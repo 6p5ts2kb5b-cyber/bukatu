@@ -25,12 +25,19 @@ import { firebaseApp } from "./firebase";
 
 // ---- 区分（連合チーム／トップ／アカデミー） ----
 
-export type DivisionKey = "main" | "top" | "academy" | "sumiyoshi" | "asabano_sumiyoshi";
+export type DivisionKey =
+  | "main"
+  | "top"
+  | "academy"
+  | "sakura"
+  | "sumiyoshi"
+  | "asabano_sumiyoshi";
 
 export const DIVISIONS: { key: DivisionKey; label: string }[] = [
   { key: "main", label: "連合チーム" },
   { key: "top", label: "トップ" },
   { key: "academy", label: "アカデミー" },
+  { key: "sakura", label: "桜のみ" },
   { key: "sumiyoshi", label: "住吉のみ" },
   { key: "asabano_sumiyoshi", label: "浅羽野・住吉" },
 ];
