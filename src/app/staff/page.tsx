@@ -10,7 +10,8 @@ import {
   EMPTY_STAFF,
   listStaff,
   normalizeEmail,
-  updateStaff,
+  changeStaffEmail,
+  deleteStaff,
   type Staff,
 } from "@/lib/staff";
 
@@ -72,12 +73,14 @@ function StaffForm({
   isMe,
   onSave,
   onCancel,
+  onDelete,
 }: {
   initial: Staff;
   isNew: boolean;
   isMe: boolean;
   onSave: (s: Staff) => Promise<void>;
   onCancel: () => void;
+  onDelete?: () => Promise<void>;
 }) {
   const [s, setS] = useState<Staff>(initial);
   const [saving, setSaving] = useState(false);
@@ -115,7 +118,7 @@ function StaffForm({
         />
       </Field>
       <Field label="Googleメールアドレス（ログインに使うもの）">
-        {isNew ? (
+        {isNew || !isMe ? (
           <input
             className={inputClass}
             value={s.email}
@@ -128,6 +131,7 @@ function StaffForm({
         ) : (
           <p className="break-all rounded-xl bg-field px-4 py-3 text-base text-navy-soft/80">
             {s.email}
+            <span className="mt-1 block text-sm">（自分のメールアドレスはここでは変更できません）</span>
           </p>
         )}
       </Field>
@@ -183,6 +187,25 @@ function StaffForm({
           {saving ? "保存中…" : "保存する"}
         </button>
       </div>
+      {onDelete && !isMe && (
+        <button
+          type="button"
+          onClick={async () => {
+            if (!window.confirm(`${initial.name} さんを名簿から削除します。この人はアプリに入れなくなります。よろしいですか？`)) return;
+            setSaving(true);
+            try {
+              await onDelete();
+            } catch {
+              setError("削除できませんでした。");
+              setSaving(false);
+            }
+          }}
+          disabled={saving}
+          className="min-h-12 w-full rounded-xl text-base font-bold text-ng ring-1 ring-ng/30 active:bg-ng/10 disabled:opacity-50"
+        >
+          このスタッフを削除する
+        </button>
+      )}
     </div>
   );
 }
@@ -290,8 +313,12 @@ export default function StaffPage() {
                 isNew={false}
                 isMe={s.email === me.email}
                 onCancel={() => setEditing(null)}
+                onDelete={async () => {
+                  await deleteStaff(s.email);
+                  await saved("削除しました");
+                }}
                 onSave={async (next) => {
-                  await updateStaff(next);
+                  await changeStaffEmail(s.email, next);
                   await saved("保存しました");
                 }}
               />

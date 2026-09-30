@@ -15,6 +15,7 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  writeBatch,
   type Firestore,
 } from "firebase/firestore";
 import type { User } from "firebase/auth";
@@ -119,4 +120,37 @@ export async function updateStaff(s: Staff): Promise<void> {
     active: s.active,
     updatedAt: serverTimestamp(),
   });
+}
+
+// メールアドレスを変更する。
+// 名簿はメールアドレスを名前にして保存しているので、新しいアドレスで作り直してから古い方を消す。
+export async function changeStaffEmail(oldEmail: string, s: Staff): Promise<void> {
+  const from = normalizeEmail(oldEmail);
+  const to = normalizeEmail(s.email);
+  if (from === to) {
+    await updateStaff({ ...s, email: from });
+    return;
+  }
+  const exists = await getDoc(doc(db(), "staff", to));
+  if (exists.exists()) {
+    throw new Error("このメールアドレスはすでに登録されています");
+  }
+  const batch = writeBatch(db());
+  batch.set(doc(db(), "staff", to), {
+    ...s,
+    email: to,
+    name: s.name.trim(),
+    note: s.note.trim(),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  batch.delete(doc(db(), "staff", from));
+  await batch.commit();
+}
+
+// スタッフを名簿から削除する（この人はログインできなくなる）
+export async function deleteStaff(email: string): Promise<void> {
+  const batch = writeBatch(db());
+  batch.delete(doc(db(), "staff", normalizeEmail(email)));
+  await batch.commit();
 }
