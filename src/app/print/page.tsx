@@ -51,20 +51,28 @@ function time(start: string, end: string): string {
 // 持ち物（お弁当・軽食は目立たせて先頭に）
 const HIGHLIGHT = ["お弁当", "軽食"];
 
+// お弁当・軽食は右の欄に◯で表示するので、ここにはそれ以外の持ち物だけ載せる
 function Packing({ items }: { items: string[] }) {
-  const main = HIGHLIGHT.filter((h) => items.includes(h));
   const rest = items.filter((i) => !HIGHLIGHT.includes(i));
+  if (rest.length === 0) return null;
+  return <p>持ち物：{rest.join("・")}</p>;
+}
+
+// その日にお弁当・軽食が必要か（活動がある区分のどれかで選ばれていれば◯）
+function needs(a: Activity, item: string): boolean {
+  return a.groups.some(
+    (g) =>
+      !isOffType(g.type) &&
+      !(g.type === "部活あり" && !g.returnToSchool) &&
+      g.packing.includes(item),
+  );
+}
+
+function Mark({ on }: { on: boolean }) {
   return (
-    <p>
-      持ち物：
-      {main.map((m) => (
-        <span key={m} className="mr-1 font-extrabold underline decoration-2 underline-offset-2">
-          {m}
-        </span>
-      ))}
-      {main.length > 0 && rest.length > 0 && "・"}
-      {rest.join("・")}
-    </p>
+    <td className="w-14 border-l border-black/30 py-2 text-center align-middle text-2xl font-extrabold print:w-[13mm] print:text-[16pt]">
+      {on ? "◯" : ""}
+    </td>
   );
 }
 
@@ -214,6 +222,14 @@ export default function PrintPage() {
         )}
 
         <table className="mt-2 w-full border-collapse">
+          <thead>
+            <tr className="border-b-2 border-black text-sm font-extrabold print:text-[9pt]">
+              <th className="py-1 text-left">日</th>
+              <th className="py-1 text-left">予定</th>
+              <th className="w-14 border-l border-black/30 py-1 print:w-[13mm]">お弁当</th>
+              <th className="w-14 border-l border-black/30 py-1 print:w-[13mm]">軽食</th>
+            </tr>
+          </thead>
           <tbody>
             {rows.map((a) => {
               const d = Number(a.date.slice(8));
@@ -223,7 +239,7 @@ export default function PrintPage() {
                     <span className="block text-xl font-extrabold leading-none print:text-[14pt]">{d}</span>
                     <span className={`text-sm font-extrabold ${weekdayColor(a.date)}`}>（{weekday(a.date)}）</span>
                   </td>
-                  <td className="py-2">
+                  <td className="py-2 pr-2">
                     <div className="flex flex-col gap-2">
                       {a.groups.map((g) => (
                         <GroupLines key={g.division} g={g} showDivision={a.groups.length > 1 || !(["main", school] as string[]).includes(g.division)} />
@@ -231,6 +247,8 @@ export default function PrintPage() {
                       {a.note && <p className="text-navy-soft">※{a.note}</p>}
                     </div>
                   </td>
+                  <Mark on={needs(a, "お弁当")} />
+                  <Mark on={needs(a, "軽食")} />
                 </tr>
               );
             })}
