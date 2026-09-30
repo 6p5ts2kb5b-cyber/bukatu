@@ -56,6 +56,13 @@ export default function ActivitiesPage() {
         ))}
       </ul>
 
+      <Link
+        href="/print"
+        className="flex min-h-12 items-center justify-center rounded-xl bg-white px-4 text-base font-bold ring-1 ring-navy/15 active:bg-field"
+      >
+        🖨 月間予定表を印刷する
+      </Link>
+
       {!showPast ? (
         <SecondaryButton onClick={() => setShowPast(true)}>過去の予定を見る</SecondaryButton>
       ) : (

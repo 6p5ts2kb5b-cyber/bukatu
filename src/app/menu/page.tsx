@@ -9,6 +9,7 @@ import { Card, SecondaryButton } from "@/components/ui";
 
 const ITEMS = [
   { href: "/activities", label: "予定一覧", desc: "これからの予定と過去の予定" },
+  { href: "/print", label: "印刷（保護者配布用）", desc: "学校ごとの月間予定表をA4で印刷" },
   { href: "/teams", label: "学校（合同チーム）", desc: "桜中・浅羽野中・住吉中などの名簿" },
   { href: "/staff", label: "スタッフ名簿", desc: "アプリに入れる人の登録" },
 ];

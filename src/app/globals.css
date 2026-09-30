@@ -20,3 +20,18 @@ body {
     system-ui, sans-serif;
   -webkit-text-size-adjust: 100%;
 }
+
+/* 印刷するときの設定（A4縦・余白10mm・背景は白） */
+@page {
+  size: A4 portrait;
+  margin: 10mm;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

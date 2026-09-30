@@ -49,7 +49,7 @@ function GoogleMark() {
 function Header({ small = false }: { small?: boolean }) {
   return (
     <header
-      className={`bg-navy px-5 text-white ${small ? "pb-5" : "pb-8"}`}
+      className={`bg-navy px-5 text-white print:hidden ${small ? "pb-5" : "pb-8"}`}
       style={{ paddingTop: `calc(env(safe-area-inset-top) + ${small ? "1.25rem" : "2.5rem"})` }}
     >
       <div className="flex items-center gap-3">
@@ -138,14 +138,14 @@ const NAV = [
 function isActive(href: string, pathname: string): boolean {
   if (href === "/") return pathname === "/";
   if (href === "/activities") return pathname.startsWith("/activities") && pathname !== "/activities/new";
-  if (href === "/menu") return ["/menu", "/teams", "/staff"].some((p) => pathname.startsWith(p));
+  if (href === "/menu") return ["/menu", "/teams", "/staff", "/print"].some((p) => pathname.startsWith(p));
   return pathname === href;
 }
 
 function BottomNav() {
   const pathname = usePathname();
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-navy/10 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+    <nav className="fixed inset-x-0 bottom-0 z-10 print:hidden border-t border-navy/10 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
       <ul className="mx-auto flex max-w-xl">
         {NAV.map((n) => {
           const active = isActive(n.href, pathname);
@@ -229,9 +229,9 @@ function Gate({ children }: { children: ReactNode }) {
   }
   return (
     <MeContext.Provider value={access.me}>
-      <main className="mx-auto flex min-h-dvh max-w-xl flex-col pb-24">
+      <main className="mx-auto flex min-h-dvh max-w-xl flex-col pb-24 print:max-w-none print:pb-0">
         <Header small />
-        <div className="flex flex-col gap-4 px-4 pt-4">{children}</div>
+        <div className="flex flex-col gap-4 px-4 pt-4 print:p-0">{children}</div>
       </main>
       <BottomNav />
     </MeContext.Provider>

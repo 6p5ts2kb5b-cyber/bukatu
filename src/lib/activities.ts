@@ -182,6 +182,24 @@ export async function listUpcoming(): Promise<Activity[]> {
   return snap.docs.map((d) => toActivity(d.id, d.data()));
 }
 
+// 指定した期間の活動（日付の早い順）。from・to は "YYYY-MM-DD"
+export async function listRange(from: string, to: string): Promise<Activity[]> {
+  const q = query(
+    collection(db(), "activities"),
+    where("date", ">=", from),
+    where("date", "<=", to),
+    orderBy("date"),
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => toActivity(d.id, d.data()));
+}
+
+// 土曜・日曜かどうか
+export function isWeekend(date: string): boolean {
+  const w = parseDate(date).getDay();
+  return w === 0 || w === 6;
+}
+
 // 過去の活動（新しい順）
 export async function listPast(): Promise<Activity[]> {
   const q = query(
