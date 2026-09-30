@@ -15,7 +15,7 @@ export default function NewActivityPage() {
       <h1 className="px-1 text-xl font-extrabold">＋ 新しい予定</h1>
       <ActivityEditor
         isNew
-        initial={{ date, note: "", groups: defaultDivisions(date).map(newGroup) }}
+        initial={{ date, note: "", groups: defaultDivisions(date).map((k) => newGroup(k, date)) }}
         onSave={async (a) => {
           const id = await createActivity({ date: a.date, note: a.note, groups: a.groups });
           router.push(`/activities/${id}?saved=1`);

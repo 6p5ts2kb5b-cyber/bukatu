@@ -9,6 +9,7 @@ import { ErrorText, ToggleButton } from "@/components/ui";
 import {
   divisionLabel,
   isMatchType,
+  isOffType,
   listRange,
   weekday,
   weekdayColor,
@@ -47,8 +48,30 @@ function time(start: string, end: string): string {
   return `${start}〜${end}`;
 }
 
+// 持ち物（お弁当・軽食は目立たせて先頭に）
+const HIGHLIGHT = ["お弁当", "軽食"];
+
+function Packing({ items }: { items: string[] }) {
+  const main = HIGHLIGHT.filter((h) => items.includes(h));
+  const rest = items.filter((i) => !HIGHLIGHT.includes(i));
+  return (
+    <p>
+      持ち物：
+      {main.map((m) => (
+        <span key={m} className="mr-1 font-extrabold underline decoration-2 underline-offset-2">
+          {m}
+        </span>
+      ))}
+      {main.length > 0 && rest.length > 0 && "・"}
+      {rest.join("・")}
+    </p>
+  );
+}
+
 function GroupLines({ g, showDivision }: { g: ActivityGroup; showDivision: boolean }) {
-  const off = g.type === "練習なし";
+  const off = isOffType(g.type);
+  // 平日の「部活あり」は、再登校のときだけ会場・持ち物を載せる
+  const plainClubDay = g.type === "部活あり" && !g.returnToSchool;
   const title = [
     showDivision ? `【${divisionLabel(g.division)}】` : "",
     g.type,
@@ -60,7 +83,7 @@ function GroupLines({ g, showDivision }: { g: ActivityGroup; showDivision: boole
   return (
     <div className="flex flex-col gap-0.5">
       <p className={`font-extrabold ${off ? "text-navy-soft/60" : ""}`}>{title}</p>
-      {!off && (
+      {!off && !plainClubDay && (
         <>
           {opponents.length > 0 && <p className="font-bold">vs {opponents.join("・")}</p>}
           {g.type === "合同練習" && g.partners.length > 0 && (
@@ -86,7 +109,10 @@ function GroupLines({ g, showDivision }: { g: ActivityGroup; showDivision: boole
               集合：{g.meetTime} {g.meetPlace}
             </p>
           )}
-          {g.packing.length > 0 && <p>持ち物：{g.packing.join("・")}</p>}
+          {g.type === "部活あり" && g.returnToSchool && (
+            <p className="font-extrabold">再登校：{g.returnTime || "時間未定"}</p>
+          )}
+          {g.packing.length > 0 && <Packing items={g.packing} />}
         </>
       )}
       {g.note && <p className="text-navy-soft">※{g.note}</p>}

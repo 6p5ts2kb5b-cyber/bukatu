@@ -15,6 +15,8 @@ import {
   type DivisionKey,
   type Game,
   isMatchType,
+  isOffType,
+  isSimpleType,
   recentPlaces,
 } from "@/lib/activities";
 import { addPackingItem, listPackingItems, type PackingItem } from "@/lib/packing";
@@ -173,7 +175,10 @@ function GroupEditor({
   const [newItem, setNewItem] = useState("");
   const [adding, setAdding] = useState(false);
   const needsTournament = group.type === "公式戦" || group.type === "大会";
-  const isOff = group.type === "練習なし";
+  const isOff = isOffType(group.type);
+  const isSimple = isSimpleType(group.type);
+  // 平日の「部活あり」は、再登校にチェックしたときだけ会場・持ち物を出す
+  const showDetails = !isOff && (!isSimple || group.returnToSchool);
   const set = (patch: Partial<ActivityGroup>) => onChange({ ...group, ...patch });
 
   const togglePacking = (name: string) => {
@@ -237,7 +242,33 @@ function GroupEditor({
         />
       )}
 
-      {!isOff && (
+      {group.type === "部活あり" && (
+        <div className="flex flex-col gap-3 rounded-xl bg-field p-4">
+          <button
+            type="button"
+            onClick={() => set({ returnToSchool: !group.returnToSchool })}
+            aria-pressed={group.returnToSchool}
+            className={`flex min-h-14 items-center gap-3 rounded-xl px-4 text-lg font-extrabold ring-2 ${
+              group.returnToSchool ? "bg-navy text-white ring-navy" : "bg-white text-navy-soft ring-navy/15"
+            }`}
+          >
+            <span
+              className={`flex h-7 w-7 items-center justify-center rounded-md text-base ${
+                group.returnToSchool ? "bg-white text-navy" : "ring-2 ring-navy/30"
+              }`}
+              aria-hidden
+            >
+              {group.returnToSchool ? "✓" : ""}
+            </span>
+            再登校あり
+          </button>
+          {group.returnToSchool && (
+            <TimeInput label="再登校の時間" value={group.returnTime} onChange={(v) => set({ returnTime: v })} />
+          )}
+        </div>
+      )}
+
+      {showDetails && (
         <>
           <Field label="会場">
             <input
@@ -255,6 +286,8 @@ function GroupEditor({
             ))}
           </datalist>
 
+          {!isSimple && (
+          <>
           <div className="grid grid-cols-2 gap-3">
             <TimeInput label="開始時間" value={group.startTime} onChange={(v) => set({ startTime: v })} />
             <TimeInput label="終了時間" value={group.endTime} onChange={(v) => set({ endTime: v })} />
@@ -291,6 +324,8 @@ function GroupEditor({
               ))}
             </div>
           </div>
+          </>
+          )}
 
           <div className="flex flex-col gap-2">
             <div className="flex items-baseline justify-between">
@@ -385,7 +420,7 @@ export function ActivityEditor({
       return;
     }
     const keys = defaultDivisions(date);
-    const groups = keys.map((k) => a.groups.find((g) => g.division === k) ?? newGroup(k));
+    const groups = keys.map((k) => a.groups.find((g) => g.division === k) ?? newGroup(k, date));
     setA({ ...a, date, groups });
     setTab(keys[0]);
   };
@@ -402,7 +437,7 @@ export function ActivityEditor({
       if (tab === key) setTab(groups[0].division);
     } else {
       const order = DIVISIONS.map((d) => d.key);
-      const groups = [...a.groups, newGroup(key)].sort(
+      const groups = [...a.groups, newGroup(key, a.date)].sort(
         (x, y) => order.indexOf(x.division) - order.indexOf(y.division),
       );
       setA({ ...a, groups });

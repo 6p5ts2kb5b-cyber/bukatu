@@ -11,6 +11,7 @@ import {
   type Activity,
   type ActivityGroup,
   isMatchType,
+  isOffType,
 } from "@/lib/activities";
 
 function daysUntil(date: string): number {
@@ -66,6 +67,17 @@ function Opponents({ g }: { g: ActivityGroup }) {
 }
 
 function GroupDetails({ g }: { g: ActivityGroup }) {
+  // 平日の「部活あり」：再登校のときだけ詳細を出す
+  if (g.type === "部活あり") {
+    if (!g.returnToSchool) return null;
+    return (
+      <dl className="mt-2 border-t border-navy/10 pt-2">
+        <Row label="再登校" value={g.returnTime} strong />
+        <Row label="会場" value={g.venue} />
+        <Row label="持ち物" value={g.packing.join("・")} />
+      </dl>
+    );
+  }
   const meet = [g.meetTime, g.meetPlace].filter(Boolean).join("　");
   return (
     <dl className="mt-2 border-t border-navy/10 pt-2">
@@ -111,13 +123,13 @@ export function ActivityCard({ activity }: { activity: Activity }) {
                   {divisionLabel(g.division)}
                 </span>
               )}
-              <span className={`text-lg font-bold ${g.type === "練習なし" ? "text-navy-soft/50" : ""}`}>
+              <span className={`text-lg font-bold ${isOffType(g.type) ? "text-navy-soft/50" : ""}`}>
                 {g.type}
               </span>
               {g.tournamentName && <span className="text-base text-navy-soft/80">{g.tournamentName}</span>}
             </div>
             <Opponents g={g} />
-            {g.type !== "練習なし" && <GroupDetails g={g} />}
+            {!isOffType(g.type) && <GroupDetails g={g} />}
           </li>
         ))}
       </ul>

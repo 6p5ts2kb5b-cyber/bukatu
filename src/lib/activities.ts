@@ -47,15 +47,37 @@ export function divisionLabel(key: DivisionKey): string {
 }
 
 // 12〜4月はトップとアカデミー、5〜11月は連合チーム
+// 平日（月〜金）は「住吉のみ」、土日は月によって連合チーム／トップ・アカデミー
 export function defaultDivisions(date: string): DivisionKey[] {
+  if (date && !isWeekend(date)) return ["sumiyoshi"];
   const month = Number(date.slice(5, 7));
   return month >= 12 || month <= 4 ? ["top", "academy"] : ["main"];
 }
 
 // ---- 活動種別 ----
 
-export const ACTIVITY_TYPES = ["練習", "練習試合", "公式戦", "大会", "合同練習", "練習なし", "その他"] as const;
+export const ACTIVITY_TYPES = [
+  "部活あり",
+  "部活なし",
+  "練習",
+  "練習試合",
+  "公式戦",
+  "大会",
+  "合同練習",
+  "練習なし",
+  "その他",
+] as const;
 export type ActivityType = (typeof ACTIVITY_TYPES)[number];
+
+// 活動しない日（会場・時間などの欄を出さない）
+export function isOffType(type: string): boolean {
+  return type === "練習なし" || type === "部活なし";
+}
+
+// 平日の簡単入力（部活あり／なし＋再登校）
+export function isSimpleType(type: string): boolean {
+  return type === "部活あり" || type === "部活なし";
+}
 
 // ---- データの形 ----
 
@@ -80,6 +102,8 @@ export type ActivityGroup = {
   meetTime: string; // 集合時間 "08:30"
   meetPlace: string; // 集合場所（例：若葉駅、現地）
   packing: string[]; // 持ち物（選んだものだけ）
+  returnToSchool: boolean; // 再登校あり（平日の部活ありのとき）
+  returnTime: string; // 再登校の時間 "14:00"
   games: Game[]; // 試合（練習試合・公式戦・大会のとき）
   partners: string[]; // 合同練習の相手（合同練習のとき）
   note: string; // この区分の備考
@@ -92,10 +116,10 @@ export type Activity = {
   groups: ActivityGroup[];
 };
 
-export function newGroup(division: DivisionKey): ActivityGroup {
+export function newGroup(division: DivisionKey, date = ""): ActivityGroup {
   return {
     division,
-    type: "練習",
+    type: date && !isWeekend(date) ? "部活あり" : "練習",
     tournamentName: "",
     venue: "",
     startTime: "",
@@ -103,6 +127,8 @@ export function newGroup(division: DivisionKey): ActivityGroup {
     meetTime: "",
     meetPlace: "",
     packing: [],
+    returnToSchool: false,
+    returnTime: "",
     games: [],
     partners: [],
     note: "",
@@ -166,6 +192,7 @@ function toActivity(id: string, data: Record<string, unknown>): Activity {
       ...g,
       packing: Array.isArray(g.packing) ? g.packing : [],
       games: Array.isArray(g.games) ? g.games : [],
+      returnToSchool: g.returnToSchool === true,
       partners: Array.isArray(g.partners) ? g.partners : [],
     })) as ActivityGroup[],
   };
