@@ -35,7 +35,7 @@ function Header() {
       <div className="flex items-center gap-3">
         <BallMark />
         <div>
-          <h1 className="text-2xl font-extrabold tracking-wide">STORMクラブ</h1>
+          <h1 className="text-2xl font-extrabold tracking-wide">桜・浅羽野・住吉</h1>
           <p className="text-sm text-white/75">予定・活動管理</p>
         </div>
       </div>

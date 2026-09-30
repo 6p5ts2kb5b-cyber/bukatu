@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* STORMクラブの基本カラー（野球らしい紺と、縫い目の赤） */
+/* 桜・浅羽野・住吉の基本カラー（野球らしい紺と、縫い目の赤） */
 @theme {
   --color-navy: #0b1f3a;
   --color-navy-soft: #1d3557;
