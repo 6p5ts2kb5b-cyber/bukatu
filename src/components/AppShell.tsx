@@ -48,7 +48,10 @@ function GoogleMark() {
 
 function Header({ small = false }: { small?: boolean }) {
   return (
-    <header className={`bg-navy px-5 text-white ${small ? "pb-5 pt-6" : "pb-8 pt-10"}`}>
+    <header
+      className={`bg-navy px-5 text-white ${small ? "pb-5" : "pb-8"}`}
+      style={{ paddingTop: `calc(env(safe-area-inset-top) + ${small ? "1.25rem" : "2.5rem"})` }}
+    >
       <div className="flex items-center gap-3">
         <BallMark className={small ? "h-9 w-9" : "h-11 w-11"} />
         <div>

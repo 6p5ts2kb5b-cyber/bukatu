@@ -63,6 +63,12 @@ export type ActivityGroup = {
   division: DivisionKey;
   type: ActivityType;
   tournamentName: string; // 大会名（公式戦・大会のとき）
+  venue: string; // 会場
+  startTime: string; // 開始時間 "09:00"
+  endTime: string; // 終了時間 "12:00"
+  meetTime: string; // 集合時間 "08:30"
+  meetPlace: string; // 集合場所（例：若葉駅、現地）
+  packing: string[]; // 持ち物（選んだものだけ）
   note: string; // この区分の備考
 };
 
@@ -74,7 +80,18 @@ export type Activity = {
 };
 
 export function newGroup(division: DivisionKey): ActivityGroup {
-  return { division, type: "練習", tournamentName: "", note: "" };
+  return {
+    division,
+    type: "練習",
+    tournamentName: "",
+    venue: "",
+    startTime: "",
+    endTime: "",
+    meetTime: "",
+    meetPlace: "",
+    packing: [],
+    note: "",
+  };
 }
 
 // ---- 日付の表示 ----
@@ -132,6 +149,7 @@ function toActivity(id: string, data: Record<string, unknown>): Activity {
     groups: groups.map((g) => ({
       ...newGroup((g.division as DivisionKey) ?? "main"),
       ...g,
+      packing: Array.isArray(g.packing) ? g.packing : [],
     })) as ActivityGroup[],
   };
 }
@@ -179,4 +197,19 @@ export async function saveActivity(a: Activity): Promise<void> {
 
 export async function deleteActivity(id: string): Promise<void> {
   await deleteDoc(doc(db(), "activities", id));
+}
+
+// 過去に入力した会場・集合場所（入力欄の候補に使う）
+export async function recentPlaces(): Promise<{ venues: string[]; meetPlaces: string[] }> {
+  const snap = await getDocs(query(collection(db(), "activities"), orderBy("date", "desc")));
+  const venues = new Set<string>();
+  const meetPlaces = new Set<string>();
+  snap.docs.forEach((d) => {
+    const groups = (d.data().groups ?? []) as Partial<ActivityGroup>[];
+    groups.forEach((g) => {
+      if (g.venue) venues.add(g.venue);
+      if (g.meetPlace) meetPlaces.add(g.meetPlace);
+    });
+  });
+  return { venues: [...venues].slice(0, 30), meetPlaces: [...meetPlaces].slice(0, 30) };
 }
