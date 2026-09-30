@@ -25,12 +25,14 @@ import { firebaseApp } from "./firebase";
 
 // ---- 区分（連合チーム／トップ／アカデミー） ----
 
-export type DivisionKey = "main" | "top" | "academy";
+export type DivisionKey = "main" | "top" | "academy" | "sumiyoshi" | "asabano_sumiyoshi";
 
 export const DIVISIONS: { key: DivisionKey; label: string }[] = [
   { key: "main", label: "連合チーム" },
   { key: "top", label: "トップ" },
   { key: "academy", label: "アカデミー" },
+  { key: "sumiyoshi", label: "住吉のみ" },
+  { key: "asabano_sumiyoshi", label: "浅羽野・住吉" },
 ];
 
 export function divisionLabel(key: DivisionKey): string {
@@ -45,7 +47,7 @@ export function defaultDivisions(date: string): DivisionKey[] {
 
 // ---- 活動種別 ----
 
-export const ACTIVITY_TYPES = ["練習", "練習試合", "公式戦", "大会", "合同練習", "その他"] as const;
+export const ACTIVITY_TYPES = ["練習", "練習試合", "公式戦", "大会", "合同練習", "練習なし", "その他"] as const;
 export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 
 // ---- データの形 ----

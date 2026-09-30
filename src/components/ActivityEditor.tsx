@@ -165,7 +165,7 @@ export function ActivityEditor({
               ))}
             </div>
             <p className="text-sm text-navy-soft/70">
-              5〜11月は「連合チーム」、12〜4月は「トップ」「アカデミー」が自動で選ばれます。
+              5〜11月は「連合チーム」、12〜4月は「トップ」「アカデミー」が自動で選ばれます。住吉のみ・浅羽野と住吉だけで活動する日は、ここで切り替えてください。
             </p>
           </div>
           <Field label="この日全体の備考">
@@ -182,7 +182,7 @@ export function ActivityEditor({
       {current && (
         <Card>
           {a.groups.length > 1 && (
-            <div className="-mx-1 mb-4 flex gap-2" role="tablist">
+            <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3" role="tablist">
               {a.groups.map((g) => (
                 <button
                   key={g.division}
@@ -190,7 +190,7 @@ export function ActivityEditor({
                   role="tab"
                   aria-selected={tab === g.division}
                   onClick={() => setTab(g.division)}
-                  className={`min-h-12 flex-1 rounded-xl text-base font-bold ${
+                  className={`min-h-12 rounded-xl px-2 text-base font-bold ${
                     tab === g.division ? "bg-navy text-white" : "bg-field text-navy-soft/70"
                   }`}
                 >

@@ -51,7 +51,9 @@ export function ActivityCard({ activity }: { activity: Activity }) {
                 {divisionLabel(g.division)}
               </span>
             )}
-            <span className="text-lg font-bold">{g.type}</span>
+            <span className={`text-lg font-bold ${g.type === "練習なし" ? "text-navy-soft/50" : ""}`}>
+              {g.type}
+            </span>
             {g.tournamentName && <span className="text-base text-navy-soft/80">{g.tournamentName}</span>}
           </li>
         ))}
