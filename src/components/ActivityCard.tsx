@@ -10,6 +10,7 @@ import {
   weekdayColor,
   type Activity,
   type ActivityGroup,
+  isMatchType,
 } from "@/lib/activities";
 
 function daysUntil(date: string): number {
@@ -44,12 +45,40 @@ function timeRange(start: string, end: string): string {
   return `${start || "？"}〜${end || ""}`;
 }
 
+// 「vs 坂戸中・鶴ヶ島中」「合同：鶴ヶ島中」の表示
+function Opponents({ g }: { g: ActivityGroup }) {
+  if (isMatchType(g.type)) {
+    const names = g.games.map((x) => x.opponent).filter(Boolean);
+    return (
+      <p className={`mt-1 text-lg font-extrabold ${names.length ? "" : "text-[#8a6500]"}`}>
+        {names.length ? `vs ${[...new Set(names)].join("・")}` : "▲ 対戦相手 未入力"}
+      </p>
+    );
+  }
+  if (g.type === "合同練習") {
+    return (
+      <p className={`mt-1 text-lg font-extrabold ${g.partners.length ? "" : "text-[#8a6500]"}`}>
+        {g.partners.length ? `合同：${g.partners.join("・")}` : "▲ 合同練習の相手 未入力"}
+      </p>
+    );
+  }
+  return null;
+}
+
 function GroupDetails({ g }: { g: ActivityGroup }) {
   const meet = [g.meetTime, g.meetPlace].filter(Boolean).join("　");
   return (
     <dl className="mt-2 border-t border-navy/10 pt-2">
       <Row label="会場" value={g.venue} />
       <Row label="時間" value={timeRange(g.startTime, g.endTime)} />
+      {isMatchType(g.type) &&
+        g.games.map((x, i) => (
+          <Row
+            key={i}
+            label={`第${i + 1}試合`}
+            value={[x.startTime && `${x.startTime}開始`, x.opponent && `vs ${x.opponent}`].filter(Boolean).join("　")}
+          />
+        ))}
       <Row label="集合" value={meet} strong />
       <Row label="持ち物" value={g.packing.join("・")} />
     </dl>
@@ -87,6 +116,7 @@ export function ActivityCard({ activity }: { activity: Activity }) {
               </span>
               {g.tournamentName && <span className="text-base text-navy-soft/80">{g.tournamentName}</span>}
             </div>
+            <Opponents g={g} />
             {g.type !== "練習なし" && <GroupDetails g={g} />}
           </li>
         ))}

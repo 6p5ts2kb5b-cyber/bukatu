@@ -13,6 +13,8 @@ import {
   type Activity,
   type ActivityGroup,
   type DivisionKey,
+  type Game,
+  isMatchType,
   recentPlaces,
 } from "@/lib/activities";
 import { addPackingItem, listPackingItems, type PackingItem } from "@/lib/packing";
@@ -24,6 +26,7 @@ type Options = {
   packingItems: PackingItem[];
   venues: string[];
   meetPlaces: string[];
+  opponents: string[];
   onAddPacking: (name: string) => Promise<void>;
 };
 
@@ -46,6 +49,115 @@ function TimeInput({
         onChange={(e) => onChange(e.target.value)}
       />
     </Field>
+  );
+}
+
+const smallButton =
+  "min-h-12 shrink-0 rounded-xl bg-white px-3 text-base font-bold ring-1 ring-navy/15 active:bg-field";
+
+function GamesEditor({
+  games,
+  opponents,
+  onChange,
+}: {
+  games: Game[];
+  opponents: string[];
+  onChange: (g: Game[]) => void;
+}) {
+  const update = (i: number, patch: Partial<Game>) =>
+    onChange(games.map((g, j) => (j === i ? { ...g, ...patch } : g)));
+  const add = () => onChange([...games, { opponent: "", startTime: "" }]);
+  const remove = (i: number) => onChange(games.filter((_, j) => j !== i));
+
+  return (
+    <div className="flex flex-col gap-3 rounded-xl bg-field p-4">
+      <span className="text-base font-extrabold">対戦相手・試合</span>
+      {games.length === 0 && (
+        <p className="text-sm text-navy-soft/70">「＋ 試合を追加」から対戦相手を入れてください。</p>
+      )}
+      {games.map((g, i) => (
+        <div key={i} className="flex flex-col gap-2 rounded-xl bg-white p-3 ring-1 ring-navy/10">
+          <div className="flex items-center justify-between">
+            <span className="text-base font-extrabold">第{i + 1}試合</span>
+            <button type="button" onClick={() => remove(i)} className="min-h-10 px-2 text-sm font-bold text-ng">
+              削除
+            </button>
+          </div>
+          <input
+            className={inputClass}
+            value={g.opponent}
+            onChange={(e) => update(i, { opponent: e.target.value })}
+            placeholder="対戦相手（例：坂戸中）"
+            list="opponent-options"
+            autoComplete="off"
+          />
+          <label className="flex items-center gap-3">
+            <span className="shrink-0 text-sm font-bold text-navy-soft">試合開始</span>
+            <input
+              type="time"
+              step={300}
+              className={`${inputClass} text-lg font-bold`}
+              value={g.startTime}
+              onChange={(e) => update(i, { startTime: e.target.value })}
+            />
+          </label>
+        </div>
+      ))}
+      <datalist id="opponent-options">
+        {opponents.map((v) => (
+          <option key={v} value={v} />
+        ))}
+      </datalist>
+      <button type="button" onClick={add} className={smallButton}>
+        ＋ 試合を追加
+      </button>
+    </div>
+  );
+}
+
+function PartnersEditor({
+  partners,
+  opponents,
+  onChange,
+}: {
+  partners: string[];
+  opponents: string[];
+  onChange: (p: string[]) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3 rounded-xl bg-field p-4">
+      <span className="text-base font-extrabold">合同練習の相手</span>
+      {partners.length === 0 && (
+        <p className="text-sm text-navy-soft/70">「＋ 相手を追加」から学校・チーム名を入れてください。</p>
+      )}
+      {partners.map((p, i) => (
+        <div key={i} className="flex gap-2">
+          <input
+            className={`${inputClass} bg-white`}
+            value={p}
+            onChange={(e) => onChange(partners.map((x, j) => (j === i ? e.target.value : x)))}
+            placeholder="例：鶴ヶ島中"
+            list="opponent-options"
+            autoComplete="off"
+          />
+          <button
+            type="button"
+            onClick={() => onChange(partners.filter((_, j) => j !== i))}
+            className="min-h-12 shrink-0 px-2 text-sm font-bold text-ng"
+          >
+            削除
+          </button>
+        </div>
+      ))}
+      <datalist id="opponent-options">
+        {opponents.map((v) => (
+          <option key={v} value={v} />
+        ))}
+      </datalist>
+      <button type="button" onClick={() => onChange([...partners, ""])} className={smallButton}>
+        ＋ 相手を追加
+      </button>
+    </div>
   );
 }
 
@@ -108,6 +220,21 @@ function GroupEditor({
             autoComplete="off"
           />
         </Field>
+      )}
+
+      {isMatchType(group.type) && (
+        <GamesEditor
+          games={group.games}
+          opponents={options.opponents}
+          onChange={(games) => set({ games })}
+        />
+      )}
+      {group.type === "合同練習" && (
+        <PartnersEditor
+          partners={group.partners}
+          opponents={options.opponents}
+          onChange={(partners) => set({ partners })}
+        />
       )}
 
       {!isOff && (
@@ -231,9 +358,10 @@ export function ActivityEditor({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [packingItems, setPackingItems] = useState<PackingItem[]>([]);
-  const [places, setPlaces] = useState<{ venues: string[]; meetPlaces: string[] }>({
+  const [places, setPlaces] = useState<{ venues: string[]; meetPlaces: string[]; opponents: string[] }>({
     venues: [],
     meetPlaces: [],
+    opponents: [],
   });
 
   useEffect(() => {
@@ -302,8 +430,17 @@ export function ActivityEditor({
     if (!a.date) return setError("日付を選んでください");
     if (a.groups.length === 0) return setError("区分を1つ以上選んでください");
     setSaving(true);
+    // 空欄のままの試合・相手は保存しない
+    const cleaned: ActivityDraft = {
+      ...a,
+      groups: a.groups.map((g) => ({
+        ...g,
+        games: g.games.filter((x) => x.opponent.trim() || x.startTime),
+        partners: g.partners.map((x) => x.trim()).filter(Boolean),
+      })),
+    };
     try {
-      await onSave(a);
+      await onSave(cleaned);
     } catch {
       setError("保存できませんでした。電波の良い場所でもう一度お試しください。");
       setSaving(false);

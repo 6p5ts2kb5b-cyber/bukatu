@@ -59,6 +59,17 @@ export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 
 // ---- データの形 ----
 
+// 試合（第1試合・第2試合…）
+export type Game = {
+  opponent: string; // 対戦相手（例：坂戸中）
+  startTime: string; // 試合開始 "09:00"
+};
+
+// 試合がある種別
+export function isMatchType(type: string): boolean {
+  return type === "練習試合" || type === "公式戦" || type === "大会";
+}
+
 export type ActivityGroup = {
   division: DivisionKey;
   type: ActivityType;
@@ -69,6 +80,8 @@ export type ActivityGroup = {
   meetTime: string; // 集合時間 "08:30"
   meetPlace: string; // 集合場所（例：若葉駅、現地）
   packing: string[]; // 持ち物（選んだものだけ）
+  games: Game[]; // 試合（練習試合・公式戦・大会のとき）
+  partners: string[]; // 合同練習の相手（合同練習のとき）
   note: string; // この区分の備考
 };
 
@@ -90,6 +103,8 @@ export function newGroup(division: DivisionKey): ActivityGroup {
     meetTime: "",
     meetPlace: "",
     packing: [],
+    games: [],
+    partners: [],
     note: "",
   };
 }
@@ -150,6 +165,8 @@ function toActivity(id: string, data: Record<string, unknown>): Activity {
       ...newGroup((g.division as DivisionKey) ?? "main"),
       ...g,
       packing: Array.isArray(g.packing) ? g.packing : [],
+      games: Array.isArray(g.games) ? g.games : [],
+      partners: Array.isArray(g.partners) ? g.partners : [],
     })) as ActivityGroup[],
   };
 }
@@ -199,17 +216,28 @@ export async function deleteActivity(id: string): Promise<void> {
   await deleteDoc(doc(db(), "activities", id));
 }
 
-// 過去に入力した会場・集合場所（入力欄の候補に使う）
-export async function recentPlaces(): Promise<{ venues: string[]; meetPlaces: string[] }> {
+// 過去に入力した会場・集合場所・相手チーム（入力欄の候補に使う）
+export async function recentPlaces(): Promise<{
+  venues: string[];
+  meetPlaces: string[];
+  opponents: string[];
+}> {
   const snap = await getDocs(query(collection(db(), "activities"), orderBy("date", "desc")));
   const venues = new Set<string>();
   const meetPlaces = new Set<string>();
+  const opponents = new Set<string>();
   snap.docs.forEach((d) => {
     const groups = (d.data().groups ?? []) as Partial<ActivityGroup>[];
     groups.forEach((g) => {
       if (g.venue) venues.add(g.venue);
       if (g.meetPlace) meetPlaces.add(g.meetPlace);
+      (g.games ?? []).forEach((x) => x.opponent && opponents.add(x.opponent));
+      (g.partners ?? []).forEach((x) => x && opponents.add(x));
     });
   });
-  return { venues: [...venues].slice(0, 30), meetPlaces: [...meetPlaces].slice(0, 30) };
+  return {
+    venues: [...venues].slice(0, 30),
+    meetPlaces: [...meetPlaces].slice(0, 30),
+    opponents: [...opponents].slice(0, 50),
+  };
 }
