@@ -19,4 +19,4 @@ Firebaseの接続設定は `src/lib/firebase-config.ts` に書いてあります
 
 - [x] STEP1 基本環境（公開・Firebase設定の確認）
 - [x] STEP2 Googleログイン（画面側）
-- [ ] STEP3 スタッフマスター・権限
+- [x] STEP3 スタッフ名簿（登録した人だけログイン可。権限の区別はなし）

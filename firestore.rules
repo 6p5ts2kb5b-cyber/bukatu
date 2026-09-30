@@ -1,0 +1,29 @@
+// Firestoreのセキュリティルール（控え）
+// 実際のルールはFirebaseの画面（Firestore → ルール）に貼り付けて公開します。
+// 持ち主のメールアドレスは公開しないよう、ここでは OWNER_EMAIL と書いています。
+// 貼り付けるときは OWNER_EMAIL を持ち主のGmailアドレスに置き換えてください。
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function myEmail() {
+      return request.auth.token.email.lower();
+    }
+    function isOwner() {
+      return signedIn() && myEmail() == 'OWNER_EMAIL';
+    }
+    function isStaff() {
+      return isOwner() || (
+        signedIn()
+        && exists(/databases/$(database)/documents/staff/$(myEmail()))
+        && get(/databases/$(database)/documents/staff/$(myEmail())).data.active == true
+      );
+    }
+    match /{document=**} {
+      allow read, write: if isStaff();
+    }
+  }
+}
