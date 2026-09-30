@@ -1,0 +1,18 @@
+# 部品（npm install で自動で入るもの）
+/node_modules
+
+# 組み立て結果（自動生成）
+/.next/
+/out/
+/build
+next-env.d.ts
+*.tsbuildinfo
+
+# 秘密情報（絶対にGitHubに入れない）
+.env
+.env*.local
+
+# その他
+.DS_Store
+.vercel
+npm-debug.log*

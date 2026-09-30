@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+/* STORMクラブの基本カラー（野球らしい紺と、縫い目の赤） */
+@theme {
+  --color-navy: #0b1f3a;
+  --color-navy-soft: #1d3557;
+  --color-stitch: #d62839;
+  --color-field: #f4f6f8;
+  --color-ok: #1f9d55;
+  --color-warn: #d4a017;
+  --color-ng: #d62839;
+}
+
+html,
+body {
+  background: var(--color-field);
+  color: var(--color-navy);
+  font-family:
+    "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic",
+    system-ui, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
