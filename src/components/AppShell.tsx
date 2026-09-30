@@ -120,6 +120,11 @@ function DeniedScreen({ message }: { message?: string }) {
 const NAV = [
   { href: "/", label: "ホーム", icon: "M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" },
   {
+    href: "/teams",
+    label: "学校",
+    icon: "M3 21h18M5 21V10l7-5 7 5v11M9 21v-5h6v5M12 10.5v.01",
+  },
+  {
     href: "/staff",
     label: "スタッフ",
     icon: "M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zM4 21c0-4 3.6-6 8-6s8 2 8 6",
