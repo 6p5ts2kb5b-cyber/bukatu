@@ -6,6 +6,8 @@ export const metadata: Metadata = {
   title: "桜・浅羽野・住吉",
   description: "桜・浅羽野・住吉 連合チームの予定・活動管理アプリ",
   appleWebApp: { capable: true, title: "桜浅羽野住吉", statusBarStyle: "default" },
+  // 公開中のプログラムの版（GitHubの保存番号）。動作確認用
+  other: { "app-version": (process.env.VERCEL_GIT_COMMIT_SHA ?? "dev").slice(0, 7) },
 };
 
 export const viewport: Viewport = {
