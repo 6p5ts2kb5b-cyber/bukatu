@@ -13,7 +13,7 @@ STORMクラブ（桜中・浅羽野中・住吉中の連合チーム）の活動
 
 ## 設定について
 
-Firebaseの接続設定は、このGitHubには保存しません。Vercelの「Settings → Environment Variables」に `NEXT_PUBLIC_FIREBASE_CONFIG` という名前で設定します。書き方は `.env.example` を見てください。
+Firebaseの接続設定は `src/lib/firebase-config.ts` に書いてあります。これはアプリの住所のようなもので、パスワードではありません（データはFirebaseのセキュリティルールで守ります）。本当の秘密情報（パスワードなど）はGitHubに保存しません。
 
 ## 開発の進み具合
 
