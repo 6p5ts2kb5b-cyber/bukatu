@@ -226,7 +226,7 @@ export default function PrintPage() {
                   <td className="py-2">
                     <div className="flex flex-col gap-2">
                       {a.groups.map((g) => (
-                        <GroupLines key={g.division} g={g} showDivision={a.groups.length > 1 || g.division !== "main"} />
+                        <GroupLines key={g.division} g={g} showDivision={a.groups.length > 1 || !["main", school].includes(g.division)} />
                       ))}
                       {a.note && <p className="text-navy-soft">※{a.note}</p>}
                     </div>
