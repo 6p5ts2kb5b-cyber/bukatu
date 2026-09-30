@@ -1,4 +1,4 @@
-import { checkSupabase } from "@/lib/supabase-status";
+import { getFirebaseConfig } from "@/lib/firebase-config";
 
 // 開くたびに最新の接続状態を確認する
 export const dynamic = "force-dynamic";
@@ -62,19 +62,27 @@ function BallMark() {
   );
 }
 
-export default async function Home() {
-  const supabase = await checkSupabase();
+export default function Home() {
+  const firebase = getFirebaseConfig();
 
-  const supabaseRow =
-    supabase.state === "ok"
-      ? { tone: "ok" as Tone, label: "確定", detail: "データの保存場所とつながっています" }
-      : supabase.state === "missing"
+  const firebaseRow =
+    firebase.state === "ok"
+      ? {
+          tone: "ok" as Tone,
+          label: "確定",
+          detail: `Firebaseの設定を読み込みました（プロジェクト：${firebase.config.projectId}）`,
+        }
+      : firebase.state === "missing"
         ? {
             tone: "warn" as Tone,
             label: "未設定",
-            detail: `Vercelの環境変数が未設定です：${supabase.missing.join("、")}`,
+            detail: "Vercelの環境変数 NEXT_PUBLIC_FIREBASE_CONFIG が未設定です",
           }
-        : { tone: "ng" as Tone, label: "エラー", detail: supabase.message };
+        : {
+            tone: "ng" as Tone,
+            label: "エラー",
+            detail: `設定の貼り付けが途中で切れている可能性があります（足りない項目：${firebase.missing.join("、")}）`,
+          };
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-xl flex-col">
@@ -101,7 +109,7 @@ export default async function Home() {
               label="確定"
               detail="Vercelで動いています"
             />
-            <StatusRow title="Supabase接続" {...supabaseRow} />
+            <StatusRow title="Firebase設定" {...firebaseRow} />
           </ul>
         </div>
       </section>
