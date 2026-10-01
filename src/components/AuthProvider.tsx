@@ -39,6 +39,10 @@ function toJapanese(code: string): string {
       return "このアドレスはまだFirebaseで許可されていません（管理者がFirebaseの「承認済みドメイン」に追加する必要があります）。";
     case "auth/operation-not-allowed":
       return "Googleログインがまだ有効になっていません（Firebaseの「ログイン方法」でGoogleを有効にしてください）。";
+    case "auth/web-storage-unsupported":
+      return "このブラウザの設定ではログインできません。Safariの「プライベート」をやめるか、設定の「すべてのCookieをブロック」をオフにしてください。";
+    case "auth/popup-blocked":
+      return "ログイン画面がブロックされました。もう一度ボタンを押してください。";
     case "auth/network-request-failed":
       return "通信できませんでした。電波の良い場所でもう一度お試しください。";
     default:

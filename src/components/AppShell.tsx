@@ -71,11 +71,53 @@ function Card({ children }: { children: ReactNode }) {
   );
 }
 
+// LINE・Instagram・Facebookなどのアプリ内ブラウザでは、Googleがログインを禁止している
+type InApp = "line" | "other" | null;
+function detectInAppBrowser(): InApp {
+  if (typeof navigator === "undefined") return null;
+  const ua = navigator.userAgent;
+  if (/\bLine\//i.test(ua)) return "line";
+  if (/FBAN|FBAV|Instagram|MicroMessenger|KAKAOTALK/i.test(ua)) return "other";
+  return null;
+}
+
+function InAppWarning({ kind }: { kind: Exclude<InApp, null> }) {
+  // LINEは、アドレスの最後に ?openExternalBrowser=1 を付けるとSafari/Chromeで開き直せる
+  const externalUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}${window.location.pathname}?openExternalBrowser=1`
+      : "/";
+  return (
+    <div className="mt-4 rounded-xl bg-warn/15 p-4 ring-1 ring-warn/40">
+      <p className="text-base font-extrabold text-[#6b4e00]">▲ このままではログインできません</p>
+      <p className="mt-1 text-sm text-[#6b4e00]">
+        {kind === "line" ? "LINE" : "アプリ"}の中のブラウザでは、Googleのログインが使えません。
+        Safari（Androidの方はChrome）で開き直してください。
+      </p>
+      {kind === "line" ? (
+        <a
+          href={externalUrl}
+          className="mt-3 flex min-h-12 items-center justify-center rounded-xl bg-navy px-4 text-base font-bold text-white"
+        >
+          Safari／Chromeで開き直す
+        </a>
+      ) : (
+        <p className="mt-2 text-sm font-bold text-[#6b4e00]">
+          画面の「…」や共有ボタンから「ブラウザで開く」を選んでください。
+        </p>
+      )}
+    </div>
+  );
+}
+
 function LoginScreen() {
   const { signIn, error } = useAuth();
+  const [inApp, setInApp] = useState<InApp>(null);
+  useEffect(() => setInApp(detectInAppBrowser()), []);
   return (
     <Card>
       <h2 className="text-lg font-extrabold">ログイン</h2>
+      {inApp && <InAppWarning kind={inApp} />}
       <p className="mt-1 text-sm text-navy-soft/80">
         登録されたスタッフのGoogleアカウントでログインしてください。
       </p>
