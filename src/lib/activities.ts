@@ -286,3 +286,18 @@ export async function recentPlaces(): Promise<{
     opponents: [...opponents].slice(0, 50),
   };
 }
+
+// まだ決まっていない項目（ホームの「要確認」に使う）
+export function missingFields(g: ActivityGroup): string[] {
+  if (isOffType(g.type)) return [];
+  if (g.type === "部活あり") {
+    if (!g.returnToSchool) return [];
+    return [!g.returnTime && "再登校の時間", !g.venue && "会場"].filter(Boolean) as string[];
+  }
+  const out: string[] = [];
+  if (isMatchType(g.type) && !g.games.some((x) => x.opponent)) out.push("対戦相手");
+  if (g.type === "合同練習" && g.partners.length === 0) out.push("合同練習の相手");
+  if (!g.venue) out.push("会場");
+  if (!g.meetTime && !g.meetPlace) out.push("集合");
+  return out;
+}

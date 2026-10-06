@@ -10,6 +10,7 @@ import { usePathname } from "next/navigation";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { AuthProvider, useAuth } from "@/components/AuthProvider";
 import { checkAccess, type Staff } from "@/lib/staff";
+import { cssVars } from "@/components/ui";
 
 const MeContext = createContext<Staff | null>(null);
 
@@ -22,11 +23,11 @@ export function useMe(): Staff {
 export function BallMark({ className = "h-11 w-11" }: { className?: string }) {
   return (
     <svg viewBox="0 0 48 48" className={className} aria-hidden>
-      <circle cx="24" cy="24" r="21" fill="#fff" />
+      <circle cx="24" cy="24" r="21" fill="#f5f7f2" />
       <path
         d="M11 9c6 6 6 24 0 30M37 9c-6 6-6 24 0 30"
         fill="none"
-        stroke="#d62839"
+        stroke="#c42b3b"
         strokeWidth="2.5"
         strokeLinecap="round"
         strokeDasharray="2 3.2"
@@ -46,30 +47,32 @@ function GoogleMark() {
   );
 }
 
-function Header({ small = false }: { small?: boolean }) {
+// 見出し：チーム名と、今日の日付（得点板のめくり数字）
+function Header() {
+  const [today, setToday] = useState<{ m: number; d: number; wd: string } | null>(null);
+  useEffect(() => {
+    const t = new Date();
+    setToday({ m: t.getMonth() + 1, d: t.getDate(), wd: "日月火水木金土"[t.getDay()] });
+  }, []);
   return (
-    <header
-      className={`bg-navy px-5 text-white print:hidden ${small ? "pb-5" : "pb-8"}`}
-      style={{ paddingTop: `calc(env(safe-area-inset-top) + ${small ? "1.25rem" : "2.5rem"})` }}
-    >
-      <div className="flex items-center gap-3">
-        <BallMark className={small ? "h-9 w-9" : "h-11 w-11"} />
-        <div>
-          <h1 className={`${small ? "text-xl" : "text-2xl"} font-extrabold tracking-wide`}>
-            桜・浅羽野・住吉
-          </h1>
-          <p className="text-sm text-white/75">予定・活動管理</p>
-        </div>
+    <header className="app-header print:hidden">
+      <BallMark className="app-header__mark" />
+      <div className="app-header__titles">
+        <p className="app-header__title">桜・浅羽野・住吉</p>
+        <p className="app-header__sub">予定・活動管理</p>
       </div>
+      {today && (
+        <p className="app-header__today" aria-label={`今日は${today.m}月${today.d}日（${today.wd}）`}>
+          <span className="tile" style={cssVars({ "--i": 1 })}>{today.m}</span>
+          <i aria-hidden>/</i>
+          <span className="tile" style={cssVars({ "--i": 2 })}>{today.d}</span>
+          <small aria-hidden>{today.wd}</small>
+        </p>
+      )}
     </header>
   );
 }
 
-function Card({ children }: { children: ReactNode }) {
-  return (
-    <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-navy/5">{children}</div>
-  );
-}
 
 // LINE・Instagram・Facebookなどのアプリ内ブラウザでは、Googleがログインを禁止している
 type InApp = "line" | "other" | null;
@@ -88,130 +91,124 @@ function InAppWarning({ kind }: { kind: Exclude<InApp, null> }) {
       ? `${window.location.origin}${window.location.pathname}?openExternalBrowser=1`
       : "/";
   return (
-    <div className="mt-4 rounded-xl bg-warn/15 p-4 ring-1 ring-warn/40">
-      <p className="text-base font-extrabold text-[#6b4e00]">▲ このままではログインできません</p>
-      <p className="mt-1 text-sm text-[#6b4e00]">
-        {kind === "line" ? "LINE" : "アプリ"}の中のブラウザでは、Googleのログインが使えません。
-        Safari（Androidの方はChrome）で開き直してください。
-      </p>
+    <div className="login__note login__note--warn" role="alert">
+      {kind === "line" ? "LINE" : "アプリ"}の中のブラウザでは、Googleのログインが使えません。
+      Safari（Androidの方はChrome）で開き直してください。
       {kind === "line" ? (
-        <a
-          href={externalUrl}
-          className="mt-3 flex min-h-12 items-center justify-center rounded-xl bg-navy px-4 text-base font-bold text-white"
-        >
-          Safari／Chromeで開き直す
-        </a>
+        <a href={externalUrl}>Safari／Chromeで開き直す</a>
       ) : (
-        <p className="mt-2 text-sm font-bold text-[#6b4e00]">
-          画面の「…」や共有ボタンから「ブラウザで開く」を選んでください。
-        </p>
+        <span className="mt-2 block">画面の「…」や共有ボタンから「ブラウザで開く」を選んでください。</span>
       )}
     </div>
   );
 }
 
+// ログイン画面：試合前の、まだ何も入っていない得点板
 function LoginScreen() {
   const { signIn, error } = useAuth();
   const [inApp, setInApp] = useState<InApp>(null);
   useEffect(() => setInApp(detectInAppBrowser()), []);
   return (
-    <Card>
-      <h2 className="text-lg font-extrabold">ログイン</h2>
-      {inApp && <InAppWarning kind={inApp} />}
-      <p className="mt-1 text-sm text-navy-soft/80">
-        登録されたスタッフのGoogleアカウントでログインしてください。
-      </p>
-      <button
-        type="button"
-        onClick={signIn}
-        className="mt-5 flex min-h-14 w-full items-center justify-center gap-3 rounded-xl bg-white px-4 text-base font-bold ring-2 ring-navy/15 active:bg-field"
-      >
-        <GoogleMark />
-        Googleでログイン
-      </button>
-      {error && (
-        <p className="mt-4 rounded-lg bg-ng/10 p-3 text-sm font-bold text-ng" role="alert">
-          ■ {error}
-        </p>
-      )}
-    </Card>
+    <main className="login">
+      <div className="login__top">
+        <div className="login__board" aria-hidden>
+          <div className="login__row login__row--head">
+            <span />
+            <span>1</span>
+            <span>2</span>
+            <span>3</span>
+          </div>
+          {["桜", "浅羽野", "住吉"].map((t, r) => (
+            <div key={t} className="login__row">
+              <div className="login__team">{t}</div>
+              {[0, 1, 2].map((c) => (
+                <span key={c} className="tile" style={cssVars({ "--i": r * 3 + c + 2 })} />
+              ))}
+            </div>
+          ))}
+        </div>
+        <div className="login__caption">
+          <span className="login__kicker">STAFF ONLY</span>
+          <h1>予定・活動管理</h1>
+          <p>桜・浅羽野・住吉 連合チーム</p>
+        </div>
+      </div>
+      <div className="login__panel">
+        {inApp && <InAppWarning kind={inApp} />}
+        <p>名簿に登録したGoogleアカウントで入ります。</p>
+        <button type="button" onClick={signIn} className="login__google">
+          <GoogleMark />
+          Googleでログイン
+        </button>
+        {error && (
+          <p className="login__note login__note--error" role="alert">
+            {error}
+          </p>
+        )}
+      </div>
+    </main>
   );
 }
 
 function DeniedScreen({ message }: { message?: string }) {
   const { user, logOut } = useAuth();
   return (
-    <Card>
-      <p className="inline-flex items-center gap-1.5 rounded-full bg-ng/10 px-3 py-1 text-sm font-bold text-ng ring-1 ring-ng/30">
-        <span aria-hidden>■</span>未登録
-      </p>
-      <h2 className="mt-3 text-lg font-extrabold">このアカウントは登録されていません</h2>
-      <p className="mt-2 break-all text-sm text-navy-soft/80">{user?.email}</p>
-      <p className="mt-3 text-sm text-navy-soft/80">
+    <section className="panel flex flex-col gap-3">
+      <span className="tag tag--red self-start">未登録</span>
+      <h2 className="text-xl font-extrabold leading-snug">このアカウントは<wbr />登録されていません</h2>
+      <p className="break-all text-sm font-bold text-navy-soft">{user?.email}</p>
+      <p className="text-sm leading-relaxed text-navy-soft">
         {message ??
           "スタッフ名簿に登録されたアカウントだけが使えます。管理している方に、このメールアドレスの登録を頼んでください。別のアカウントで入る場合は、いったんログアウトしてください。"}
       </p>
-      <button
-        type="button"
-        onClick={logOut}
-        className="mt-5 min-h-12 w-full rounded-xl bg-field px-4 text-base font-bold ring-1 ring-navy/10 active:bg-navy/10"
-      >
+      <button type="button" onClick={logOut} className="btn btn--ghost mt-2">
         ログアウト
       </button>
-    </Card>
+    </section>
   );
 }
 
 const NAV = [
   { href: "/", label: "ホーム", icon: "M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" },
-  {
-    href: "/activities",
-    label: "予定",
-    icon: "M4 6h16v14H4zM4 10h16M8 3v4M16 3v4",
-  },
-  { href: "/activities/new", label: "＋予定", icon: "M12 5v14M5 12h14", primary: true },
-  {
-    href: "/menu",
-    label: "メニュー",
-    icon: "M4 6h16M4 12h16M4 18h16",
-  },
+  { href: "/activities", label: "予定", icon: "M4 6h16v14H4zM4 10h16M8 3v4M16 3v4" },
+  { href: "/activities/new", label: "予定を追加", icon: "M12 5v14M5 12h14", plate: true },
+  { href: "/menu", label: "メニュー", icon: "M4 6h16M4 12h16M4 18h16" },
 ];
 
 function isActive(href: string, pathname: string): boolean {
   if (href === "/") return pathname === "/";
   if (href === "/activities") return pathname.startsWith("/activities") && pathname !== "/activities/new";
-  if (href === "/menu") return ["/menu", "/teams", "/staff", "/print", "/players", "/lineups"].some((p) => pathname.startsWith(p));
+  if (href === "/menu")
+    return ["/menu", "/teams", "/staff", "/print", "/players", "/lineups"].some((p) => pathname.startsWith(p));
   return pathname === href;
 }
 
+function NavIcon({ d }: { d: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d={d} />
+    </svg>
+  );
+}
+
+// 画面下のボタン。「予定を追加」はホームベースの形
 function BottomNav() {
   const pathname = usePathname();
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-10 print:hidden border-t border-navy/10 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
-      <ul className="mx-auto flex max-w-xl">
+    <nav className="tabbar print:hidden" aria-label="メインメニュー">
+      <ul>
         {NAV.map((n) => {
           const active = isActive(n.href, pathname);
           return (
-            <li key={n.href} className="flex-1">
-              <Link
-                href={n.href}
-                className={`flex min-h-16 flex-col items-center justify-center gap-1 text-xs font-bold ${
-                  n.primary ? "text-stitch" : active ? "text-navy" : "text-navy-soft/50"
-                }`}
-                aria-current={active ? "page" : undefined}
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  className={n.primary ? "h-8 w-8 rounded-full bg-stitch p-1 text-white" : "h-6 w-6"}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden
-                >
-                  <path d={n.icon} />
-                </svg>
+            <li key={n.href}>
+              <Link href={n.href} aria-current={active ? "page" : undefined} className={n.plate ? "plate" : undefined}>
+                {n.plate ? (
+                  <span className="plate__shape">
+                    <NavIcon d={n.icon} />
+                  </span>
+                ) : (
+                  <NavIcon d={n.icon} />
+                )}
                 {n.label}
               </Link>
             </li>
@@ -249,19 +246,11 @@ function Gate({ children }: { children: ReactNode }) {
   if (loading || (user && access.state === "checking")) {
     return (
       <Shell>
-        <Card>
-          <p className="text-center text-sm text-navy-soft/70">読み込み中…</p>
-        </Card>
+        <p className="py-16 text-center text-sm font-bold text-navy-soft">読み込み中…</p>
       </Shell>
     );
   }
-  if (!user) {
-    return (
-      <Shell>
-        <LoginScreen />
-      </Shell>
-    );
-  }
+  if (!user) return <LoginScreen />;
   if (access.state !== "allowed") {
     return (
       <Shell>
@@ -271,9 +260,9 @@ function Gate({ children }: { children: ReactNode }) {
   }
   return (
     <MeContext.Provider value={access.me}>
-      <main className="mx-auto flex min-h-dvh max-w-xl flex-col pb-24 print:max-w-none print:pb-0">
-        <Header small />
-        <div className="flex flex-col gap-4 px-4 pt-4 print:p-0">{children}</div>
+      <Header />
+      <main className="page mx-auto flex min-h-dvh max-w-xl flex-col gap-3 px-3.5 pb-28 pt-4 print:max-w-none print:p-0">
+        {children}
       </main>
       <BottomNav />
     </MeContext.Provider>
@@ -282,10 +271,10 @@ function Gate({ children }: { children: ReactNode }) {
 
 function Shell({ children }: { children: ReactNode }) {
   return (
-    <main className="mx-auto flex min-h-dvh max-w-xl flex-col">
+    <>
       <Header />
-      <section className="-mt-4 px-4">{children}</section>
-    </main>
+      <main className="mx-auto max-w-xl px-3.5 pt-4">{children}</main>
+    </>
   );
 }
 

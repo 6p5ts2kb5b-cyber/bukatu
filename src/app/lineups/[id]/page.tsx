@@ -9,6 +9,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { PaperPreview } from "@/components/PaperPreview";
 import { ErrorText, Field, inputClass, SecondaryButton } from "@/components/ui";
 import { formatDateLong } from "@/lib/activities";
 import {
@@ -41,8 +42,14 @@ const SPOTS: Record<string, { x: number; y: number }> = {
 function FieldPicture() {
   return (
     <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full" aria-hidden>
-      {/* 外野の芝 */}
+      <defs>
+        <pattern id="mow" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <rect width="4" height="8" fill="rgb(255 255 255 / 0.05)" />
+        </pattern>
+      </defs>
+      {/* 外野の芝（刈り目の縞） */}
       <path d="M50 90 L3 43 A66 66 0 0 1 97 43 Z" fill="#3f8f4f" />
+      <path d="M50 90 L3 43 A66 66 0 0 1 97 43 Z" fill="url(#mow)" />
       {/* 内野の土 */}
       <path d="M50 94 L18 64 A34 34 0 0 1 82 64 Z" fill="#c98f5a" />
       {/* 内野の芝 */}
@@ -269,7 +276,7 @@ export default function LineupPage() {
         </span>
       </div>
 
-      <section className="flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-navy/5 print:hidden">
+      <section className="panel flex flex-col gap-3 print:hidden">
         <Field label="名前">
           <input className={inputClass} value={lineup.title} onChange={(e) => update({ title: e.target.value })} />
         </Field>
@@ -288,7 +295,7 @@ export default function LineupPage() {
         </div>
       </section>
 
-      <div className="grid grid-cols-3 gap-2 print:hidden" role="tablist">
+      <div className="seg print:hidden" role="tablist">
         {(
           [
             ["field", "① 守備位置"],
@@ -302,9 +309,7 @@ export default function LineupPage() {
             role="tab"
             aria-selected={tab === k}
             onClick={() => setTab(k)}
-            className={`min-h-12 rounded-xl text-base font-bold ${
-              tab === k ? "bg-navy text-white" : "bg-white text-navy-soft/70 ring-1 ring-navy/10"
-            }`}
+            className="seg__btn"
           >
             {label}
           </button>
@@ -315,7 +320,7 @@ export default function LineupPage() {
       {tab === "field" && (
         <>
           <p className={`px-1 text-base font-bold ${filled === 9 ? "text-ok" : "text-[#8a6500]"}`}>
-            {filled === 9 ? "● 守備9人がそろいました" : `▲ 守備 ${filled}/9人　丸をタップして選手を選んでください`}
+            {filled === 9 ? "● 守備9人がそろいました" : `▲ 守備 ${filled}/9人 ― 丸をタップして選ぶ`}
           </p>
           <div className="relative mx-auto aspect-square w-full max-w-md overflow-hidden rounded-3xl bg-[#2f7a3f]">
             <FieldPicture />
@@ -356,9 +361,9 @@ export default function LineupPage() {
       {/* ② 打順 */}
       {tab === "order" && (
         <>
-          <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-navy/5">
-            <h2 className="text-lg font-extrabold">打順</h2>
-            <p className="text-sm text-navy-soft/70">▲▼で順番を入れ替えます。守備についた選手が並びます。</p>
+          <section className="panel">
+            <h2 className="panel__title">打順</h2>
+            <p className="f-hint -mt-2 mb-1">▲▼で順番を入れ替えます。守備についた選手が並びます。</p>
             {order.length === 0 && (
               <p className="py-4 text-center text-sm text-[#8a6500]">▲ 先に「① 守備位置」で選手を選んでください。</p>
             )}
@@ -367,13 +372,13 @@ export default function LineupPage() {
                 const p = byId.get(pid);
                 const pos = POSITIONS.find((x) => x.key === positionOf(lineup, pid));
                 return (
-                  <li key={pid} className="flex items-center gap-3 rounded-xl bg-field p-2 pl-3">
-                    <span className="w-8 text-center text-2xl font-extrabold">{i + 1}</span>
+                  <li key={pid} className="flex items-center gap-3 rounded-xl border border-rule bg-[#f7f9f5] p-2 pl-2.5">
+                    <span className="tile text-[26px]" style={{ width: "1.5em", height: "1.35em" }}>{i + 1}</span>
                     <span className="rounded-md bg-navy px-2 py-1 text-sm font-bold text-white">{pos?.short}</span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-base font-extrabold">{p?.name ?? "（削除された選手）"}</span>
                       <span className="block text-xs text-navy-soft/70">
-                        {p ? `背番号${p.number || "－"}・${teamName(p.teamId)}・${p.grade}年` : ""}
+                        {p ? `#${p.number || "－"}・${teamName(p.teamId)}・${p.grade}年` : ""}
                       </span>
                     </span>
                     <button
@@ -400,12 +405,11 @@ export default function LineupPage() {
             </ol>
           </section>
 
-          <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-navy/5">
-            <div className="flex items-baseline justify-between">
-              <h2 className="text-lg font-extrabold">控え選手</h2>
-              <span className="text-sm font-bold text-navy-soft/70">{lineup.bench.length}人</span>
-            </div>
-            <p className="text-sm text-navy-soft/70">ベンチに入る選手をタップして選びます。</p>
+          <section className="panel">
+            <h2 className="panel__title">
+              控え選手<small>{lineup.bench.length}人</small>
+            </h2>
+            <p className="f-hint -mt-2 mb-1">ベンチに入る選手をタップして選びます。</p>
             <div className="mt-3 grid grid-cols-2 gap-2">
               {notPlaying.map((p) => {
                 const on = lineup.bench.includes(p.id);
@@ -415,11 +419,8 @@ export default function LineupPage() {
                     type="button"
                     onClick={() => toggleBench(p.id)}
                     aria-pressed={on}
-                    className={`min-h-12 rounded-xl px-2 text-left text-sm font-bold ring-2 ${
-                      on ? "bg-navy text-white ring-navy" : "bg-white text-navy-soft ring-navy/15"
-                    }`}
+                    className="choice choice--sm text-left"
                   >
-                    {on ? "✓ " : ""}
                     {p.number ? `${p.number} ` : ""}
                     {p.name}
                   </button>
@@ -440,26 +441,27 @@ export default function LineupPage() {
           <button
             type="button"
             onClick={() => window.print()}
-            className="flex min-h-14 w-full items-center justify-center rounded-xl bg-stitch px-4 text-lg font-extrabold text-white active:opacity-80 print:hidden"
+            className="btn btn--accent print:hidden"
           >
             🖨 メンバー表を印刷する
           </button>
-          <article className="rounded-2xl bg-white p-5 text-black shadow-sm ring-1 ring-navy/10 print:rounded-none print:p-0 print:shadow-none print:ring-0">
+          <PaperPreview>
+          <article className="px-[48px] py-[44px] text-black print:p-0">
             <header className="border-b-2 border-black pb-2">
               <p className="text-sm print:text-[10pt]">桜・浅羽野・住吉 連合チーム</p>
-              <h2 className="text-2xl font-extrabold print:text-[18pt]">{lineup.title || "メンバー表"}</h2>
+              <h2 className="text-[30px] font-extrabold print:text-[20pt]">{lineup.title || "メンバー表"}</h2>
               <p className="text-base font-bold print:text-[11pt]">
                 {lineup.date && formatDateLong(lineup.date)}
                 {lineup.opponent && `　vs ${lineup.opponent}`}
               </p>
             </header>
-            <table className="mt-3 w-full border-collapse text-base print:text-[12pt]">
+            <table className="mt-3 w-full border-collapse text-[19px] print:text-[13pt]">
               <thead>
                 <tr className="border-b-2 border-black text-sm print:text-[10pt]">
                   <th className="w-12 py-1">打順</th>
                   <th className="w-16 py-1">守備</th>
                   <th className="w-14 py-1">背番号</th>
-                  <th className="py-1 text-left">氏名</th>
+                  <th className="min-w-[14em] py-1 text-left">氏名</th>
                   <th className="w-12 py-1">学年</th>
                   <th className="w-20 py-1">学校</th>
                 </tr>
@@ -471,14 +473,14 @@ export default function LineupPage() {
                   const pos = pid ? POSITIONS.find((x) => x.key === positionOf(lineup, pid)) : undefined;
                   return (
                     <tr key={i} className="border-b border-black/40">
-                      <td className="py-2 text-center text-xl font-extrabold print:text-[14pt]">{i + 1}</td>
-                      <td className="py-2 text-center font-extrabold">
+                      <td className="py-3 text-center text-[26px] font-extrabold print:text-[16pt]">{i + 1}</td>
+                      <td className="py-3 text-center font-extrabold">
                         {pos ? `${pos.key} ${pos.short}` : ""}
                       </td>
-                      <td className="py-2 text-center font-bold">{p?.number ?? ""}</td>
-                      <td className="py-2 text-lg font-extrabold print:text-[13pt]">{p?.name ?? ""}</td>
-                      <td className="py-2 text-center">{p ? `${p.grade}年` : ""}</td>
-                      <td className="py-2 text-center">{p ? teamName(p.teamId) : ""}</td>
+                      <td className="py-3 text-center font-bold">{p?.number ?? ""}</td>
+                      <td className="py-3 text-[23px] font-extrabold print:text-[15pt]">{p?.name ?? ""}</td>
+                      <td className="py-3 text-center">{p ? `${p.grade}年` : ""}</td>
+                      <td className="py-3 text-center">{p ? teamName(p.teamId) : ""}</td>
                     </tr>
                   );
                 })}
@@ -488,7 +490,7 @@ export default function LineupPage() {
             <h3 className="mt-5 border-b-2 border-black pb-1 text-lg font-extrabold print:text-[12pt]">
               控え選手（{bench.length}人）
             </h3>
-            <table className="w-full border-collapse text-base print:text-[11pt]">
+            <table className="w-full border-collapse text-[18px] print:text-[12pt]">
               <tbody>
                 {bench.map((p) => (
                   <tr key={p.id} className="border-b border-black/30">
@@ -500,17 +502,18 @@ export default function LineupPage() {
                 ))}
                 {bench.length === 0 && (
                   <tr>
-                    <td className="py-2 text-sm text-navy-soft/70">（なし）</td>
+                    <td className="py-3 text-sm text-navy-soft/70">（なし）</td>
                   </tr>
                 )}
               </tbody>
             </table>
           </article>
+          </PaperPreview>
         </>
       )}
 
       <div className="mt-6 print:hidden">
-        <SecondaryButton onClick={remove}>このメンバー表を削除する</SecondaryButton>
+        <SecondaryButton danger onClick={remove}>このメンバー表を削除する</SecondaryButton>
       </div>
 
       {picking && (

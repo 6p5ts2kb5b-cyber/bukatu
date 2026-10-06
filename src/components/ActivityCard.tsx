@@ -1,17 +1,20 @@
 "use client";
 
 // 一覧やホームに出す「活動カード」です。
+// 左に得点板のめくり数字で日付、右にその日の区分ごとの予定を並べます。
+// featured（ホームの一番上の「次の活動」）は、日付を上の帯に大きく出します。
+// 見た目は design.css の .acard で決めています。
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import {
   divisionLabel,
-  formatDate,
-  todayString,
-  weekdayColor,
-  type Activity,
-  type ActivityGroup,
   isMatchType,
   isOffType,
+  todayString,
+  weekday,
+  type Activity,
+  type ActivityGroup,
 } from "@/lib/activities";
 
 function daysUntil(date: string): number {
@@ -29,37 +32,67 @@ function whenLabel(date: string): string | null {
   return null;
 }
 
-function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
-  const missing = !value;
+const MISSING = <span className="acard__missing">未入力</span>;
+
+// 「9:00」のような時刻は得点板の数字の書体で
+function Num({ children }: { children: string }) {
+  return <span className="num">{children}</span>;
+}
+
+function timeRange(start: string, end: string) {
+  if (!start && !end) return null;
+  return <Num>{`${start || "?"}〜${end || ""}`}</Num>;
+}
+
+function Rows({ items }: { items: [string, ReactNode | null][] }) {
   return (
-    <div className="flex gap-3 py-1">
-      <dt className="w-16 shrink-0 text-sm font-bold text-navy-soft/70">{label}</dt>
-      <dd className={`text-base ${strong ? "font-extrabold" : "font-bold"} ${missing ? "text-[#8a6500]" : ""}`}>
-        {missing ? "▲ 未入力" : value}
-      </dd>
-    </div>
+    <dl className="acard__rows">
+      {items.map(([label, value], i) => (
+        <div key={i} className="contents">
+          <dt>{label}</dt>
+          <dd>{value ?? MISSING}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
-function timeRange(start: string, end: string): string {
-  if (!start && !end) return "";
-  return `${start || "？"}〜${end || ""}`;
+function packing(g: ActivityGroup) {
+  return g.packing.length ? g.packing.join("・") : null;
 }
 
-// 「vs 坂戸中・鶴ヶ島中」「合同：鶴ヶ島中」の表示
+function meet(g: ActivityGroup) {
+  if (!g.meetTime && !g.meetPlace) return null;
+  return (
+    <span className="meet">
+      {g.meetTime && <Num>{g.meetTime}</Num>}
+      {g.meetTime && g.meetPlace && "　"}
+      {g.meetPlace}
+    </span>
+  );
+}
+
+// 「VS 坂戸中・鶴ヶ島中」「合同：鶴ヶ島中」
 function Opponents({ g }: { g: ActivityGroup }) {
   if (isMatchType(g.type)) {
-    const names = g.games.map((x) => x.opponent).filter(Boolean);
-    return (
-      <p className={`mt-1 text-lg font-extrabold ${names.length ? "" : "text-[#8a6500]"}`}>
-        {names.length ? `vs ${[...new Set(names)].join("・")}` : "▲ 対戦相手 未入力"}
+    const names = [...new Set(g.games.map((x) => x.opponent).filter(Boolean))];
+    return names.length ? (
+      <p className="acard__vs">
+        <b>VS</b>
+        {names.join("・")}
+      </p>
+    ) : (
+      <p className="acard__vs">
+        <span className="acard__missing">対戦相手 未入力</span>
       </p>
     );
   }
   if (g.type === "合同練習") {
-    return (
-      <p className={`mt-1 text-lg font-extrabold ${g.partners.length ? "" : "text-[#8a6500]"}`}>
-        {g.partners.length ? `合同：${g.partners.join("・")}` : "▲ 合同練習の相手 未入力"}
+    return g.partners.length ? (
+      <p className="acard__vs">合同：{g.partners.join("・")}</p>
+    ) : (
+      <p className="acard__vs">
+        <span className="acard__missing">合同練習の相手 未入力</span>
       </p>
     );
   }
@@ -67,74 +100,88 @@ function Opponents({ g }: { g: ActivityGroup }) {
 }
 
 function GroupDetails({ g }: { g: ActivityGroup }) {
+  if (isOffType(g.type)) return null;
   // 平日の「部活あり」：再登校のときだけ詳細を出す
   if (g.type === "部活あり") {
     if (!g.returnToSchool) return null;
     return (
-      <dl className="mt-2 border-t border-navy/10 pt-2">
-        <Row label="再登校" value={g.returnTime} strong />
-        <Row label="会場" value={g.venue} />
-        <Row label="持ち物" value={g.packing.join("・")} />
-      </dl>
+      <Rows
+        items={[
+          ["再登校", g.returnTime ? <span className="meet"><Num>{g.returnTime}</Num></span> : null],
+          ["会場", g.venue || null],
+          ["持ち物", packing(g)],
+        ]}
+      />
     );
   }
-  const meet = [g.meetTime, g.meetPlace].filter(Boolean).join("　");
-  return (
-    <dl className="mt-2 border-t border-navy/10 pt-2">
-      <Row label="会場" value={g.venue} />
-      <Row label="時間" value={timeRange(g.startTime, g.endTime)} />
-      {isMatchType(g.type) &&
-        g.games.map((x, i) => (
-          <Row
-            key={i}
-            label={`第${i + 1}試合`}
-            value={[x.startTime && `${x.startTime}開始`, x.opponent && `vs ${x.opponent}`].filter(Boolean).join("　")}
-          />
-        ))}
-      <Row label="集合" value={meet} strong />
-      <Row label="持ち物" value={g.packing.join("・")} />
-    </dl>
-  );
+  const items: [string, ReactNode | null][] = [["会場", g.venue || null]];
+  if (isMatchType(g.type) && g.games.length > 0) {
+    g.games.forEach((x, i) =>
+      items.push([
+        `第${i + 1}試合`,
+        x.startTime || x.opponent ? (
+          <>
+            {x.startTime && <Num>{x.startTime}</Num>}
+            {x.startTime && x.opponent && "　"}
+            {x.opponent}
+          </>
+        ) : null,
+      ]),
+    );
+  } else {
+    items.push(["時間", timeRange(g.startTime, g.endTime)]);
+  }
+  items.push(["集合", meet(g)], ["持ち物", packing(g)]);
+  return <Rows items={items} />;
 }
 
-export function ActivityCard({ activity }: { activity: Activity }) {
+export function ActivityCard({ activity, featured = false }: { activity: Activity; featured?: boolean }) {
   const when = whenLabel(activity.date);
-  const [date, wd] = formatDate(activity.date).split("（");
+  const month = Number(activity.date.slice(5, 7));
+  const day = Number(activity.date.slice(8, 10));
+  const wd = weekday(activity.date);
+  const wdClass = wd === "土" ? "acard__wd--sat" : wd === "日" ? "acard__wd--sun" : "";
+
   return (
     <Link
       href={`/activities/${activity.id}`}
-      className="block rounded-2xl bg-white p-5 shadow-sm ring-1 ring-navy/5 active:bg-field"
+      className={`acard${featured ? " acard--featured" : ""}`}
+      aria-label={`${month}月${day}日（${wd}）の予定を開く`}
     >
-      <div className="flex items-center gap-2">
-        <span className="text-2xl font-extrabold">{date}</span>
-        <span className={`text-lg font-extrabold ${weekdayColor(activity.date)}`}>（{wd}</span>
-        {when && (
-          <span className="ml-auto rounded-full bg-stitch px-3 py-1 text-sm font-bold text-white">
-            {when}
-          </span>
+      {when && <span className="acard__when">{when}</span>}
+      <div className="acard__date" aria-hidden>
+        {featured ? (
+          <>
+            <span className="acard__month tile">{month}</span>
+            <span className="acard__slash">/</span>
+            <span className="tile acard__day">{day}</span>
+            <span className={`acard__wd ${wdClass}`}>（{wd}）</span>
+          </>
+        ) : (
+          <>
+            <span className="acard__month">
+              {month}
+              <span>月</span>
+            </span>
+            <span className="tile acard__day">{day}</span>
+            <span className={`acard__wd ${wdClass}`}>{wd}</span>
+          </>
         )}
       </div>
-      <ul className="mt-3 flex flex-col gap-4">
+      <div className="acard__body">
         {activity.groups.map((g) => (
-          <li key={g.division}>
-            <div className="flex flex-wrap items-baseline gap-x-2">
-              {g.division !== "main" && (
-                <span className="rounded-md bg-navy/5 px-2 py-0.5 text-sm font-bold text-navy-soft">
-                  {divisionLabel(g.division)}
-                </span>
-              )}
-              <span className={`text-lg font-bold ${isOffType(g.type) ? "text-navy-soft/50" : ""}`}>
-                {g.type}
-              </span>
-              {g.tournamentName && <span className="text-base text-navy-soft/80">{g.tournamentName}</span>}
+          <div key={g.division} className="acard__group">
+            <div className="acard__head">
+              {g.division !== "main" && <span className="acard__div">{divisionLabel(g.division)}</span>}
+              <span className={`acard__type${isOffType(g.type) ? " acard__type--off" : ""}`}>{g.type}</span>
+              {g.tournamentName && <span className="acard__tournament">{g.tournamentName}</span>}
             </div>
             <Opponents g={g} />
-            {!isOffType(g.type) && <GroupDetails g={g} />}
-          </li>
+            <GroupDetails g={g} />
+          </div>
         ))}
-      </ul>
-      {activity.note && <p className="mt-2 text-sm text-navy-soft/80">{activity.note}</p>}
-      <p className="mt-3 text-sm font-bold text-navy-soft/60">詳しく見る ›</p>
+      </div>
+      {activity.note && <p className="acard__note">※{activity.note}</p>}
     </Link>
   );
 }

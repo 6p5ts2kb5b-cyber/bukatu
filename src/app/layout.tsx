@@ -1,6 +1,18 @@
 import type { Metadata, Viewport } from "next";
+import localFont from "next/font/local";
 import { AppShell } from "@/components/AppShell";
 import "./globals.css";
+
+// 得点板の数字の書体（Barlow Condensed／SIL Open Font License）。数字と英字だけに絞って軽くしています
+const numFont = localFont({
+  src: [
+    { path: "../fonts/BarlowCondensed-SemiBold.woff", weight: "600" },
+    { path: "../fonts/BarlowCondensed-Bold.woff", weight: "700" },
+    { path: "../fonts/BarlowCondensed-ExtraBold.woff", weight: "800" },
+  ],
+  variable: "--font-num",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "桜・浅羽野・住吉",
@@ -14,14 +26,14 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#0b1f3a",
+  themeColor: "#123f31",
 };
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ja">
+    <html lang="ja" className={numFont.variable}>
       <body className="min-h-dvh antialiased">
         <AppShell>{children}</AppShell>
       </body>

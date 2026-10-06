@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { ActivityEditor } from "@/components/ActivityEditor";
-import { ErrorText, SecondaryButton, Toast } from "@/components/ui";
+import { ErrorText, SecondaryButton, Toast, PageHead } from "@/components/ui";
 import { deleteActivity, getActivity, saveActivity, type Activity } from "@/lib/activities";
 
 export default function ActivityPage() {
@@ -57,9 +57,15 @@ export default function ActivityPage() {
 
   return (
     <>
-      <Link href="/activities" className="px-1 text-sm font-bold text-navy-soft/70">
-        ‹ 予定一覧
-      </Link>
+      <PageHead
+        kicker="EDIT"
+        title="予定の編集"
+        action={
+          <Link href="/activities" className="btn btn--ghost btn--small shrink-0">
+            一覧へ
+          </Link>
+        }
+      />
       <ActivityEditor
         key={version}
         isNew={false}
@@ -73,7 +79,7 @@ export default function ActivityPage() {
         }}
       />
       <div className="mt-6">
-        <SecondaryButton onClick={remove}>この予定を削除する</SecondaryButton>
+        <SecondaryButton danger onClick={remove}>この予定を削除する</SecondaryButton>
       </div>
       <Toast message={toast} onDone={clearToast} />
     </>

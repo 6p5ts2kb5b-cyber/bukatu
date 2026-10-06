@@ -1,24 +1,26 @@
 @import "tailwindcss";
+@import "./design.css";
 
-/* 桜・浅羽野・住吉の基本カラー（野球らしい紺と、縫い目の赤） */
+/* 色の名前（Tailwindで使う）。値は design.css の得点板の色と同じ */
 @theme {
-  --color-navy: #0b1f3a;
-  --color-navy-soft: #1d3557;
-  --color-stitch: #d62839;
-  --color-field: #f4f6f8;
-  --color-ok: #1f9d55;
-  --color-warn: #d4a017;
-  --color-ng: #d62839;
+  --color-navy: #123f31; /* 得点板の緑（ボタン・強調） */
+  --color-navy-soft: #4a6158; /* 補助の文字 */
+  --color-ink: #0f2a21; /* 本文の文字 */
+  --color-stitch: #c42b3b; /* 縫い目の赤 */
+  --color-field: #e6ebe3; /* 背景・入力欄 */
+  --color-rule: #d4dcd1; /* 罫線 */
+  --color-ok: #1e7a46;
+  --color-warn: #d8a63a;
+  --color-ng: #c42b3b;
 }
 
 html,
 body {
   background: var(--color-field);
-  color: var(--color-navy);
-  font-family:
-    "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic",
-    system-ui, sans-serif;
+  color: var(--color-ink);
+  font-family: var(--jp);
   -webkit-text-size-adjust: 100%;
+  text-wrap: pretty;
 }
 
 /* 印刷するときの設定（A4縦・余白10mm・背景は白） */

@@ -1,12 +1,54 @@
 "use client";
 
-// 活動予定の一覧画面です。
+// 活動予定の一覧画面です。月ごとに区切って並べます。
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { ActivityCard } from "@/components/ActivityCard";
-import { ErrorText, SecondaryButton } from "@/components/ui";
+import { ErrorText, Loading, PageHead, SecondaryButton, cssVars } from "@/components/ui";
 import { listPast, listUpcoming, type Activity } from "@/lib/activities";
+
+// 月ごとにまとめる
+function byMonth(list: Activity[]): { key: string; year: number; month: number; items: Activity[] }[] {
+  const out: { key: string; year: number; month: number; items: Activity[] }[] = [];
+  for (const a of list) {
+    const key = a.date.slice(0, 7);
+    let g = out.find((x) => x.key === key);
+    if (!g) {
+      g = { key, year: Number(a.date.slice(0, 4)), month: Number(a.date.slice(5, 7)), items: [] };
+      out.push(g);
+    }
+    g.items.push(a);
+  }
+  return out;
+}
+
+function MonthList({ list, faded }: { list: Activity[]; faded?: boolean }) {
+  return (
+    <>
+      {byMonth(list).map((m, mi) => (
+        <Fragment key={m.key}>
+          <h2 className="month-head">
+            <span className="tile" style={cssVars({ "--i": mi })}>
+              {m.month}
+            </span>
+            <b>月</b>
+            <span>
+              {m.year}年・{m.items.length}件
+            </span>
+          </h2>
+          <ul className={`month-group flex flex-col gap-2.5 ${faded ? "opacity-75" : ""}`}>
+            {m.items.map((a) => (
+              <li key={a.id}>
+                <ActivityCard activity={a} />
+              </li>
+            ))}
+          </ul>
+        </Fragment>
+      ))}
+    </>
+  );
+}
 
 export default function ActivitiesPage() {
   const [upcoming, setUpcoming] = useState<Activity[] | null>(null);
@@ -29,58 +71,40 @@ export default function ActivitiesPage() {
 
   return (
     <>
-      <div className="flex items-center justify-between px-1">
-        <h1 className="text-xl font-extrabold">予定一覧</h1>
-        <Link
-          href="/activities/new"
-          className="flex min-h-12 items-center rounded-xl bg-navy px-4 text-base font-bold text-white active:bg-navy-soft"
-        >
-          ＋ 予定
-        </Link>
-      </div>
+      <PageHead
+        kicker="SCHEDULE"
+        title="予定"
+        action={
+          <Link href="/print" className="btn btn--ghost btn--small shrink-0">
+            印刷する
+          </Link>
+        }
+      />
 
       {error && <ErrorText>{error}</ErrorText>}
-      {!upcoming && !error && <p className="py-6 text-center text-sm text-navy-soft/70">読み込み中…</p>}
+      {!upcoming && !error && <Loading />}
       {upcoming && upcoming.length === 0 && (
-        <p className="rounded-2xl bg-white p-5 text-center text-base text-navy-soft/80 ring-1 ring-navy/5">
-          これからの予定はまだありません。
-          <br />
-          右上の「＋ 予定」から登録できます。
-        </p>
+        <section className="panel text-center">
+          <p className="text-base font-extrabold">これからの予定はまだありません</p>
+          <p className="mt-1 text-sm text-navy-soft">下の「予定を追加」から登録できます。</p>
+        </section>
       )}
-      <ul className="flex flex-col gap-3">
-        {upcoming?.map((a) => (
-          <li key={a.id}>
-            <ActivityCard activity={a} />
-          </li>
-        ))}
-      </ul>
+      {upcoming && <MonthList list={upcoming} />}
 
-      <Link
-        href="/print"
-        className="flex min-h-12 items-center justify-center rounded-xl bg-white px-4 text-base font-bold ring-1 ring-navy/15 active:bg-field"
-      >
-        🖨 月間予定表を印刷する
-      </Link>
-
-      {!showPast ? (
-        <SecondaryButton onClick={() => setShowPast(true)}>過去の予定を見る</SecondaryButton>
-      ) : (
-        <>
-          <h2 className="mt-4 px-1 text-lg font-extrabold text-navy-soft/80">過去の予定</h2>
-          {!past && <p className="py-4 text-center text-sm text-navy-soft/70">読み込み中…</p>}
-          {past && past.length === 0 && (
-            <p className="text-center text-sm text-navy-soft/70">過去の予定はありません。</p>
-          )}
-          <ul className="flex flex-col gap-3 opacity-80">
-            {past?.map((a) => (
-              <li key={a.id}>
-                <ActivityCard activity={a} />
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
+      <div className="mt-3">
+        {!showPast ? (
+          <SecondaryButton onClick={() => setShowPast(true)}>過去の予定を見る</SecondaryButton>
+        ) : (
+          <>
+            <p className="group-label">過去の予定</p>
+            {!past && <Loading />}
+            {past && past.length === 0 && (
+              <p className="py-4 text-center text-sm text-navy-soft">過去の予定はありません。</p>
+            )}
+            {past && <MonthList list={past} faded />}
+          </>
+        )}
+      </div>
     </>
   );
 }

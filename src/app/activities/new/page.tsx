@@ -4,6 +4,7 @@
 
 import { useRouter } from "next/navigation";
 import { ActivityEditor } from "@/components/ActivityEditor";
+import { PageHead } from "@/components/ui";
 import { createActivity, defaultDivisions, newGroup, todayString } from "@/lib/activities";
 
 export default function NewActivityPage() {
@@ -12,7 +13,7 @@ export default function NewActivityPage() {
 
   return (
     <>
-      <h1 className="px-1 text-xl font-extrabold">＋ 新しい予定</h1>
+      <PageHead kicker="NEW" title="予定を追加" />
       <ActivityEditor
         isNew
         initial={{ date, note: "", groups: defaultDivisions(date).map((k) => newGroup(k, date)) }}

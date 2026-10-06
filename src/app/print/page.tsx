@@ -5,7 +5,8 @@
 // 審判・グラウンド候補・スタッフの内部メモなど、運営の情報は載せません。
 
 import { useEffect, useMemo, useState } from "react";
-import { ErrorText, ToggleButton } from "@/components/ui";
+import { PaperPreview } from "@/components/PaperPreview";
+import { Choices, ErrorText, Field, PageHead, ToggleButton } from "@/components/ui";
 import {
   divisionLabel,
   isMatchType,
@@ -160,60 +161,52 @@ export default function PrintPage() {
   return (
     <>
       {/* ---- 操作パネル（印刷されない） ---- */}
-      <div className="flex flex-col gap-4 print:hidden">
-        <h1 className="px-1 text-xl font-extrabold">印刷（保護者配布用）</h1>
-        <section className="flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-navy/5">
-          <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-bold text-navy-soft">学校</span>
-            <div className="grid grid-cols-3 gap-2">
+      <div className="flex flex-col gap-3 print:hidden">
+        <PageHead kicker="PRINT" title="保護者配布用の印刷" lead="学校と月を選ぶと、A4縦の月間予定表ができます。" />
+        <section className="panel flex flex-col gap-4">
+          <div>
+            <span className="f-label">学校</span>
+            <Choices cols={3}>
               {SCHOOLS.map((s) => (
                 <ToggleButton key={s.key} on={school === s.key} label={s.label} onClick={() => setSchool(s.key)} />
               ))}
-            </div>
+            </Choices>
           </div>
-          <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-bold text-navy-soft">月</span>
-            <div className="grid grid-cols-3 gap-2">
+          <div>
+            <span className="f-label">月</span>
+            <Choices cols={5}>
               {monthOptions.map((mo) => (
                 <ToggleButton
                   key={mo}
+                  small
                   on={month === mo}
                   label={`${Number(mo.slice(5))}月`}
                   onClick={() => setMonth(mo)}
                 />
               ))}
-            </div>
+            </Choices>
           </div>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-bold text-navy-soft">保護者へのひとこと（任意・印刷の一番下に出ます）</span>
+          <Field label="保護者へのひとこと（任意）" hint="印刷の一番下に載ります。">
             <textarea
-              className="min-h-20 w-full rounded-xl bg-field px-4 py-3 text-base ring-1 ring-navy/15"
+              className="f-input"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="例：予定は変更になる場合があります。変更時はLINEでお知らせします。"
             />
-          </label>
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="flex min-h-14 w-full items-center justify-center rounded-xl bg-stitch px-4 text-lg font-extrabold text-white active:opacity-80"
-          >
-            🖨 印刷する
-          </button>
-          <p className="text-sm text-navy-soft/70">
-            iPhoneでは、印刷画面で「プリンタ」を選ぶか、共有ボタンから「PDFとして保存」ができます。下が印刷される見本です。
-          </p>
+          </Field>
         </section>
         {error && <ErrorText>{error}</ErrorText>}
+        <p className="group-label">印刷の見本</p>
       </div>
 
       {/* ---- 印刷される部分 ---- */}
-      <article className="rounded-2xl bg-white p-5 text-[15px] leading-relaxed text-black shadow-sm ring-1 ring-navy/10 print:rounded-none print:p-0 print:text-[10.5pt] print:shadow-none print:ring-0">
+      <PaperPreview>
+      <article className="px-[38px] py-[34px] text-[14px] leading-relaxed text-black print:p-0 print:text-[10.5pt]">
         <header className="border-b-2 border-black pb-2">
-          <h2 className="text-2xl font-extrabold print:text-[18pt]">
+          <h2 className="text-[24px] font-extrabold print:text-[18pt]">
             {schoolInfo.label} 野球部　{y}年{m}月の活動予定
           </h2>
-          <p className="text-sm print:text-[9pt]">桜・浅羽野・住吉 連合チーム</p>
+          <p className="text-[12px] print:text-[9pt]">桜・浅羽野・住吉 連合チーム</p>
         </header>
 
         {!activities && !error && <p className="py-6 text-center">読み込み中…</p>}
@@ -257,6 +250,16 @@ export default function PrintPage() {
 
         {message && <p className="mt-4 whitespace-pre-wrap border-t border-black/30 pt-2">{message}</p>}
       </article>
+      </PaperPreview>
+
+      <div className="h-16 print:hidden" aria-hidden />
+      <div className="savebar print:hidden">
+        <div>
+          <button type="button" onClick={() => window.print()} className="btn btn--accent">
+            印刷・PDFにする
+          </button>
+        </div>
+      </div>
     </>
   );
 }

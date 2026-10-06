@@ -1,0 +1,1226 @@
+/*
+  デザインの基本（得点板のデザイン）
+  ─ 中学校のグラウンドにある、手でめくる得点板がモチーフです。
+  ─ 主役は「めくり数字パネル」の日付。それ以外は静かに整えます。
+  ─ このファイルは見本ページ（プレビュー）でもそのまま使い、見た目を確認しています。
+*/
+
+:root {
+  --board: #123f31; /* 得点板の緑 */
+  --board-deep: #0b2b21; /* パネルの奥の影 */
+  --board-line: #1d5443; /* パネルの継ぎ目 */
+  --chalk: #f5f7f2; /* チョークの白 */
+  --paper: #e6ebe3; /* 背景：グラウンド脇の薄い緑灰 */
+  --sheet: #ffffff; /* カード */
+  --ink: #0f2a21; /* 文字 */
+  --ink-2: #4a6158; /* 補助の文字 */
+  --ink-3: #56685e; /* さらに薄い文字（白地で4.5:1以上） */
+  --rule: #d4dcd1; /* 罫線 */
+  --stitch: #c42b3b; /* ボールの縫い目の赤 */
+  --caution-bg: #fff1cf; /* 未入力の背景 */
+  --caution: #7a5200; /* 未入力の文字 */
+  --ok: #1e7a46;
+  --sat: #1d4ed8;
+  --sun: #c42b3b;
+  --num: var(--font-num, "Barlow Condensed"), "Arial Narrow", sans-serif;
+  --jp: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Noto Sans CJK JP",
+    "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+}
+
+/* ───────── めくり数字パネル（日付・打順で使う） ───────── */
+.tile {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.15em;
+  padding: 0.04em 0.12em 0;
+  border-radius: 0.12em;
+  background: linear-gradient(180deg, #17503e 0%, var(--board) 49%, var(--board-deep) 51%, #0f3529 100%);
+  color: var(--chalk);
+  font-family: var(--num);
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.12),
+    0 1px 0 rgb(0 0 0 / 0.25);
+}
+/* パネルの真ん中の継ぎ目 */
+.tile::after {
+  content: "";
+  position: absolute;
+  inset: 50% 0 auto;
+  height: 1px;
+  background: rgb(0 0 0 / 0.45);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.06);
+}
+
+/* ───────── 見出し（得点板の緑） ───────── */
+.app-header {
+  background: var(--board);
+  color: var(--chalk);
+  padding: calc(env(safe-area-inset-top) + 14px) 18px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.app-header__mark {
+  width: 34px;
+  height: 34px;
+  flex: none;
+}
+.app-header__titles {
+  min-width: 0;
+  flex: 1;
+}
+.app-header__title {
+  font-family: var(--jp);
+  font-weight: 800;
+  font-size: 19px;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+}
+.app-header__sub {
+  font-family: var(--jp);
+  font-size: 12px;
+  color: rgb(245 247 242 / 0.66);
+  margin-top: 1px;
+}
+.app-header__today {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  font-size: 24px;
+}
+.app-header__today .tile {
+  background: linear-gradient(180deg, #1d5a47 0%, #174d3c 49%, #0d3226 51%, #123d30 100%);
+}
+.app-header__today i {
+  font-family: var(--num);
+  font-style: normal;
+  font-weight: 700;
+  font-size: 18px;
+  color: rgb(245 247 242 / 0.5);
+  padding-bottom: 2px;
+}
+.app-header__today small {
+  font-family: var(--jp);
+  font-size: 11px;
+  font-weight: 700;
+  color: rgb(245 247 242 / 0.7);
+  margin-left: 2px;
+  line-height: 1.3;
+}
+
+/* ───────── 活動カード ───────── */
+.acard {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 14px;
+  padding: 16px 16px 14px;
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  color: var(--ink);
+  text-decoration: none;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+.acard:active {
+  background: #f6f8f4;
+}
+.acard__date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.acard__month {
+  font-family: var(--num);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--ink-2);
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+.acard__month span {
+  font-family: var(--jp);
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: 1px;
+}
+.acard__day {
+  font-size: 40px;
+}
+.acard__wd {
+  font-family: var(--jp);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-2);
+}
+.acard__wd--sat {
+  color: var(--sat);
+}
+.acard__wd--sun {
+  color: var(--sun);
+}
+.acard__when {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-family: var(--jp);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--chalk);
+  background: var(--stitch);
+  padding: 3px 9px 3px;
+  border-radius: 999px;
+}
+.acard__body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.acard__group + .acard__group {
+  padding-top: 12px;
+  border-top: 1px dashed var(--rule);
+}
+.acard__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  padding-right: 54px;
+}
+.acard__div {
+  font-family: var(--jp);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--board);
+  border: 1.5px solid var(--board);
+  border-radius: 6px;
+  padding: 1px 6px;
+  line-height: 1.4;
+}
+.acard__type {
+  font-family: var(--jp);
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.acard__type--off {
+  color: var(--ink-3);
+  font-weight: 700;
+}
+.acard__tournament {
+  font-family: var(--jp);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+.acard__vs {
+  font-family: var(--jp);
+  font-size: 17px;
+  font-weight: 800;
+  margin-top: 4px;
+}
+.acard__vs b {
+  font-family: var(--num);
+  font-weight: 700;
+  color: var(--stitch);
+  margin-right: 4px;
+  font-size: 16px;
+}
+.acard__rows {
+  margin: 8px 0 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  align-items: baseline;
+  font-family: var(--jp);
+}
+.acard__rows dt {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.acard__rows dd {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.45;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.acard__rows .num {
+  font-family: var(--num);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.01em;
+}
+.acard__rows .meet {
+  font-weight: 800;
+}
+.acard__rows .meet .num {
+  font-size: 20px;
+  font-weight: 800;
+}
+.acard__missing {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--caution);
+  background: var(--caution-bg);
+  border: 1px dashed #d8a63a;
+  border-radius: 6px;
+  padding: 1px 7px;
+}
+.acard__note {
+  font-family: var(--jp);
+  font-size: 13px;
+  color: var(--ink-2);
+  grid-column: 2;
+}
+
+/* 次の活動（ホームの一番上）だけ、大きく見せる */
+.acard--featured {
+  grid-template-columns: 1fr;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  border-color: var(--board);
+}
+.acard--featured .acard__date {
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 16px 16px 14px;
+  background: var(--board);
+}
+.acard--featured .acard__month {
+  font-size: 30px;
+  color: var(--chalk);
+  margin-bottom: 2px;
+}
+.acard--featured .acard__month span {
+  display: none;
+}
+.acard--featured .acard__slash {
+  display: inline;
+  font-family: var(--num);
+  font-weight: 700;
+  font-size: 34px;
+  color: rgb(245 247 242 / 0.5);
+  line-height: 1;
+  padding-bottom: 4px;
+}
+.acard--featured .acard__day {
+  font-size: 52px;
+}
+.acard--featured .acard__wd {
+  color: var(--chalk);
+  font-size: 16px;
+  padding-bottom: 4px;
+  margin-left: 2px;
+}
+.acard--featured .acard__wd--sat {
+  color: #a9c4ff;
+}
+.acard--featured .acard__wd--sun {
+  color: #ffb3bb;
+}
+.acard--featured .acard__when {
+  top: 16px;
+  right: 16px;
+  font-size: 13px;
+  padding: 4px 11px;
+}
+.acard--featured .acard__body {
+  padding: 14px 16px 16px;
+}
+.acard--featured .acard__note {
+  grid-column: 1;
+  padding: 0 16px 16px;
+}
+.acard__slash {
+  display: none;
+}
+
+/* ───────── 見出しの行 ───────── */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 6px 2px 0;
+  font-family: var(--jp);
+}
+.section-head h2 {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink-2);
+  letter-spacing: 0.06em;
+  margin: 0;
+}
+.section-head a {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--board);
+  text-decoration: none;
+}
+.greeting {
+  font-family: var(--jp);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-2);
+  padding: 2px 2px 0;
+}
+
+/* ───────── 画面下のボタン ───────── */
+.tabbar {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 10;
+  background: var(--board);
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -1px 0 rgb(0 0 0 / 0.2);
+}
+.tabbar ul {
+  list-style: none;
+  margin: 0 auto;
+  padding: 0;
+  max-width: 36rem;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+.tabbar a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 60px;
+  font-family: var(--jp);
+  font-size: 11px;
+  font-weight: 700;
+  color: rgb(245 247 242 / 0.6);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.tabbar a[aria-current="page"] {
+  color: var(--chalk);
+}
+.tabbar a[aria-current="page"] svg {
+  stroke-width: 2.4;
+}
+.tabbar svg {
+  width: 24px;
+  height: 24px;
+}
+/* 「＋予定」はホームベースの形 */
+.tabbar .plate {
+  position: relative;
+  color: var(--chalk);
+}
+.tabbar .plate__shape {
+  width: 48px;
+  height: 46px;
+  margin-top: -18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--stitch);
+  clip-path: polygon(0 0, 100% 0, 100% 58%, 50% 100%, 0 58%);
+  border-radius: 4px 4px 0 0;
+  filter: drop-shadow(0 2px 0 rgb(0 0 0 / 0.25));
+}
+.tabbar .plate__shape svg {
+  margin-top: -6px;
+  width: 26px;
+  height: 26px;
+  stroke-width: 2.6;
+}
+
+/* ───────── ログイン画面（試合前の得点板） ───────── */
+.login {
+  min-height: 100dvh;
+  background: var(--board);
+  color: var(--chalk);
+  display: grid;
+  grid-template-rows: 1fr auto;
+  padding: calc(env(safe-area-inset-top) + 24px) 20px calc(env(safe-area-inset-bottom) + 28px);
+}
+.login__top {
+  align-self: end;
+  padding-bottom: 8vh;
+  width: 100%;
+  max-width: 26rem;
+  margin: 0 auto;
+}
+.login__board {
+  border: 3px solid #0a281f;
+  border-radius: 10px;
+  background: var(--board-deep);
+  padding: 10px 10px 12px;
+  display: grid;
+  gap: 8px;
+}
+.login__row {
+  display: grid;
+  grid-template-columns: 1fr repeat(3, 34px);
+  gap: 6px;
+  align-items: center;
+}
+.login__row--head {
+  font-family: var(--num);
+  font-weight: 700;
+  font-size: 15px;
+  color: rgb(245 247 242 / 0.5);
+  text-align: center;
+  margin-bottom: -2px;
+}
+.login__team {
+  font-family: var(--jp);
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: 0.12em;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: var(--board);
+  box-shadow: inset 0 0 0 1px var(--board-line);
+}
+.login__row .tile {
+  font-size: 26px;
+  height: 42px;
+  width: 34px;
+}
+.login__caption {
+  margin-top: 16px;
+  font-family: var(--jp);
+}
+.login__kicker {
+  display: block;
+  font-family: var(--num);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.3em;
+  color: #f0b429;
+  margin-bottom: 6px;
+}
+.login__caption h1 {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  margin: 0;
+  line-height: 1.3;
+}
+.login__caption p {
+  font-size: 14px;
+  color: rgb(245 247 242 / 0.66);
+  margin: 4px 0 0;
+}
+.login__panel {
+  max-width: 26rem;
+  width: 100%;
+  margin: 0 auto;
+  padding-top: 28px;
+  font-family: var(--jp);
+}
+.login__panel p {
+  font-size: 14px;
+  line-height: 1.7;
+  color: rgb(245 247 242 / 0.78);
+  margin: 0 0 14px;
+}
+.login__google {
+  width: 100%;
+  min-height: 58px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--chalk);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-family: var(--jp);
+  font-size: 17px;
+  font-weight: 800;
+  box-shadow: 0 2px 0 rgb(0 0 0 / 0.3);
+  cursor: pointer;
+}
+.login__google:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.3);
+}
+.login__note {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+.login__note--error {
+  background: #fff;
+  color: var(--stitch);
+}
+.login__note--warn {
+  background: var(--caution-bg);
+  color: var(--caution);
+}
+.login__note a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  margin-top: 10px;
+  border-radius: 10px;
+  background: var(--board);
+  color: var(--chalk);
+  text-decoration: none;
+}
+
+/* ───────── 動き（めくり数字がパタッと返る・画面がふわっと出る） ───────── */
+@keyframes tile-flip {
+  0% {
+    transform: perspective(240px) rotateX(-92deg);
+    filter: brightness(0.6);
+  }
+  60% {
+    transform: perspective(240px) rotateX(12deg);
+  }
+  100% {
+    transform: perspective(240px) rotateX(0);
+    filter: none;
+  }
+}
+.tile {
+  transform-origin: 50% 50%;
+  animation: tile-flip 0.62s cubic-bezier(0.2, 0.8, 0.25, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+  backface-visibility: hidden;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.page > * {
+  animation: rise 0.42s cubic-bezier(0.2, 0.8, 0.25, 1) both;
+}
+.page > *:nth-child(2) { animation-delay: 40ms; }
+.page > *:nth-child(3) { animation-delay: 80ms; }
+.page > *:nth-child(4) { animation-delay: 120ms; }
+.page > *:nth-child(5) { animation-delay: 160ms; }
+.page > *:nth-child(n + 6) { animation-delay: 200ms; }
+
+/* ───────── 画面の見出し（小さな英字＋日本語） ───────── */
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 2px 2px;
+}
+.page-head__kicker {
+  display: block;
+  font-family: var(--num);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.22em;
+  color: var(--stitch);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.page-head h1 {
+  margin: 0;
+  font-family: var(--jp);
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  color: var(--ink);
+}
+.page-head__lead {
+  margin: 6px 0 0;
+  font-family: var(--jp);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+/* ───────── 面（カード） ───────── */
+.panel {
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  padding: 18px 16px;
+}
+.panel__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  font-family: var(--jp);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+.panel__title .tile {
+  font-size: 17px;
+  width: 26px;
+  height: 28px;
+}
+.panel__title small {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+/* ───────── 入力欄 ───────── */
+.f-label {
+  display: block;
+  font-family: var(--jp);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-2);
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+.f-hint {
+  font-family: var(--jp);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink-3);
+  margin: 6px 0 0;
+}
+.f-input {
+  display: block;
+  width: 100%;
+  min-height: 50px;
+  padding: 0 14px;
+  border: 1.5px solid var(--rule);
+  border-radius: 12px;
+  background: #f7f9f5;
+  color: var(--ink);
+  font-family: var(--jp);
+  font-size: 16px;
+  font-weight: 600;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+textarea.f-input {
+  padding: 12px 14px;
+  min-height: 92px;
+  line-height: 1.6;
+  resize: vertical;
+}
+.f-input::placeholder {
+  color: #9aa9a2;
+  font-weight: 500;
+}
+.f-input:focus {
+  outline: none;
+  border-color: var(--board);
+  background: #fff;
+  box-shadow: 0 0 0 4px rgb(18 63 49 / 0.12);
+}
+.f-input[type="time"],
+.f-input[type="date"] {
+  font-family: var(--num);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.f-input--white {
+  background: #fff;
+}
+
+/* ───────── 選ぶボタン（大きなチェックの代わり） ───────── */
+.choices {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
+}
+.choice {
+  position: relative;
+  min-height: 50px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  border: 1.5px solid var(--rule);
+  background: #fff;
+  color: var(--ink-2);
+  font-family: var(--jp);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.25;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.choice:active {
+  transform: scale(0.97);
+}
+.choice[aria-pressed="true"] {
+  background: var(--board);
+  border-color: var(--board);
+  color: var(--chalk);
+  box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.22);
+}
+.choice[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--stitch);
+  box-shadow: 0 0 0 2px var(--board);
+}
+.choice--sm {
+  min-height: 44px;
+  font-size: 14px;
+}
+
+/* ───────── ボタン ───────── */
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 18px;
+  border-radius: 14px;
+  border: 0;
+  font-family: var(--jp);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s, background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:active {
+  transform: translateY(1px);
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.btn--primary {
+  background: var(--board);
+  color: var(--chalk);
+  box-shadow: 0 3px 0 var(--board-deep);
+}
+.btn--primary:active {
+  box-shadow: 0 2px 0 var(--board-deep);
+}
+.btn--accent {
+  background: var(--stitch);
+  color: #fff;
+  box-shadow: 0 3px 0 #8f1d2a;
+}
+.btn--ghost {
+  background: #fff;
+  color: var(--ink);
+  border: 1.5px solid var(--rule);
+}
+.btn--danger {
+  background: transparent;
+  color: var(--stitch);
+  border: 1.5px solid rgb(196 43 59 / 0.35);
+}
+.btn--small {
+  min-height: 44px;
+  width: auto;
+  font-size: 14px;
+  padding: 0 14px;
+  border-radius: 12px;
+}
+
+/* ───────── 一覧（iPhoneの設定画面のような、まとまった行） ───────── */
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.list > li + li {
+  border-top: 1px solid #e7ece5;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 14px 12px 16px;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  color: var(--ink);
+  text-decoration: none;
+  font-family: var(--jp);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.row:active {
+  background: #f2f5f0;
+}
+.row__main {
+  flex: 1;
+  min-width: 0;
+}
+.row__title {
+  display: block;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.row__sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.row__chev {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid #b4c0ba;
+  border-top: 2px solid #b4c0ba;
+  transform: rotate(45deg);
+  margin-right: 4px;
+}
+.row--off {
+  opacity: 0.5;
+}
+.row__icon {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--board);
+  color: var(--chalk);
+}
+.row__icon svg {
+  width: 22px;
+  height: 22px;
+}
+.row__icon--red {
+  background: var(--stitch);
+}
+.row__num {
+  flex: none;
+  font-size: 22px;
+  width: 40px;
+  height: 44px;
+}
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--jp);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #edf1eb;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.tag--ok {
+  background: #e3f2e8;
+  color: var(--ok);
+}
+.tag--off {
+  background: #eef0ee;
+  color: var(--ink-3);
+}
+.tag--red {
+  background: var(--stitch);
+  color: #fff;
+}
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+}
+.group-label {
+  font-family: var(--jp);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--ink-3);
+  padding: 10px 4px 0;
+}
+
+/* ───────── 絞り込み（学校など） ───────── */
+.filters {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 2px;
+}
+.filters::-webkit-scrollbar {
+  display: none;
+}
+.filter {
+  flex: none;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--rule);
+  background: #fff;
+  font-family: var(--jp);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.filter[aria-pressed="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+/* ───────── 切り替え（セグメント） ───────── */
+.seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  background: #d6dfd3;
+}
+.seg__btn {
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  font-family: var(--jp);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+.seg__btn[aria-selected="true"] {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgb(15 42 33 / 0.18);
+}
+
+/* ───────── 保存ボタンの帯（画面下のボタンの上に固定） ───────── */
+.savebar {
+  position: fixed;
+  inset: auto 0 calc(60px + env(safe-area-inset-bottom));
+  z-index: 9;
+  padding: 10px 14px;
+  background: linear-gradient(180deg, rgb(230 235 227 / 0), rgb(230 235 227 / 0.92) 30%);
+}
+.savebar > * {
+  max-width: 36rem;
+  margin: 0 auto;
+}
+
+/* ───────── 「保存しました」 ───────── */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  z-index: 40;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px 12px 14px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--jp);
+  font-size: 15px;
+  font-weight: 800;
+  box-shadow: 0 10px 30px rgb(15 42 33 / 0.35);
+  animation: toast-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  white-space: nowrap;
+}
+.toast i {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--ok);
+  display: grid;
+  place-items: center;
+  font-style: normal;
+  font-size: 13px;
+}
+.alert {
+  font-family: var(--jp);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.6;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fbe9eb;
+  color: #9b1f2d;
+  border-left: 4px solid var(--stitch);
+}
+
+/* ───────── 月の区切り（予定一覧） ───────── */
+.month-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 2px 2px;
+  font-family: var(--jp);
+}
+.month-head .tile {
+  font-size: 26px;
+  height: 34px;
+  min-width: 34px;
+}
+.month-head b {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.month-head span {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-3);
+  margin-left: auto;
+}
+.month-group .acard__month {
+  display: none;
+}
+
+/* ───────── ホーム：まだ決まっていないこと ───────── */
+.todo {
+  display: block;
+  border-radius: 16px;
+  background: var(--caution-bg);
+  border: 1.5px solid #ecd08b;
+  padding: 14px 16px;
+  color: var(--caution);
+  text-decoration: none;
+  font-family: var(--jp);
+}
+.todo__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 800;
+}
+.todo__head .tile {
+  font-size: 20px;
+  min-width: 28px;
+  height: 30px;
+  background: linear-gradient(180deg, #a26d06 0%, #8a5b00 49%, #6b4600 51%, #7c5200 100%);
+}
+.todo ul {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.todo li a {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  color: inherit;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 700;
+}
+.todo li b {
+  font-family: var(--num);
+  font-size: 17px;
+  font-weight: 800;
+  min-width: 46px;
+}
+
+/* ───────── 印刷の見本（A4の紙を縮めて見せる） ───────── */
+.paper-wrap {
+  border-radius: 16px;
+  background: #cfd8cc;
+  padding: 18px 0;
+  overflow: hidden;
+}
+.paper {
+  width: 794px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.1), 0 12px 32px rgb(15 42 33 / 0.18);
+  transform-origin: top left;
+}
+@media print {
+  .paper-wrap {
+    background: none;
+    padding: 0;
+    border-radius: 0;
+    height: auto !important;
+  }
+  .paper {
+    width: auto;
+    box-shadow: none;
+    transform: none !important;
+    margin: 0 !important;
+  }
+}
+
+/* キーボード操作のときの枠 */
+:where(a, button, input, textarea, select):focus-visible {
+  outline: 3px solid #f0b429;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

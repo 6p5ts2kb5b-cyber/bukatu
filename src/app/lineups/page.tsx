@@ -5,7 +5,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Card, ErrorText, Field, inputClass, PrimaryButton } from "@/components/ui";
+import { Card, ErrorText, Field, inputClass, Loading, PageHead, PrimaryButton } from "@/components/ui";
 import { formatDate, todayString } from "@/lib/activities";
 import { createLineup, listLineups, POSITIONS, type Lineup } from "@/lib/lineups";
 
@@ -45,9 +45,9 @@ export default function LineupsPage() {
 
   return (
     <>
-      <h1 className="px-1 text-xl font-extrabold">メンバー表</h1>
-      <Card>
-        {creating ? (
+      <PageHead kicker="LINEUP" title="メンバー表" lead="ダイヤモンドで守備位置を決め、打順を並べて印刷します。" />
+      {creating ? (
+        <Card>
           <div className="flex flex-col gap-4">
             <Field label="名前">
               <input
@@ -76,37 +76,40 @@ export default function LineupsPage() {
               {saving ? "作成中…" : "作成して守備位置を決める"}
             </PrimaryButton>
           </div>
-        ) : (
-          <PrimaryButton onClick={() => setCreating(true)}>＋ 新しいメンバー表</PrimaryButton>
-        )}
-      </Card>
-
-      {error && <ErrorText>{error}</ErrorText>}
-      {!lineups && !error && <p className="py-6 text-center text-sm text-navy-soft/70">読み込み中…</p>}
-      {lineups && lineups.length === 0 && (
-        <p className="py-4 text-center text-sm text-navy-soft/70">メンバー表はまだありません。</p>
+        </Card>
+      ) : (
+        <PrimaryButton onClick={() => setCreating(true)}>＋ 新しいメンバー表</PrimaryButton>
       )}
 
-      <ul className="flex flex-col gap-3">
+      {error && <ErrorText>{error}</ErrorText>}
+      {!lineups && !error && <Loading />}
+      {lineups && lineups.length === 0 && (
+        <p className="py-4 text-center text-sm text-navy-soft">メンバー表はまだありません。</p>
+      )}
+
+      <ul className="list">
         {lineups?.map((l) => {
           const filled = POSITIONS.filter((p) => l.positions[p.key]).length;
           return (
-            <li key={l.id} className="rounded-2xl bg-white shadow-sm ring-1 ring-navy/5">
-              <Link href={`/lineups/${l.id}`} className="block p-5 active:bg-field">
-                <p className="text-sm font-bold text-navy-soft/70">{l.date ? formatDate(l.date) : ""}</p>
-                <p className="text-lg font-extrabold">{l.title}</p>
-                {l.opponent && <p className="text-base font-bold">vs {l.opponent}</p>}
-                <p className={`mt-1 text-sm font-bold ${filled === 9 ? "text-ok" : "text-[#8a6500]"}`}>
-                  {filled === 9 ? "● 守備9人 決定" : `▲ 守備 ${filled}/9人`}
-                </p>
+            <li key={l.id}>
+              <Link href={`/lineups/${l.id}`} className="row">
+                <span className="row__main">
+                  <span className="row__sub">{l.date ? formatDate(l.date) : ""}</span>
+                  <span className="row__title">{l.title}</span>
+                  <span className="tags">
+                    {l.opponent && <span className="tag">vs {l.opponent}</span>}
+                    <span className={`tag ${filled === 9 ? "tag--ok" : ""}`}>守備 {filled}/9</span>
+                  </span>
+                </span>
+                <span className="row__chev" aria-hidden />
               </Link>
               <button
                 type="button"
                 onClick={() => create(l)}
                 disabled={saving}
-                className="w-full border-t border-navy/10 py-3 text-sm font-bold text-navy-soft active:bg-field"
+                className="w-full border-t border-dashed border-rule py-2.5 text-xs font-bold text-navy-soft active:bg-field"
               >
-                このメンバー表をコピーして新しく作る
+                コピーして次の試合を作る
               </button>
             </li>
           );

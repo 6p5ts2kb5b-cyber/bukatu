@@ -5,14 +5,16 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  Card,
   ErrorText,
+  Loading,
+  PageHead,
   Field,
   inputClass,
   PrimaryButton,
   SecondaryButton,
   Toast,
   ToggleButton,
+  cssVars,
 } from "@/components/ui";
 import { addTeam, listTeams, swapOrder, updateTeam, type Team } from "@/lib/teams";
 
@@ -67,12 +69,12 @@ function TeamForm({
       </Field>
       {!isNew && (
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-bold text-navy-soft">状態</span>
+          <span className="f-label">状態</span>
           <div className="grid grid-cols-2 gap-2">
             <ToggleButton on={t.active} label="有効" onClick={() => setT({ ...t, active: true })} />
             <ToggleButton on={!t.active} label="無効" onClick={() => setT({ ...t, active: false })} />
           </div>
-          <p className="text-sm text-navy-soft/70">
+          <p className="f-hint">
             合同チームから外れた学校は「無効」にします（データは消えません）。
           </p>
         </div>
@@ -127,73 +129,64 @@ export default function TeamsPage() {
 
   return (
     <>
-      <Card>
-        <div className="flex items-baseline justify-between gap-2">
-          <h2 className="text-lg font-extrabold">学校（合同チーム）</h2>
-          {teams && <span className="text-sm font-bold text-navy-soft/70">有効 {activeTeams.length}校</span>}
-        </div>
-        <p className="mt-1 text-sm text-navy-soft/80">
-          合同チームを組む学校の一覧です。テスト休みの判定や、参加できる学校数の表示に使います。
-        </p>
-        {editing === "new" ? (
-          <div className="mt-4 border-t border-navy/10 pt-4">
-            <TeamForm
-              initial={{ name: "", shortName: "", order: nextOrder, active: true }}
-              onCancel={() => setEditing(null)}
-              onSave={async (t) => {
-                await addTeam(t);
-                await saved("登録しました");
-              }}
-            />
-          </div>
-        ) : (
-          <div className="mt-4">
-            <PrimaryButton onClick={() => setEditing("new")}>＋ 学校を追加</PrimaryButton>
-          </div>
-        )}
-      </Card>
+      <PageHead
+        kicker="SCHOOLS"
+        title="学校"
+        lead="合同チームを組む学校です。予定の区分や、印刷・選手名簿の学校分けに使います。"
+      />
+
+      {editing === "new" ? (
+        <section className="panel">
+          <TeamForm
+            initial={{ name: "", shortName: "", order: nextOrder, active: true }}
+            onCancel={() => setEditing(null)}
+            onSave={async (t) => {
+              await addTeam(t);
+              await saved("登録しました");
+            }}
+          />
+        </section>
+      ) : (
+        <PrimaryButton onClick={() => setEditing("new")}>＋ 学校を追加</PrimaryButton>
+      )}
 
       {loadError && <ErrorText>{loadError}</ErrorText>}
-      {!teams && !loadError && <p className="py-6 text-center text-sm text-navy-soft/70">読み込み中…</p>}
+      {!teams && !loadError && <Loading />}
 
-      <ul className="flex flex-col gap-3">
+      {teams && <p className="group-label">有効 {activeTeams.length}校・▲▼で並べ替え</p>}
+      <ul className="list">
         {teams?.map((t, i) => (
-          <li
-            key={t.id}
-            className={`rounded-2xl bg-white p-5 shadow-sm ring-1 ring-navy/5 ${t.active ? "" : "opacity-60"}`}
-          >
+          <li key={t.id}>
             {editing === t.id ? (
-              <TeamForm
-                initial={t}
-                onCancel={() => setEditing(null)}
-                onSave={async (next) => {
-                  await updateTeam({ ...t, ...next, id: t.id });
-                  await saved("保存しました");
-                }}
-              />
+              <div className="p-4">
+                <TeamForm
+                  initial={t}
+                  onCancel={() => setEditing(null)}
+                  onSave={async (next) => {
+                    await updateTeam({ ...t, ...next, id: t.id });
+                    await saved("保存しました");
+                  }}
+                />
+              </div>
             ) : (
-              <div className="flex items-center gap-3">
-                <button type="button" onClick={() => setEditing(t.id)} className="min-w-0 flex-1 text-left">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl font-extrabold">{t.shortName}</span>
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-sm font-bold ring-1 ${
-                        t.active ? "bg-ok/10 text-ok ring-ok/30" : "bg-navy/5 text-navy-soft/70 ring-navy/15"
-                      }`}
-                    >
-                      {t.active ? "● 有効" : "■ 無効"}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm text-navy-soft/70">{t.name}</p>
-                  <p className="mt-2 text-sm font-bold text-navy-soft/60">タップして編集 ›</p>
+              <div className={`flex items-center ${t.active ? "" : "row--off"}`}>
+                <button type="button" onClick={() => setEditing(t.id)} className="row flex-1">
+                  <span className="tile row__num" style={cssVars({ "--i": i })}>
+                    {i + 1}
+                  </span>
+                  <span className="row__main">
+                    <span className="row__title">{t.shortName}</span>
+                    <span className="row__sub">{t.name}</span>
+                  </span>
+                  <span className={`tag ${t.active ? "tag--ok" : "tag--off"}`}>{t.active ? "有効" : "無効"}</span>
                 </button>
-                <div className="flex flex-col gap-1.5">
+                <div className="flex shrink-0 flex-col pr-2">
                   <button
                     type="button"
                     onClick={() => move(i, -1)}
                     disabled={i === 0}
                     aria-label={`${t.shortName}を上へ`}
-                    className="h-11 w-11 rounded-lg bg-field text-lg font-bold ring-1 ring-navy/10 disabled:opacity-30"
+                    className="h-10 w-11 rounded-lg text-sm text-navy-soft active:bg-field disabled:opacity-25"
                   >
                     ▲
                   </button>
@@ -202,7 +195,7 @@ export default function TeamsPage() {
                     onClick={() => move(i, 1)}
                     disabled={i === (teams?.length ?? 0) - 1}
                     aria-label={`${t.shortName}を下へ`}
-                    className="h-11 w-11 rounded-lg bg-field text-lg font-bold ring-1 ring-navy/10 disabled:opacity-30"
+                    className="h-10 w-11 rounded-lg text-sm text-navy-soft active:bg-field disabled:opacity-25"
                   >
                     ▼
                   </button>

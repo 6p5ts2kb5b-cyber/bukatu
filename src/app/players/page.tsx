@@ -4,14 +4,16 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Card,
   ErrorText,
+  Loading,
+  PageHead,
   Field,
   inputClass,
   PrimaryButton,
   SecondaryButton,
   Toast,
   ToggleButton,
+  cssVars,
 } from "@/components/ui";
 import { addPlayer, EMPTY_PLAYER, listPlayers, updatePlayer, type Player, type PlayerDraft } from "@/lib/players";
 import { listTeams, type Team } from "@/lib/teams";
@@ -59,7 +61,7 @@ function PlayerForm({
         </Field>
         <Field label="背番号">
           <input
-            className={`${inputClass} text-center text-lg font-bold`}
+            className={`${inputClass} text-center`} style={{ fontFamily: "var(--num)", fontSize: 22 }}
             value={p.number}
             onChange={(e) => setP({ ...p, number: e.target.value })}
             placeholder="10"
@@ -78,7 +80,7 @@ function PlayerForm({
         />
       </Field>
       <div className="flex flex-col gap-1.5">
-        <span className="text-sm font-bold text-navy-soft">学校</span>
+        <span className="f-label">学校</span>
         <div className="grid grid-cols-3 gap-2">
           {teams
             .filter((t) => t.active || t.id === p.teamId)
@@ -88,7 +90,7 @@ function PlayerForm({
         </div>
       </div>
       <div className="flex flex-col gap-1.5">
-        <span className="text-sm font-bold text-navy-soft">学年</span>
+        <span className="f-label">学年</span>
         <div className="grid grid-cols-3 gap-2">
           {[1, 2, 3].map((g) => (
             <ToggleButton key={g} on={p.grade === g} label={`${g}年`} onClick={() => setP({ ...p, grade: g })} />
@@ -97,7 +99,7 @@ function PlayerForm({
       </div>
       {!isNew && (
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-bold text-navy-soft">状態</span>
+          <span className="f-label">状態</span>
           <div className="grid grid-cols-2 gap-2">
             <ToggleButton on={p.active} label="在籍" onClick={() => setP({ ...p, active: true })} />
             <ToggleButton on={!p.active} label="卒業・退部" onClick={() => setP({ ...p, active: false })} />
@@ -159,64 +161,53 @@ export default function PlayersPage() {
 
   return (
     <>
-      <Card>
-        <div className="flex items-baseline justify-between gap-2">
-          <h2 className="text-lg font-extrabold">選手名簿</h2>
-          {players && <span className="text-sm font-bold text-navy-soft/70">在籍 {activeCount}人</span>}
-        </div>
-        <p className="mt-1 text-sm text-navy-soft/80">メンバー表（守備位置・打順）で使う選手の一覧です。</p>
-        {editing === "new" ? (
-          <div className="mt-4 border-t border-navy/10 pt-4">
-            <PlayerForm
-              initial={{ ...EMPTY_PLAYER, teamId: filter !== "all" ? filter : "" }}
-              teams={teams}
-              onCancel={() => setEditing(null)}
-              onSave={async (p) => {
-                await addPlayer(p);
-                await saved("登録しました");
-              }}
-            />
-          </div>
-        ) : (
-          <div className="mt-4">
-            <PrimaryButton onClick={() => setEditing("new")}>＋ 選手を追加</PrimaryButton>
-          </div>
-        )}
-      </Card>
+      <PageHead kicker="PLAYERS" title="選手名簿" lead="メンバー表（守備位置・打順）で使う選手の一覧です。" />
 
-      <div className="flex flex-wrap gap-2">
+      {editing === "new" ? (
+        <section className="panel">
+          <PlayerForm
+            initial={{ ...EMPTY_PLAYER, teamId: filter !== "all" ? filter : "" }}
+            teams={teams}
+            onCancel={() => setEditing(null)}
+            onSave={async (p) => {
+              await addPlayer(p);
+              await saved("登録しました");
+            }}
+          />
+        </section>
+      ) : (
+        <PrimaryButton onClick={() => setEditing("new")}>＋ 選手を追加</PrimaryButton>
+      )}
+
+      <div className="filters">
         {[{ id: "all", shortName: "全員" }, ...teams.filter((t) => t.active)].map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setFilter(t.id)}
-            className={`min-h-10 rounded-full px-4 text-sm font-bold ring-1 ${
-              filter === t.id ? "bg-navy text-white ring-navy" : "bg-white ring-navy/15"
-            }`}
-          >
+          <button key={t.id} type="button" className="filter" aria-pressed={filter === t.id} onClick={() => setFilter(t.id)}>
             {t.shortName}
           </button>
         ))}
-        <button
-          type="button"
-          onClick={() => setShowInactive(!showInactive)}
-          className="ml-auto min-h-10 px-2 text-sm font-bold text-navy-soft/70 underline"
-        >
-          {showInactive ? "卒業・退部を隠す" : "卒業・退部も表示"}
-        </button>
       </div>
 
       {error && <ErrorText>{error}</ErrorText>}
-      {!players && !error && <p className="py-6 text-center text-sm text-navy-soft/70">読み込み中…</p>}
+      {!players && !error && <Loading />}
       {players && shown.length === 0 && (
-        <p className="py-4 text-center text-sm text-navy-soft/70">選手はまだ登録されていません。</p>
+        <p className="py-4 text-center text-sm text-navy-soft">選手はまだ登録されていません。</p>
       )}
 
-      <ul className="flex flex-col gap-2">
-        {shown.map((p) => (
-          <li key={p.id} className={`rounded-2xl bg-white shadow-sm ring-1 ring-navy/5 ${p.active ? "" : "opacity-60"}`}>
+      {players && shown.length > 0 && (
+        <div className="flex items-baseline justify-between px-1">
+          <p className="group-label p-0">
+            {filter === "all" ? "在籍" : teamName(filter)} {shown.filter((p) => p.active).length}人
+          </p>
+          <button type="button" onClick={() => setShowInactive(!showInactive)} className="text-xs font-bold text-navy-soft underline">
+            {showInactive ? "卒業・退部を隠す" : "卒業・退部も表示"}
+          </button>
+        </div>
+      )}
+      <ul className="list">
+        {shown.map((p, i) => (
+          <li key={p.id}>
             {editing === p.id ? (
-              <div className="p-5">
+              <div className="p-4">
                 <PlayerForm
                   initial={p}
                   teams={teams}
@@ -228,19 +219,17 @@ export default function PlayersPage() {
                 />
               </div>
             ) : (
-              <button type="button" onClick={() => setEditing(p.id)} className="flex w-full items-center gap-4 p-4 text-left">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-navy text-lg font-extrabold text-white">
+              <button type="button" onClick={() => setEditing(p.id)} className={`row${p.active ? "" : " row--off"}`}>
+                <span className="tile row__num" style={cssVars({ "--i": Math.min(i, 8) })}>
                   {p.number || "－"}
                 </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-lg font-extrabold">{p.name}</span>
-                  <span className="block text-sm text-navy-soft/70">
-                    {teamName(p.teamId)}・{p.grade}年{p.active ? "" : "（卒業・退部）"}
+                <span className="row__main">
+                  <span className="row__title">{p.name}</span>
+                  <span className="row__sub">
+                    {teamName(p.teamId)}・{p.grade}年{p.active ? "" : "・卒業/退部"}
                   </span>
                 </span>
-                <span className="text-xl text-navy-soft/40" aria-hidden>
-                  ›
-                </span>
+                <span className="row__chev" aria-hidden />
               </button>
             )}
           </li>

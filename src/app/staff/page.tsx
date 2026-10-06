@@ -6,6 +6,18 @@
 import { useCallback, useEffect, useState } from "react";
 import { useMe } from "@/components/AppShell";
 import {
+  Choices,
+  ErrorText,
+  Field,
+  inputClass,
+  Loading,
+  PageHead,
+  PrimaryButton,
+  SecondaryButton,
+  Toast,
+  ToggleButton,
+} from "@/components/ui";
+import {
   addStaff,
   EMPTY_STAFF,
   listStaff,
@@ -23,49 +35,6 @@ const FLAGS: { key: Flag; label: string }[] = [
   { key: "canPlateUmpire", label: "球審" },
   { key: "canBaseUmpire", label: "塁審" },
 ];
-
-// タップで色が変わる大きな選択ボタン（小さなチェックボックスの代わり）
-function ToggleButton({
-  on,
-  label,
-  onClick,
-}: {
-  on: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={on}
-      className={`min-h-12 rounded-xl px-3 text-base font-bold ring-2 transition-colors ${
-        on ? "bg-navy text-white ring-navy" : "bg-white text-navy-soft/60 ring-navy/15"
-      }`}
-    >
-      {on ? "✓ " : ""}
-      {label}
-    </button>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-sm font-bold text-navy-soft">{label}</span>
-      {children}
-    </label>
-  );
-}
-
-const inputClass =
-  "min-h-12 w-full rounded-xl bg-field px-4 text-base ring-1 ring-navy/15 focus:outline-none focus:ring-2 focus:ring-navy";
 
 function StaffForm({
   initial,
@@ -107,7 +76,7 @@ function StaffForm({
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 p-4">
       <Field label="氏名">
         <input
           className={inputClass}
@@ -129,19 +98,19 @@ function StaffForm({
             autoComplete="off"
           />
         ) : (
-          <p className="break-all rounded-xl bg-field px-4 py-3 text-base text-navy-soft/80">
+          <span className="f-input flex flex-col justify-center break-all py-2 text-navy-soft">
             {s.email}
-            <span className="mt-1 block text-sm">（自分のメールアドレスはここでは変更できません）</span>
-          </p>
+            <span className="text-xs font-semibold">自分のメールアドレスはここでは変更できません</span>
+          </span>
         )}
       </Field>
       <div className="flex flex-col gap-1.5">
-        <span className="text-sm font-bold text-navy-soft">できること（タップで切り替え）</span>
-        <div className="grid grid-cols-2 gap-2">
+        <span className="f-label">できること</span>
+        <Choices cols={4}>
           {FLAGS.map((f) => (
-            <ToggleButton key={f.key} on={s[f.key]} label={f.label} onClick={() => toggle(f.key)} />
+            <ToggleButton key={f.key} small on={s[f.key]} label={f.label} onClick={() => toggle(f.key)} />
           ))}
-        </div>
+        </Choices>
       </div>
       <Field label="備考">
         <input
@@ -154,38 +123,23 @@ function StaffForm({
       </Field>
       {!isNew && (
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-bold text-navy-soft">ログイン</span>
+          <span className="f-label">ログイン</span>
           {isMe ? (
-            <p className="text-sm text-navy-soft/80">自分自身は無効にできません。</p>
+            <p className="f-hint">自分自身は無効にできません。</p>
           ) : (
-            <div className="grid grid-cols-2 gap-2">
+            <Choices cols={2}>
               <ToggleButton on={s.active} label="有効" onClick={() => setS({ ...s, active: true })} />
               <ToggleButton on={!s.active} label="無効" onClick={() => setS({ ...s, active: false })} />
-            </div>
+            </Choices>
           )}
         </div>
       )}
-      {error && (
-        <p className="rounded-lg bg-ng/10 p-3 text-sm font-bold text-ng" role="alert">
-          ■ {error}
-        </p>
-      )}
+      {error && <ErrorText>{error}</ErrorText>}
       <div className="grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="min-h-12 rounded-xl bg-white text-base font-bold ring-1 ring-navy/15 active:bg-field"
-        >
-          やめる
-        </button>
-        <button
-          type="button"
-          onClick={submit}
-          disabled={saving}
-          className="min-h-12 rounded-xl bg-navy text-base font-bold text-white active:bg-navy-soft disabled:opacity-50"
-        >
+        <SecondaryButton onClick={onCancel}>やめる</SecondaryButton>
+        <PrimaryButton onClick={submit} disabled={saving}>
           {saving ? "保存中…" : "保存する"}
-        </button>
+        </PrimaryButton>
       </div>
       {onDelete && !isMe && (
         <button
@@ -201,7 +155,7 @@ function StaffForm({
             }
           }}
           disabled={saving}
-          className="min-h-12 w-full rounded-xl text-base font-bold text-ng ring-1 ring-ng/30 active:bg-ng/10 disabled:opacity-50"
+          className="btn btn--danger"
         >
           このスタッフを削除する
         </button>
@@ -213,14 +167,14 @@ function StaffForm({
 function Tags({ s }: { s: Staff }) {
   const on = FLAGS.filter((f) => s[f.key]);
   return (
-    <div className="mt-2 flex flex-wrap gap-1.5">
-      {on.length === 0 && <span className="text-sm text-navy-soft/60">担当なし</span>}
+    <span className="tags">
+      {on.length === 0 && <span className="tag">担当なし</span>}
       {on.map((f) => (
-        <span key={f.key} className="rounded-full bg-navy/5 px-2.5 py-0.5 text-sm font-bold text-navy-soft">
+        <span key={f.key} className="tag">
           {f.label}
         </span>
       ))}
-    </div>
+    </span>
   );
 }
 
@@ -230,6 +184,7 @@ export default function StaffPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null); // 編集中のメール、"new" = 新規
   const [toast, setToast] = useState<string | null>(null);
+  const clearToast = useCallback(() => setToast(null), []);
 
   const reload = useCallback(async () => {
     try {
@@ -244,12 +199,6 @@ export default function StaffPage() {
     reload();
   }, [reload]);
 
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 2500);
-    return () => clearTimeout(t);
-  }, [toast]);
-
   const saved = async (msg: string) => {
     setEditing(null);
     setToast(msg);
@@ -260,53 +209,36 @@ export default function StaffPage() {
 
   return (
     <>
-      <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-navy/5">
-        <div className="flex items-baseline justify-between gap-2">
-          <h2 className="text-lg font-extrabold">スタッフ名簿</h2>
-          {staff && <span className="text-sm font-bold text-navy-soft/70">有効 {activeCount}人</span>}
-        </div>
-        <p className="mt-1 text-sm text-navy-soft/80">
-          ここに登録して「有効」にした人だけが、Googleアカウントでアプリに入れます。
-        </p>
-        {editing === "new" ? (
-          <div className="mt-4 border-t border-navy/10 pt-4">
-            <StaffForm
-              initial={EMPTY_STAFF}
-              isNew
-              isMe={false}
-              onCancel={() => setEditing(null)}
-              onSave={async (s) => {
-                await addStaff(s);
-                await saved("登録しました");
-              }}
-            />
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setEditing("new")}
-            className="mt-4 flex min-h-12 w-full items-center justify-center rounded-xl bg-navy px-4 text-base font-bold text-white active:bg-navy-soft"
-          >
-            ＋ スタッフを追加
-          </button>
-        )}
-      </section>
+      <PageHead
+        kicker="STAFF"
+        title="スタッフ名簿"
+        lead="ここに登録して「有効」にした人だけが、Googleアカウントでアプリに入れます。"
+      />
 
-      {loadError && (
-        <p className="rounded-xl bg-ng/10 p-4 text-sm font-bold text-ng" role="alert">
-          ■ {loadError}
-        </p>
-      )}
-      {!staff && !loadError && (
-        <p className="py-6 text-center text-sm text-navy-soft/70">読み込み中…</p>
+      {editing === "new" ? (
+        <section className="panel p-0">
+          <StaffForm
+            initial={EMPTY_STAFF}
+            isNew
+            isMe={false}
+            onCancel={() => setEditing(null)}
+            onSave={async (s) => {
+              await addStaff(s);
+              await saved("登録しました");
+            }}
+          />
+        </section>
+      ) : (
+        <PrimaryButton onClick={() => setEditing("new")}>＋ スタッフを追加</PrimaryButton>
       )}
 
-      <ul className="flex flex-col gap-3">
+      {loadError && <ErrorText>{loadError}</ErrorText>}
+      {!staff && !loadError && <Loading />}
+
+      {staff && <p className="group-label">有効 {activeCount}人</p>}
+      <ul className="list">
         {staff?.map((s) => (
-          <li
-            key={s.email}
-            className={`rounded-2xl bg-white p-5 shadow-sm ring-1 ring-navy/5 ${s.active ? "" : "opacity-60"}`}
-          >
+          <li key={s.email}>
             {editing === s.email ? (
               <StaffForm
                 initial={s}
@@ -323,38 +255,25 @@ export default function StaffPage() {
                 }}
               />
             ) : (
-              <button type="button" onClick={() => setEditing(s.email)} className="block w-full text-left">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-lg font-extrabold">
+              <button type="button" onClick={() => setEditing(s.email)} className={`row${s.active ? "" : " row--off"}`}>
+                <span className="row__main">
+                  <span className="row__title">
                     {s.name}
-                    {s.email === me.email && <span className="ml-2 text-sm text-navy-soft/60">（自分）</span>}
+                    {s.email === me.email && <span className="ml-2 text-xs font-bold text-navy-soft">自分</span>}
                   </span>
-                  <span
-                    className={`shrink-0 rounded-full px-3 py-1 text-sm font-bold ring-1 ${
-                      s.active ? "bg-ok/10 text-ok ring-ok/30" : "bg-navy/5 text-navy-soft/70 ring-navy/15"
-                    }`}
-                  >
-                    {s.active ? "● 有効" : "■ 無効"}
-                  </span>
-                </div>
-                <p className="mt-1 break-all text-sm text-navy-soft/70">{s.email}</p>
-                <Tags s={s} />
-                {s.note && <p className="mt-2 text-sm text-navy-soft/80">{s.note}</p>}
-                <p className="mt-3 text-sm font-bold text-navy-soft/60">タップして編集 ›</p>
+                  <span className="row__sub break-all">{s.email}</span>
+                  <Tags s={s} />
+                  {s.note && <span className="row__sub mt-1">{s.note}</span>}
+                </span>
+                <span className={`tag ${s.active ? "tag--ok" : "tag--off"}`}>{s.active ? "有効" : "無効"}</span>
+                <span className="row__chev" aria-hidden />
               </button>
             )}
           </li>
         ))}
       </ul>
 
-      {toast && (
-        <div
-          role="status"
-          className="fixed inset-x-4 bottom-24 z-20 mx-auto max-w-sm rounded-xl bg-ok px-4 py-3 text-center text-base font-bold text-white shadow-lg"
-        >
-          ✓ {toast}
-        </div>
-      )}
+      <Toast message={toast} onDone={clearToast} />
     </>
   );
 }
