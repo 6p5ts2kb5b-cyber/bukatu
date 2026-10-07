@@ -333,9 +333,9 @@ export default function PrintPage() {
 
       {/* ---- 印刷される部分 ---- */}
       <PaperPreview>
-      <article ref={sheet} className="px-[38px] py-[34px] text-[14px] leading-relaxed text-black print:p-0 print:text-[10.5pt]">
+      <article ref={sheet} className="px-[32px] py-[28px] text-[12px] leading-snug text-black print:p-0 print:text-[10.5pt]">
         <header className="border-b-2 border-black pb-2">
-          <h2 className="text-[24px] font-extrabold print:text-[18pt]">
+          <h2 className="text-[19px] font-extrabold print:text-[15pt]">
             {heading}　{y}年{period}の活動予定
           </h2>
           {!heading.startsWith("桜・浅羽野・住吉") && <p className="text-[12px] print:text-[9pt]">桜・浅羽野・住吉 連合チーム</p>}
