@@ -29,6 +29,7 @@ export type Staff = {
   canPlateUmpire: boolean; // 球審ができる
   canBaseUmpire: boolean; // 塁審ができる
   note: string; // 備考
+  phone: string; // 携帯番号（送付書の発信元・問い合わせ先で使う）
   active: boolean; // 有効（false = 無効。ログインできない）
 };
 
@@ -40,6 +41,7 @@ export const EMPTY_STAFF: Staff = {
   canPlateUmpire: false,
   canBaseUmpire: false,
   note: "",
+  phone: "",
   active: true,
 };
 
@@ -103,6 +105,7 @@ export async function addStaff(s: Staff): Promise<void> {
     email,
     name: s.name.trim(),
     note: s.note.trim(),
+    phone: (s.phone ?? "").trim(),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -117,6 +120,7 @@ export async function updateStaff(s: Staff): Promise<void> {
     canPlateUmpire: s.canPlateUmpire,
     canBaseUmpire: s.canBaseUmpire,
     note: s.note.trim(),
+    phone: (s.phone ?? "").trim(),
     active: s.active,
     updatedAt: serverTimestamp(),
   });
@@ -141,6 +145,7 @@ export async function changeStaffEmail(oldEmail: string, s: Staff): Promise<void
     email: to,
     name: s.name.trim(),
     note: s.note.trim(),
+    phone: (s.phone ?? "").trim(),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });

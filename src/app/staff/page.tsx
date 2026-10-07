@@ -112,6 +112,16 @@ function StaffForm({
           ))}
         </Choices>
       </div>
+      <Field label="携帯番号（任意）" hint="送付書の発信元・問い合わせ先で、名前と一緒に選べるようになります。">
+        <input
+          className={inputClass}
+          value={s.phone}
+          onChange={(e) => setS({ ...s, phone: e.target.value })}
+          placeholder="例：090-1234-5678"
+          inputMode="tel"
+          autoComplete="off"
+        />
+      </Field>
       <Field label="備考">
         <input
           className={inputClass}

@@ -18,6 +18,7 @@ import {
 } from "firebase/firestore";
 import { firebaseApp } from "./firebase";
 import { describeRef, isRef, normalizeTeam, todayString, type Activity } from "./activities";
+import { findVenue } from "./directory";
 
 export const OUR_TEAM = "桜・浅羽野・住吉連合";
 
@@ -29,7 +30,17 @@ export type NoticeGame = {
   timeNote: "開始" | "予定";
   plate: string; // 主審
   base: string; // 塁審
+  afterLunch?: boolean; // 時刻の代わりに「昼食後○分後」
+  lunchMin?: number; // 昼食後の分（ふつう40）
 };
+
+// 試合の時刻の書き方（「9:00」または「昼食後40分後」）
+export function gameTimeText(g: NoticeGame): string {
+  if (g.afterLunch) return `昼食後${g.lunchMin || 40}分後`;
+  if (!g.time) return "";
+  const [h, m] = g.time.split(":");
+  return `${Number(h)}:${m}`;
+}
 
 // 送付書の種類
 export type NoticeKind = "tournament" | "practice2" | "practice3";
@@ -59,8 +70,10 @@ export type Notice = {
   reserveDate: string; // 予備日
   venue: string;
   venueAddress: string;
+  venueStation: string; // 最寄駅
   reserveVenue: string;
   reserveVenueAddress: string;
+  reserveVenueStation: string;
   games: NoticeGame[];
   rain: string; // 雨天判定（例：6:00 住吉中 池田 090-…）
   contact: string; // 問い合わせ先
@@ -109,8 +122,10 @@ export function blankNotice(): NoticeDraft {
     reserveDate: "",
     venue: "",
     venueAddress: "",
+    venueStation: "",
     reserveVenue: "",
     reserveVenueAddress: "",
+    reserveVenueStation: "",
     games: [{ ...emptyGame(), timeNote: "開始" }],
     rain: "",
     contact: "",
@@ -231,6 +246,11 @@ export function applyActivity(n: NoticeDraft, a: Activity): NoticeDraft {
     subject: g.tournamentName || (g.type === "練習試合" ? "練習試合" : n.subject),
     date: a.date,
     venue: g.venue || n.venue,
+    // 3校の会場なら、住所と最寄駅も入れる
+    ...(() => {
+      const v = findVenue(g.venue || n.venue, []);
+      return v ? { venue: v.name, venueAddress: v.number, venueStation: v.extra ?? "" } : {};
+    })(),
     games: games.length ? games : n.games,
     to: opponents.length ? `${opponents.join("・")}　代表者` : n.to,
   };
@@ -274,13 +294,17 @@ function toNotice(id: string, x: Record<string, unknown>): Notice {
     reserveDate: s("reserveDate"),
     venue: s("venue"),
     venueAddress: s("venueAddress"),
+    venueStation: s("venueStation"),
     reserveVenue: s("reserveVenue"),
     reserveVenueAddress: s("reserveVenueAddress"),
+    reserveVenueStation: s("reserveVenueStation"),
     games: Array.isArray(x.games)
       ? (x.games as Partial<NoticeGame>[]).map((g) => ({
           ...emptyGame(),
           ...g,
           timeNote: g.timeNote === "開始" ? "開始" : "予定",
+          afterLunch: g.afterLunch === true,
+          lunchMin: Number(g.lunchMin) || 40,
         }))
       : [],
     rain: s("rain"),
@@ -321,6 +345,7 @@ export function parentMessage(n: NoticeDraft): string {
   }
   if (n.venue) {
     out.push(`✅会場　${n.venue}`);
+    if (n.venueStation) out.push(`最寄駅　${n.venueStation}`);
     if (n.parking.trim()) out.push(n.parking.trim());
     out.push("");
   }
@@ -332,7 +357,7 @@ export function parentMessage(n: NoticeDraft): string {
     games.forEach((g, i) => {
       const ump = g.plate ? `　球審　${teamText(g.plate, games)}` : "";
       out.push(`${i + 1}試合目　${teamText(g.first, games) || "未定"}　対　${teamText(g.third, games) || "未定"}`);
-      out.push(`${g.time ? `${clock(g.time)}〜` : "時間未定"}${ump}`);
+      out.push(`${g.afterLunch ? `${gameTimeText(g)}開始` : g.time ? `${clock(g.time)}〜` : "時間未定"}${ump}`);
       if (i < games.length - 1) out.push("");
     });
     out.push("");

@@ -197,12 +197,15 @@ function paint(p: Painter, n: NoticeDraft) {
     main: reiwa(n.date) || "　",
     sub: n.reserveDate ? `予備日　${reiwa(n.reserveDate, false)}` : undefined,
   });
-  rows.push({ label: "会場", main: n.venue || "　", sub: n.venueAddress ? `住所　${n.venueAddress}` : undefined });
+  // 住所と最寄駅を1行に
+  const place = (addr: string, st: string) =>
+    [addr && `住所　${addr}`, st && `最寄駅　${st}`].filter(Boolean).join("　／　") || undefined;
+  rows.push({ label: "会場", main: n.venue || "　", sub: place(n.venueAddress, n.venueStation) });
   if (n.reserveVenue)
     rows.push({
       label: "予備日会場",
       main: n.reserveVenue,
-      sub: n.reserveVenueAddress ? `住所　${n.reserveVenueAddress}` : undefined,
+      sub: place(n.reserveVenueAddress, n.reserveVenueStation),
     });
   if (n.groundIn) {
     const [gh, gm] = n.groundIn.split(":");
@@ -274,7 +277,10 @@ function paint(p: Painter, n: NoticeDraft) {
       team(g.third, cx, cols[3]);
       cx += cols[3];
       // 時刻
-      if (g.time) {
+      if (g.afterLunch) {
+        p.fitText("昼食後", cx + 1, p.y + h * 0.36, cols[4] - 2, 10.5, 800, "center");
+        p.fitText(`${g.lunchMin || 40}分後`, cx + 1, p.y + h * 0.7, cols[4] - 2, 10.5, 800, "center");
+      } else if (g.time) {
         const [hh2, mm2] = g.time.split(":");
         p.fitText(`${Number(hh2)}:${mm2}`, cx, p.y + h * 0.42, cols[4], 16, 700, "center", p.NUM);
         p.font(8.5, 700);
