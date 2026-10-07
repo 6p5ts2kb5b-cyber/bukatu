@@ -353,7 +353,8 @@ export function parentMessage(n: NoticeDraft): string {
   if (n.parentGreeting.trim()) out.push(n.parentGreeting.trim(), "");
   const what = n.kind === "tournament" && n.subject ? `${n.subject}　` : n.kind !== "tournament" ? "練習試合　" : "";
   if (n.date) {
-    out.push(`${shortDate(n.date)}${what}よろしくお願いします。`);
+    // 日付と大会名の行と、「よろしくお願いします。」の行を分ける
+    out.push(`${shortDate(n.date)}${what.trim()}`, "よろしくお願いします。");
     // 予備日は上の方に（会場がちがえば、その会場も）
     if (n.reserveDate) {
       out.push(`予備日　${shortDate(n.reserveDate)}`);
