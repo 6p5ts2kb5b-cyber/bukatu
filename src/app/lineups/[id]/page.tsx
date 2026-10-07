@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { PaperPreview } from "@/components/PaperPreview";
 import { ErrorText, Field, inputClass, SecondaryButton } from "@/components/ui";
 import { formatDateLong } from "@/lib/activities";
+import { elementToPdf, shareOrDownload } from "@/lib/sharePdf";
 import {
   deleteLineup,
   getLineup,
@@ -178,6 +179,38 @@ export default function LineupPage() {
   const [tab, setTab] = useState<Tab>("field");
   const [picking, setPicking] = useState<string | null>(null); // 選手を選んでいる守備位置
   const [saveState, setSaveState] = useState<"saved" | "saving" | "error">("saved");
+  // メンバー表のPDF（A4の1枚）。作る → スマホの共有画面でLINE・メールを選ぶ
+  const sheetRef = useRef<HTMLElement>(null);
+  const [pdf, setPdf] = useState<File | null>(null);
+  const [making, setMaking] = useState(false);
+  const [pdfNote, setPdfNote] = useState("");
+  useEffect(() => {
+    setPdf(null);
+    setPdfNote("");
+  }, [lineup, players, teams]);
+  const sendPdf = async () => {
+    if (!sheetRef.current || making) return;
+    const title = lineup?.title || "メンバー表";
+    const share = async (f: File) => {
+      try {
+        const r = await shareOrDownload(f, title);
+        if (r === "downloaded") setPdfNote("PDFを保存しました。LINEやメールに添付して送ってください。");
+      } catch {
+        setPdfNote("「PDFを送る」をもう一度押してください。");
+      }
+    };
+    if (pdf) return share(pdf);
+    setMaking(true);
+    try {
+      const f = await elementToPdf(sheetRef.current, `${title.replace(/[\s/\\]+/g, "_")}.pdf`, { onePage: true });
+      setPdf(f);
+      await share(f);
+    } catch {
+      setPdfNote("PDFを作れませんでした。電波の良い場所でもう一度お試しください。");
+    } finally {
+      setMaking(false);
+    }
+  };
   const loaded = useRef(false);
 
   useEffect(() => {
@@ -438,15 +471,17 @@ export default function LineupPage() {
       {/* ③ メンバー表 */}
       {tab === "sheet" && (
         <>
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="btn btn--accent print:hidden"
-          >
-            🖨 メンバー表を印刷する
-          </button>
+          <div className="grid grid-cols-[1fr_auto] gap-2 print:hidden">
+            <button type="button" onClick={sendPdf} disabled={making} className="btn btn--accent">
+              {making ? "PDFを作っています…" : pdf ? "PDFを送る" : "PDFでLINE・メールに送る"}
+            </button>
+            <button type="button" onClick={() => window.print()} className="btn btn--ghost px-5">
+              印刷
+            </button>
+          </div>
+          {pdfNote && <p className="m-0 rounded-xl border border-rule bg-white p-3 text-sm font-bold print:hidden">{pdfNote}</p>}
           <PaperPreview>
-          <article className="px-[48px] py-[44px] text-black print:p-0">
+          <article ref={sheetRef} className="sheet-one px-[48px] py-[44px] text-black print:p-0">
             <header className="border-b-2 border-black pb-2">
               <p className="text-sm print:text-[10pt]">桜・浅羽野・住吉 連合チーム</p>
               <h2 className="text-[30px] font-extrabold print:text-[20pt]">{lineup.title || "メンバー表"}</h2>

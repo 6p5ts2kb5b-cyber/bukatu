@@ -127,7 +127,12 @@ function toJpeg(c: HTMLCanvasElement): Promise<JpegPage> {
 }
 
 // 予定表（source）を PDF ファイルにする。行（tr）の途中ではページを切らない
-export async function elementToPdf(source: HTMLElement, filename: string): Promise<File> {
+// onePage = true のときは、長くても縮めてA4の1枚に収める（メンバー表など）
+export async function elementToPdf(
+  source: HTMLElement,
+  filename: string,
+  opts: { onePage?: boolean } = {},
+): Promise<File> {
   const html2canvas = await loadHtml2Canvas();
   const host = document.createElement("div");
   host.style.cssText = `position:fixed;left:-20000px;top:0;width:${PAGE_W}px;background:#fff;`;
@@ -145,6 +150,10 @@ export async function elementToPdf(source: HTMLElement, filename: string): Promi
     // ページの区切りを決める
     const slices: [number, number][] = [];
     let start = 0;
+    if (opts.onePage) {
+      slices.push([0, total]);
+      start = total;
+    }
     while (start < total - 2) {
       const room = slices.length === 0 ? PAGE_H - MARGIN : PAGE_H - MARGIN * 2;
       let end = start + room;
@@ -170,7 +179,20 @@ export async function elementToPdf(source: HTMLElement, filename: string): Promi
       const ctx = c.getContext("2d")!;
       ctx.fillStyle = "#fff";
       ctx.fillRect(0, 0, c.width, c.height);
-      ctx.drawImage(full, 0, Math.round(a * s), full.width, Math.round((b - a) * s), 0, Math.round(pad * s), full.width, Math.round((b - a) * s));
+      // 1枚に収めるとき、A4より長ければ縮める（横は中央に寄せる）
+      const fit = opts.onePage && b - a > PAGE_H ? PAGE_H / (b - a) : 1;
+      const dw = Math.round(full.width * fit);
+      ctx.drawImage(
+        full,
+        0,
+        Math.round(a * s),
+        full.width,
+        Math.round((b - a) * s),
+        Math.round((full.width - dw) / 2),
+        Math.round(pad * s),
+        dw,
+        Math.round((b - a) * s * fit),
+      );
       pages.push(await toJpeg(c));
     }
     return new File([jpegPagesToPdf(pages)], filename, { type: "application/pdf" });

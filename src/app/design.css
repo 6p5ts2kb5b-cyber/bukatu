@@ -1223,6 +1223,19 @@ textarea.f-input {
   transform-origin: top left;
 }
 @media print {
+  /* 画面用の部品（見出し・タブ・ボタン）は紙に出さない。
+     design.css は Tailwind の print:hidden より強いので、ここで確実に消す */
+  .print\:hidden,
+  .app-header,
+  .tabbar,
+  .savebar,
+  .toast {
+    display: none !important;
+  }
+  .page {
+    animation: none !important;
+    padding: 0 !important;
+  }
   .paper-wrap {
     background: none;
     padding: 0;
@@ -1234,6 +1247,21 @@ textarea.f-input {
     box-shadow: none;
     transform: none !important;
     margin: 0 !important;
+  }
+}
+
+/* メンバー表は A4 縦1枚に収める */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+  .sheet-one {
+    break-inside: avoid;
+  }
+  .sheet-one td {
+    padding-top: 1.6mm !important;
+    padding-bottom: 1.6mm !important;
   }
 }
 
