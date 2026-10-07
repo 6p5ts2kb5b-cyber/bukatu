@@ -15,7 +15,7 @@ export type DirEntry = { id: string; kind: DirKind; name: string; number: string
 export const VENUE_PRESETS: DirEntry[] = [
   { id: "preset-asabano", kind: "venue", name: "坂戸市立浅羽野中学校", number: "坂戸市浅羽753-1", extra: "東武東上線・越生線 坂戸駅 徒歩約13分", preset: true },
   { id: "preset-sakura", kind: "venue", name: "坂戸市立桜中学校", number: "坂戸市泉町3-25-8", extra: "東武東上線 北坂戸駅 徒歩約13分", preset: true },
-  { id: "preset-sumiyoshi", kind: "venue", name: "坂戸市立住吉中学校", number: "坂戸市塚越114-1", extra: "東武東上線 若葉駅からバス約11分（さかっちワゴン「住吉中学校」下車 徒歩3分）", preset: true },
+  { id: "preset-sumiyoshi", kind: "venue", name: "坂戸市立住吉中学校", number: "坂戸市塚越114-1", extra: "東武東上線 若葉駅からバス「塚越」バス停下車 徒歩10分", preset: true },
 ];
 
 // 「浅羽野中」「浅羽野中学校」などの書き方でも、登録した会場を見つける

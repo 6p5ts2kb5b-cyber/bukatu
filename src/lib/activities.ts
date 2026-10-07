@@ -88,6 +88,8 @@ export type Game = {
   // 3チーム以上の日の「他チーム同士」の試合（うちは出ない）。home = 片方のチーム名
   others?: boolean;
   home?: string;
+  // 先に書いたチーム（うちの試合なら「うち」、他チーム同士なら「チーム1」）のベンチ。ふつうは1塁
+  bench?: "1塁" | "3塁";
 };
 
 // ---- 「第1試合の勝者」のような、まだ決まっていない相手 ----
@@ -266,6 +268,7 @@ function toActivity(id: string, data: Record<string, unknown>): Activity {
               startTime: String(x.startTime ?? ""),
               home: String(x.home ?? ""),
               others: x.others === true,
+              bench: x.bench === "3塁" ? "3塁" : "1塁",
             }),
           )
         : [],

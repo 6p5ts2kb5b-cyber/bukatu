@@ -231,14 +231,20 @@ export function applyActivity(n: NoticeDraft, a: Activity): NoticeDraft {
   // 種類：練習試合なら相手の数で 2チーム／3チーム
   const kind: NoticeKind =
     g.type === "練習試合" ? (opponents.length >= 2 ? "practice3" : "practice2") : n.kind === "tournament" ? "tournament" : n.kind;
-  let games: NoticeGame[] = g.games.map((x, i) => ({
-    first: x.others ? normalizeTeam(x.home ?? "") : OUR_TEAM,
-    third: normalizeTeam(x.opponent),
+  let games: NoticeGame[] = g.games.map((x, i) => {
+    const a = x.others ? normalizeTeam(x.home ?? "") : OUR_TEAM;
+    const b = normalizeTeam(x.opponent);
+    // 予定で「3塁側」にしたチームは3塁ベンチへ
+    const [first, third] = x.bench === "3塁" ? [b, a] : [a, b];
+    return {
+    first,
+    third,
     time: x.startTime,
     timeNote: i === 0 ? "開始" : "予定",
     plate: "",
     base: "",
-  }));
+    } as NoticeGame;
+  });
   if (!games.length && kind !== "tournament") games = practiceGames(kind, opponents[0] ?? "", opponents[1] ?? "");
   games = fillUmpires(kind, games, teams);
   return {

@@ -196,7 +196,7 @@ function GamesEditor({
 }) {
   const update = (i: number, patch: Partial<Game>) =>
     onChange(games.map((g, j) => (j === i ? { ...g, ...patch } : g)));
-  const add = () => onChange([...games, { opponent: "", startTime: "", home: "", others: false }]);
+  const add = () => onChange([...games, { opponent: "", startTime: "", home: "", others: false, bench: "1塁" }]);
   const remove = (i: number) => onChange(games.filter((_, j) => j !== i));
   // 試合の順番を入れ替える
   const move = (i: number, dir: -1 | 1) => {
@@ -281,6 +281,25 @@ function GamesEditor({
                     placeholder="例：坂戸中"
                   />
                 )}
+                {/* ベンチ（1塁側・3塁側） */}
+                <div className="flex items-center gap-2">
+                  <span className="shrink-0 text-sm font-extrabold text-navy-soft">
+                    {others ? `${g.home || "チーム1"}は` : "うちは"}
+                  </span>
+                  <div className="seg flex-1" role="group" aria-label="ベンチ">
+                    {(["1塁", "3塁"] as const).map((b) => (
+                      <button
+                        key={b}
+                        type="button"
+                        className="seg__btn"
+                        aria-pressed={(g.bench ?? "1塁") === b}
+                        onClick={() => update(i, { bench: b })}
+                      >
+                        {b}側
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div className="flex items-center gap-2">
                   <span className="shrink-0 text-sm font-extrabold text-navy-soft">開始</span>
                   <div className="w-[11rem]">
