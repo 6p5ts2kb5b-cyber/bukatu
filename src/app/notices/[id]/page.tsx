@@ -19,6 +19,7 @@ import {
   teamText,
   formatPhone,
   gameTimeText,
+  meetText,
   OUR_TEAM,
   parentMessage,
   saveNotice,
@@ -450,6 +451,13 @@ function ParentLine({ n, set }: { n: Notice; set: (p: Partial<Notice>) => void }
           />
         </Field>
         <Text
+          label="生徒の集合"
+          value={n.meet}
+          onChange={(v) => set({ meet: v })}
+          placeholder="例：7:10　若葉駅"
+          hint={n.activityId ? "予定の集合時間と場所が入ります。" : undefined}
+        />
+        <Text
           label="持ち物"
           value={n.packing}
           onChange={(v) => set({ packing: v })}
@@ -613,10 +621,16 @@ export default function NoticePage() {
   };
   const linked = matches.find((a) => a.id === n.activityId);
   // 持ち物がまだ空なら、つながっている予定の持ち物を入れる（試合順はそのまま）
-  const linkedPacking = linked?.groups.find((g) => g.games.length > 0 || g.tournamentName)?.packing ?? [];
-  if (linked && !n.packing && linkedPacking.length && !packingFilled.current) {
+  const linkedGroup = linked?.groups.find((g) => g.games.length > 0 || g.tournamentName);
+  const linkedPacking = linkedGroup?.packing.join("・") ?? "";
+  const linkedMeet = linkedGroup ? meetText(linkedGroup.meetTime, linkedGroup.meetPlace) : "";
+  if (linked && ((!n.packing && linkedPacking) || (!n.meet && linkedMeet)) && !packingFilled.current) {
     packingFilled.current = true;
-    queueMicrotask(() => setN((cur) => (cur && !cur.packing ? { ...cur, packing: linkedPacking.join("・") } : cur)));
+    queueMicrotask(() =>
+      setN((cur) =>
+        cur ? { ...cur, packing: cur.packing || linkedPacking, meet: cur.meet || linkedMeet } : cur,
+      ),
+    );
   }
   const title = `送付書_${n.subject || "大会"}${n.to ? `_${n.to.replace(/\s*代表者.*$/, "")}` : ""}`;
 

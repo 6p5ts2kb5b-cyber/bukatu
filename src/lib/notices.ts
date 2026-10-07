@@ -85,6 +85,7 @@ export type Notice = {
   parentGreeting: string; // あいさつ
   parentNote: string; // そのほかの連絡
   packing: string; // 持ち物（予定から。「・」区切り）
+  meet: string; // 生徒の集合（予定から。例：7:10　若葉駅）
 };
 
 export type NoticeDraft = Omit<Notice, "id">;
@@ -95,7 +96,6 @@ export function defaultBody(): string {
   return [
     "お世話になっております。標記の件につきまして送信させて頂きました。",
     "下記の日程で、よろしくお願いいたします。",
-    "尚、予備日でのご都合が悪い場合は、ご連絡を下さい。",
   ].join("\n");
 }
 
@@ -137,6 +137,7 @@ export function blankNotice(): NoticeDraft {
     parentGreeting: "お疲れ様です。",
     parentNote: "",
     packing: "",
+    meet: "",
   };
 }
 
@@ -247,6 +248,7 @@ export function applyActivity(n: NoticeDraft, a: Activity): NoticeDraft {
     teams,
     // 持ち物は予定から（お弁当・水筒など）
     packing: g.packing.join("・"),
+    meet: meetText(g.meetTime, g.meetPlace),
     subject: g.tournamentName || (g.type === "練習試合" ? "練習試合" : n.subject),
     date: a.date,
     venue: g.venue || n.venue,
@@ -320,6 +322,7 @@ function toNotice(id: string, x: Record<string, unknown>): Notice {
     parentGreeting: s("parentGreeting"),
     parentNote: s("parentNote"),
     packing: s("packing"),
+    meet: s("meet"),
   };
 }
 
@@ -355,6 +358,7 @@ export function parentMessage(n: NoticeDraft): string {
     out.push("");
   }
   if (n.mapUrl.trim()) out.push(n.mapUrl.trim(), "");
+  if (n.meet.trim()) out.push(`集合　${n.meet.trim()}`, "");
   // グラウンドインは相手チーム向け（送付書に載せる）。保護者の文には入れない
   const games = n.games.filter((g) => g.first || g.third);
   if (games.length) {
@@ -412,4 +416,10 @@ export function formatPhone(v: string): string {
   if (/^0[789]0\d{8}$/.test(d)) return `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}`;
   if (/^0\d{9}$/.test(d)) return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
   return v.trim();
+}
+
+// 生徒の集合（予定の集合時間と場所から）「7:10　若葉駅」
+export function meetText(time: string, place: string): string {
+  const t = time ? `${Number(time.split(":")[0])}:${time.split(":")[1]}` : "";
+  return [t, place].filter(Boolean).join("　");
 }
