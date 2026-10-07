@@ -35,6 +35,7 @@ type Options = {
   reloadDir: () => void;
   meetPlaces: string[];
   opponents: string[];
+  tournaments: string[];
   onAddPacking: (name: string) => Promise<void>;
 };
 
@@ -465,9 +466,24 @@ function GroupEditor({
                 value={group.tournamentName}
                 onChange={(e) => set({ tournamentName: e.target.value })}
                 placeholder="例：秋季新人大会"
+                list="tournament-options"
                 autoComplete="off"
               />
             </Field>
+            <Suggest id="tournament-options" values={options.tournaments} />
+            {/* これまでに入れた大会名から選ぶ（2日目・予備日なども同じ名前で） */}
+            {options.tournaments.length > 0 && (
+              <div className="picks mt-2">
+                {options.tournaments
+                  .filter((t) => t !== group.tournamentName)
+                  .slice(0, 8)
+                  .map((t) => (
+                    <button key={t} type="button" className="pick" onClick={() => set({ tournamentName: t })}>
+                      {t}
+                    </button>
+                  ))}
+              </div>
+            )}
           </div>
         )}
         {group.type === "部活あり" && (
@@ -664,10 +680,11 @@ export function ActivityEditor({
       .then(setDir)
       .catch(() => {});
   }, []);
-  const [places, setPlaces] = useState<{ venues: string[]; meetPlaces: string[]; opponents: string[] }>({
+  const [places, setPlaces] = useState<{ venues: string[]; meetPlaces: string[]; opponents: string[]; tournaments: string[] }>({
     venues: [],
     meetPlaces: [],
     opponents: [],
+    tournaments: [],
   });
 
   useEffect(() => {

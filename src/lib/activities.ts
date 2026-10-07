@@ -360,16 +360,19 @@ export async function recentPlaces(): Promise<{
   venues: string[];
   meetPlaces: string[];
   opponents: string[];
+  tournaments: string[];
 }> {
   const snap = await getDocs(query(collection(db(), "activities"), orderBy("date", "desc")));
   const venues = new Set<string>();
   const meetPlaces = new Set<string>();
   const opponents = new Set<string>();
+  const tournaments = new Set<string>();
   snap.docs.forEach((d) => {
     const groups = (d.data().groups ?? []) as Partial<ActivityGroup>[];
     groups.forEach((g) => {
       if (g.venue) venues.add(g.venue);
       if (g.meetPlace) meetPlaces.add(g.meetPlace);
+      if (g.tournamentName) tournaments.add(g.tournamentName.trim());
       (g.games ?? []).forEach((x) => {
         if (x.opponent) opponents.add(x.opponent);
         if (x.home) opponents.add(x.home);
@@ -381,6 +384,7 @@ export async function recentPlaces(): Promise<{
     venues: [...venues].slice(0, 30),
     meetPlaces: [...meetPlaces].slice(0, 30),
     opponents: [...opponents].slice(0, 50),
+    tournaments: [...tournaments].slice(0, 12),
   };
 }
 
