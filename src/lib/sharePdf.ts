@@ -7,7 +7,7 @@ type Html2Canvas = (el: HTMLElement, opts: Record<string, unknown>) => Promise<H
 
 const PAGE_W = 794; // A4 の幅（画面のピクセル）
 const PAGE_H = 1123; // A4 の高さ
-const MARGIN = 34; // 2ページ目以降の上下の余白
+const MARGIN = 14; // 2ページ目以降の上下の余白（用紙いっぱいに使う）
 
 let loading: Promise<Html2Canvas> | null = null;
 function loadHtml2Canvas(): Promise<Html2Canvas> {

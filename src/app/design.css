@@ -1374,10 +1374,10 @@ textarea.f-input {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 8mm;
+    margin: 4mm; /* 用紙いっぱいに（プリンターが印刷できる端まで） */
   }
   .ms {
-    padding: 0;
+    padding: 4mm;
     break-inside: avoid;
   }
 }
