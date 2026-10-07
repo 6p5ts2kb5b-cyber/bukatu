@@ -143,6 +143,14 @@ export function describeRef(t: string, pairs: [string, string][]): string | null
   return `${name(p[0])}と${name(p[1])}の${r.win ? "勝者" : "敗者"}`;
 }
 
+// 大会の日程（何日目・決勝など）
+export const STAGES = ["1日目", "2日目", "3日目", "準決勝", "決勝", "準決・決勝"];
+
+// 「秋季新人大会 2日目」のような大会の見出し
+export function tournamentTitle(g: Pick<ActivityGroup, "tournamentName" | "stage">): string {
+  return [g.tournamentName, g.stage].filter(Boolean).join(" ");
+}
+
 // 試合の開始の書き方（「9:00」または「昼食後40分後」）
 export function gameStart(x: Game): string {
   if (x.afterLunch) return `昼食後${x.lunchMin || 40}分後`;
@@ -174,6 +182,7 @@ export type ActivityGroup = {
   division: DivisionKey;
   type: ActivityType;
   tournamentName: string; // 大会名（公式戦・大会のとき）
+  stage: string; // 大会の何日目か（1日目・2日目・3日目・準決勝・決勝・準決・決勝）
   venue: string; // 会場
   venueAddress: string; // 会場の住所
   venueStation: string; // 最寄駅（駅からの時間も）
@@ -201,6 +210,7 @@ export function newGroup(division: DivisionKey, date = ""): ActivityGroup {
     division,
     type: date && !isWeekend(date) ? "部活あり" : "練習",
     tournamentName: "",
+    stage: "",
     venue: "",
     venueAddress: "",
     venueStation: "",

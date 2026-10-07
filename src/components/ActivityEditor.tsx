@@ -19,6 +19,7 @@ import {
   isOffType,
   parseRef,
   isSimpleType,
+  STAGES,
   recentPlaces,
 } from "@/lib/activities";
 import { addPackingItem, listPackingItems, type PackingItem } from "@/lib/packing";
@@ -471,6 +472,21 @@ function GroupEditor({
               />
             </Field>
             <Suggest id="tournament-options" values={options.tournaments} />
+            <span className="f-label mt-4 block">日程</span>
+            <div className="picks">
+              {STAGES.map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  className="pick"
+                  aria-pressed={group.stage === st}
+                  onClick={() => set({ stage: group.stage === st ? "" : st })}
+                >
+                  {st}
+                </button>
+              ))}
+            </div>
+            {options.tournaments.length > 0 && <span className="f-label mt-4 block">これまでの大会名から選ぶ</span>}
             {/* これまでに入れた大会名から選ぶ（2日目・予備日なども同じ名前で） */}
             {options.tournaments.length > 0 && (
               <div className="picks mt-2">

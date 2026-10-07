@@ -14,6 +14,7 @@ import {
   divisionLabel,
   gameLabel,
   gameStart,
+  tournamentTitle,
   isMatchType,
   ourOpponents,
   isOffType,
@@ -96,7 +97,7 @@ function GroupLines({ g, showDivision }: { g: ActivityGroup; showDivision: boole
   const title = [
     showDivision ? `【${divisionLabel(g.division)}】` : "",
     g.type,
-    g.tournamentName ? `（${g.tournamentName}）` : "",
+    tournamentTitle(g) ? `（${tournamentTitle(g)}）` : "",
   ].join("");
   const opponents = isMatchType(g.type)
     ? ourOpponents(g.games)

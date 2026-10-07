@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Card, Choices, ErrorText, Field, inputClass, Loading, PageHead, PrimaryButton, ToggleButton } from "@/components/ui";
-import { formatDate, isMatchType, listUpcoming, type Activity } from "@/lib/activities";
+import { formatDate, isMatchType, listUpcoming, tournamentTitle, type Activity } from "@/lib/activities";
 import {
   activityOpponents,
   applyActivity,
@@ -109,7 +109,7 @@ export default function NoticesPage() {
                     <button type="button" className="row" disabled={saving} onClick={() => createFrom(a)}>
                       <span className="row__main">
                         <span className="row__sub">{formatDate(a.date)}</span>
-                        <span className="row__title">{g.tournamentName || g.type}</span>
+                        <span className="row__title">{tournamentTitle(g) || g.type}</span>
                         <span className="tags">
                           {opps.length > 0 && <span className="tag">vs {opps.join("・")}</span>}
                           {g.games.length > 0 && <span className="tag">{g.games.length}試合</span>}

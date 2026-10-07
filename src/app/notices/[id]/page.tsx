@@ -30,7 +30,7 @@ import { shareOrDownload } from "@/lib/sharePdf";
 import { findVenue, listDirectory, VENUE_PRESETS, type DirEntry } from "@/lib/directory";
 import { DirPicker } from "@/components/DirPicker";
 import { listStaff, type Staff } from "@/lib/staff";
-import { formatDate, isMatchType, isRef, listUpcoming, type Activity } from "@/lib/activities";
+import { formatDate, isMatchType, isRef, listUpcoming, tournamentTitle, type Activity } from "@/lib/activities";
 
 function Text({
   label,
@@ -571,7 +571,7 @@ export default function NoticePage() {
             <span className="source__label">予定</span>
             <span className="source__value">
               {linked
-                ? `${formatDate(linked.date)} ${linked.groups.find((g) => isMatchType(g.type))?.tournamentName || "練習試合"}`
+                ? `${formatDate(linked.date)} ${linked.groups.find((g) => isMatchType(g.type))?.tournamentName ? tournamentTitle(linked.groups.find((g) => isMatchType(g.type))!) : "練習試合"}`
                 : n.activityId
                   ? "読み込んだ予定（終わった予定）"
                   : "予定から読み込んでいません"}
@@ -607,7 +607,7 @@ export default function NoticePage() {
                       setShowPick(false);
                     }}
                   >
-                    {formatDate(a.date)} {g.tournamentName || g.type}
+                    {formatDate(a.date)} {tournamentTitle(g) || g.type}
                   </button>
                 );
               })}

@@ -17,7 +17,7 @@ import {
   type Firestore,
 } from "firebase/firestore";
 import { firebaseApp } from "./firebase";
-import { describeRef, isRef, normalizeTeam, todayString, type Activity } from "./activities";
+import { describeRef, isRef, normalizeTeam, todayString, tournamentTitle, type Activity } from "./activities";
 import { findVenue } from "./directory";
 
 export const OUR_TEAM = "桜・浅羽野・住吉連合";
@@ -257,7 +257,7 @@ export function applyActivity(n: NoticeDraft, a: Activity): NoticeDraft {
     // 持ち物は予定から（お弁当・水筒など）
     packing: g.packing.join("・"),
     meet: meetText(g.meetTime, g.meetPlace),
-    subject: g.tournamentName || (g.type === "練習試合" ? "練習試合" : n.subject),
+    subject: tournamentTitle(g) || (g.type === "練習試合" ? "練習試合" : n.subject),
     date: a.date,
     venue: g.venue || n.venue,
     // 3校の会場なら、住所と最寄駅も入れる

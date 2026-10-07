@@ -11,6 +11,7 @@ import {
   divisionLabel,
   gameLabel,
   gameStart,
+  tournamentTitle,
   isOthersGame,
   ourOpponents,
   isMatchType,
@@ -180,7 +181,7 @@ export function ActivityCard({ activity, featured = false }: { activity: Activit
             <div className="acard__head">
               {g.division !== "main" && <span className="acard__div">{divisionLabel(g.division)}</span>}
               <span className={`acard__type${isOffType(g.type) ? " acard__type--off" : ""}`}>{g.type}</span>
-              {g.tournamentName && <span className="acard__tournament">{g.tournamentName}</span>}
+              {tournamentTitle(g) && <span className="acard__tournament">{tournamentTitle(g)}</span>}
             </div>
             <Opponents g={g} />
             <GroupDetails g={g} />
