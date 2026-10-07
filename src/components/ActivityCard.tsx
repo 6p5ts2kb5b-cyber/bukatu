@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import {
   divisionLabel,
   gameLabel,
+  gameStart,
   isOthersGame,
   ourOpponents,
   isMatchType,
@@ -118,14 +119,15 @@ function GroupDetails({ g }: { g: ActivityGroup }) {
     );
   }
   const items: [string, ReactNode | null][] = [["会場", g.venue || null]];
+  if (g.venueStation) items.push(["最寄駅", g.venueStation]);
   if (isMatchType(g.type) && g.games.length > 0) {
     g.games.forEach((x, i) =>
       items.push([
         `第${i + 1}試合`,
-        x.startTime || gameLabel(x) ? (
+        gameStart(x) || gameLabel(x) ? (
           <span className={isOthersGame(x) ? "acard__others" : undefined}>
-            {x.startTime && <Num>{x.startTime}</Num>}
-            {x.startTime && gameLabel(x) && "　"}
+            {x.afterLunch ? gameStart(x) : x.startTime && <Num>{x.startTime}</Num>}
+            {gameStart(x) && gameLabel(x) && "　"}
             {gameLabel(x)}
             {isOthersGame(x) && "（うちは休み）"}
           </span>

@@ -13,6 +13,7 @@ import {
   DIVISIONS,
   divisionLabel,
   gameLabel,
+  gameStart,
   isMatchType,
   ourOpponents,
   isOffType,
@@ -110,17 +111,17 @@ function GroupLines({ g, showDivision }: { g: ActivityGroup; showDivision: boole
             <p className="font-bold">合同：{g.partners.join("・")}</p>
           )}
           {isMatchType(g.type) &&
-            g.games.some((x) => x.startTime) &&
+            g.games.some((x) => gameStart(x)) &&
             g.games.length > 1 && (
               <p>
                 {g.games
-                  .map((x, i) => `第${i + 1}試合 ${x.startTime || "未定"}${gameLabel(x) ? ` ${gameLabel(x)}` : ""}`)
+                  .map((x, i) => `第${i + 1}試合 ${gameStart(x) || "未定"}${gameLabel(x) ? ` ${gameLabel(x)}` : ""}`)
                   .join("／")}
               </p>
             )}
           {(g.venue || g.startTime || g.endTime) && (
             <p>
-              {g.venue && <>会場：{g.venue}　</>}
+              {g.venue && <>会場：{g.venue}{g.venueStation && `（${g.venueStation}）`}　</>}
               {time(g.startTime, g.endTime) && <>時間：{time(g.startTime, g.endTime)}</>}
             </p>
           )}

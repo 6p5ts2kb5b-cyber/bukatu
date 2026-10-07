@@ -61,3 +61,11 @@ export async function addDirectory(kind: DirKind, name: string, number: string, 
 export async function deleteDirectory(id: string): Promise<void> {
   await deleteDoc(doc(db(), "directory", id));
 }
+
+// 登録した会場＋3校（同じ名前を登録していれば、登録した方を使う）
+export function venueList(dir: DirEntry[]): DirEntry[] {
+  return [
+    ...dir.filter((d) => d.kind === "venue"),
+    ...VENUE_PRESETS.filter((p) => !dir.some((d) => d.kind === "venue" && d.name === p.name)),
+  ];
+}

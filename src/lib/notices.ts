@@ -243,6 +243,8 @@ export function applyActivity(n: NoticeDraft, a: Activity): NoticeDraft {
     timeNote: i === 0 ? "開始" : "予定",
     plate: "",
     base: "",
+    afterLunch: x.afterLunch === true,
+    lunchMin: x.lunchMin || 40,
     } as NoticeGame;
   });
   if (!games.length && kind !== "tournament") games = practiceGames(kind, opponents[0] ?? "", opponents[1] ?? "");
@@ -260,6 +262,8 @@ export function applyActivity(n: NoticeDraft, a: Activity): NoticeDraft {
     venue: g.venue || n.venue,
     // 3校の会場なら、住所と最寄駅も入れる
     ...(() => {
+      // 予定に住所・最寄駅があればそれを、なければ3校の会場から
+      if (g.venueAddress || g.venueStation) return { venueAddress: g.venueAddress, venueStation: g.venueStation };
       const v = findVenue(g.venue || n.venue, []);
       return v ? { venue: v.name, venueAddress: v.number, venueStation: v.extra ?? "" } : {};
     })(),

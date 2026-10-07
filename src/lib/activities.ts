@@ -90,6 +90,8 @@ export type Game = {
   home?: string;
   // 先に書いたチーム（うちの試合なら「うち」、他チーム同士なら「チーム1」）のベンチ。ふつうは1塁
   bench?: "1塁" | "3塁";
+  afterLunch?: boolean; // 開始を「昼食後○分後」にする
+  lunchMin?: number;
 };
 
 // ---- 「第1試合の勝者」のような、まだ決まっていない相手 ----
@@ -141,6 +143,12 @@ export function describeRef(t: string, pairs: [string, string][]): string | null
   return `${name(p[0])}と${name(p[1])}の${r.win ? "勝者" : "敗者"}`;
 }
 
+// 試合の開始の書き方（「9:00」または「昼食後40分後」）
+export function gameStart(x: Game): string {
+  if (x.afterLunch) return `昼食後${x.lunchMin || 40}分後`;
+  return x.startTime;
+}
+
 // うちが出ない試合（他チーム同士）か
 export function isOthersGame(x: Game): boolean {
   return x.others === true;
@@ -167,6 +175,8 @@ export type ActivityGroup = {
   type: ActivityType;
   tournamentName: string; // 大会名（公式戦・大会のとき）
   venue: string; // 会場
+  venueAddress: string; // 会場の住所
+  venueStation: string; // 最寄駅（駅からの時間も）
   startTime: string; // 開始時間 "09:00"
   endTime: string; // 終了時間 "12:00"
   meetTime: string; // 集合時間 "08:30"
@@ -192,6 +202,8 @@ export function newGroup(division: DivisionKey, date = ""): ActivityGroup {
     type: date && !isWeekend(date) ? "部活あり" : "練習",
     tournamentName: "",
     venue: "",
+    venueAddress: "",
+    venueStation: "",
     startTime: "",
     endTime: "",
     meetTime: "",
@@ -269,6 +281,8 @@ function toActivity(id: string, data: Record<string, unknown>): Activity {
               home: String(x.home ?? ""),
               others: x.others === true,
               bench: x.bench === "3塁" ? "3塁" : "1塁",
+              afterLunch: x.afterLunch === true,
+              lunchMin: Number(x.lunchMin) || 40,
             }),
           )
         : [],

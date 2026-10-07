@@ -22,6 +22,8 @@ import {
   recentPlaces,
 } from "@/lib/activities";
 import { addPackingItem, listPackingItems, type PackingItem } from "@/lib/packing";
+import { findVenue, listDirectory, venueList, type DirEntry } from "@/lib/directory";
+import { DirPicker } from "@/components/DirPicker";
 import { Card, Choices, ErrorText, Field, inputClass, PanelTitle, PrimaryButton, ToggleButton } from "@/components/ui";
 
 export type ActivityDraft = Omit<Activity, "id"> & { id?: string };
@@ -29,6 +31,8 @@ export type ActivityDraft = Omit<Activity, "id"> & { id?: string };
 type Options = {
   packingItems: PackingItem[];
   venues: string[];
+  dir: DirEntry[]; // 名簿（会場の住所・最寄駅）
+  reloadDir: () => void;
   meetPlaces: string[];
   opponents: string[];
   onAddPacking: (name: string) => Promise<void>;
@@ -300,16 +304,47 @@ function GamesEditor({
                     ))}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="shrink-0 text-sm font-extrabold text-navy-soft">開始</span>
-                  <div className="w-[11rem]">
-                    <TimePicker10
-                      white
-                      name={`第${i + 1}試合の開始`}
-                      value={g.startTime}
-                      onChange={(v) => update(i, { startTime: v })}
-                    />
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="shrink-0 text-sm font-extrabold text-navy-soft">開始</span>
+                    <div className="seg flex-1" role="group" aria-label="開始の書き方">
+                      <button type="button" className="seg__btn" aria-pressed={!g.afterLunch} onClick={() => update(i, { afterLunch: false })}>
+                        時刻
+                      </button>
+                      <button
+                        type="button"
+                        className="seg__btn"
+                        aria-pressed={!!g.afterLunch}
+                        onClick={() => update(i, { afterLunch: true, lunchMin: g.lunchMin || 40 })}
+                      >
+                        昼食後○分後
+                      </button>
+                    </div>
                   </div>
+                  {g.afterLunch ? (
+                    <div className="picks">
+                      {[30, 40, 45, 50, 60].map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          className="pick"
+                          aria-pressed={(g.lunchMin || 40) === m}
+                          onClick={() => update(i, { lunchMin: m })}
+                        >
+                          昼食後{m}分後
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="w-[11rem]">
+                      <TimePicker10
+                        white
+                        name={`第${i + 1}試合の開始`}
+                        value={g.startTime}
+                        onChange={(v) => update(i, { startTime: v })}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -481,13 +516,34 @@ function GroupEditor({
               <input
                 className={inputClass}
                 value={group.venue}
-                onChange={(e) => set({ venue: e.target.value })}
+                onChange={(e) => {
+                  // 登録した会場（3校など）と同じなら、住所と最寄駅もいっしょに
+                  const f = findVenue(e.target.value, venueList(options.dir));
+                  set({ venue: e.target.value, ...(f ? { venueAddress: f.number, venueStation: f.extra ?? "" } : {}) });
+                }}
                 placeholder="例：桜中学校 グラウンド"
                 list="venue-options"
                 autoComplete="off"
               />
             </Field>
             <Suggest id="venue-options" values={options.venues} />
+            <DirPicker
+              kind="venue"
+              entries={venueList(options.dir)}
+              isOn={(e) => e.name === group.venue}
+              onPick={(e) => set({ venue: e.name, venueAddress: e.number, venueStation: e.extra ?? "" })}
+              onChanged={options.reloadDir}
+            />
+            {(group.venue || group.venueStation) && (
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="住所">
+                  <input className={inputClass} value={group.venueAddress} onChange={(e) => set({ venueAddress: e.target.value })} autoComplete="off" />
+                </Field>
+                <Field label="最寄駅">
+                  <input className={inputClass} value={group.venueStation} onChange={(e) => set({ venueStation: e.target.value })} autoComplete="off" />
+                </Field>
+              </div>
+            )}
             {!isSimple && (
               <div className="grid grid-cols-2 gap-3">
                 <TimeSelect10 label="開始" value={group.startTime} onChange={(v) => set({ startTime: v })} />
@@ -602,6 +658,12 @@ export function ActivityEditor({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [packingItems, setPackingItems] = useState<PackingItem[]>([]);
+  const [dir, setDir] = useState<DirEntry[]>([]);
+  const reloadDir = useCallback(() => {
+    listDirectory()
+      .then(setDir)
+      .catch(() => {});
+  }, []);
   const [places, setPlaces] = useState<{ venues: string[]; meetPlaces: string[]; opponents: string[] }>({
     venues: [],
     meetPlaces: [],
@@ -611,7 +673,8 @@ export function ActivityEditor({
   useEffect(() => {
     listPackingItems().then(setPackingItems).catch(() => {});
     recentPlaces().then(setPlaces).catch(() => {});
-  }, []);
+    reloadDir();
+  }, [reloadDir]);
 
   const onAddPacking = useCallback(
     async (name: string) => {
@@ -751,7 +814,7 @@ export function ActivityEditor({
           key={current.division}
           group={current}
           onChange={updateGroup}
-          options={{ packingItems, onAddPacking, ...places }}
+          options={{ packingItems, onAddPacking, ...places, dir, reloadDir }}
           tabs={tabs}
           extra={
             top && academy && tab === "academy" ? (
