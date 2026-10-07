@@ -7,7 +7,7 @@ type Html2Canvas = (el: HTMLElement, opts: Record<string, unknown>) => Promise<H
 
 const PAGE_W = 794; // A4 の幅（画面のピクセル）
 const PAGE_H = 1123; // A4 の高さ
-const MARGIN = 14; // 2ページ目以降の上下の余白（用紙いっぱいに使う）
+const MARGIN = 6; // 2ページ目以降の上下の余白（PDFは余白なしで用紙いっぱいに）
 
 let loading: Promise<Html2Canvas> | null = null;
 function loadHtml2Canvas(): Promise<Html2Canvas> {
@@ -137,6 +137,8 @@ export async function elementToPdf(
   const host = document.createElement("div");
   host.style.cssText = `position:fixed;left:-20000px;top:0;width:${PAGE_W}px;background:#fff;`;
   const clone = source.cloneNode(true) as HTMLElement;
+  // PDFは余白なし：画面の見本の外側の余白を詰める
+  clone.style.padding = "6px";
   host.appendChild(clone);
   document.body.appendChild(host);
   try {

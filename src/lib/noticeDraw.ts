@@ -10,9 +10,9 @@ const PX_PER_MM = 794 / 210;
 const PT = 0.3528; // 1pt = 0.3528mm
 const PAGE_W = 210;
 const PAGE_H = 297;
-const L = 18; // 左右の余白
+const L = 7; // 左右の余白（PDFは用紙いっぱいに）
 const W = PAGE_W - L * 2;
-const BOTTOM = PAGE_H - 14;
+const BOTTOM = PAGE_H - 6;
 
 function cssVar(name: string): string {
   if (typeof document === "undefined") return "";
@@ -25,7 +25,7 @@ const NO_START = "、。，．）」』】〕）!?！？ー・：:";
 type Ctx = CanvasRenderingContext2D;
 
 class Painter {
-  y = 14;
+  y = 6;
   constructor(
     private ctx: Ctx,
     private K: number, // 1mm あたりの点
@@ -349,7 +349,7 @@ export async function drawNotice(n: NoticeDraft, scale = 2): Promise<HTMLCanvasE
     const dry = new Painter(ctx, K, f, JP, NUM, true);
     paint(dry, n);
     if (dry.y <= BOTTOM) break;
-    f *= Math.max(0.8, (BOTTOM - 14) / (dry.y - 14)) * 0.99;
+    f *= Math.max(0.8, (BOTTOM - 6) / (dry.y - 6)) * 0.99;
   }
   ctx.fillStyle = "#fff";
   ctx.fillRect(0, 0, c.width, c.height);

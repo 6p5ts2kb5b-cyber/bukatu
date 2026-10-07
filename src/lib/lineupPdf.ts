@@ -83,9 +83,10 @@ export async function lineupToPdf(d: SheetData, filename: string): Promise<File>
     ctx.fillText(s, mm(tx), mm(y + h / 2));
   };
 
-  const X0 = 12;
-  const W = 186;
-  let y = 12;
+  // PDFは余白なしで用紙いっぱいに（左右・上 5mm）
+  const X0 = 5;
+  const W = 200;
+  let y = 5;
 
   // ---- 見出しの枠 ----
   const headH = 28;
@@ -165,7 +166,7 @@ export async function lineupToPdf(d: SheetData, filename: string): Promise<File>
   y += 3;
   text(`控え選手（${d.bench.filter((b) => b.name).length}人）`, X0, y, W, 6, 11, 800, JP, "left", 0);
   y += 7;
-  const room = 285 - y - 8;
+  const room = 292 - y - 8;
   const benchH = Math.min(10, room / Math.max(1, d.bench.length));
   table(
     [
