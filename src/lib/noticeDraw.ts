@@ -3,6 +3,7 @@
 // 寸法は mm で決め、入りきらないときは全体を少しずつ小さくして1枚に収めます。
 
 import { reiwa, type NoticeDraft } from "./notices";
+import { describeRef, isRef } from "./activities";
 import { jpegPagesToPdf, toJpeg } from "./sharePdf";
 
 const PX_PER_MM = 794 / 210;
@@ -244,6 +245,7 @@ function paint(p: Painter, n: NoticeDraft) {
     });
     p.y += hh;
     p.line(L, p.y, L + W, p.y, 0.5);
+    const pairs = n.games.map((x) => [x.first, x.third] as [string, string]);
     games.forEach((g, i) => {
       const h = p.sz(14);
       let cx = L;
@@ -253,12 +255,20 @@ function paint(p: Painter, n: NoticeDraft) {
       p.text("試合", cx + cols[0] / 2, p.y + h * 0.68, "center");
       cx += cols[0];
       // 1塁・対・3塁
-      p.fitText(g.first, cx + 2, p.y + h / 2, cols[1] - 4, 11, 800, "center");
+      // チーム名。「第1試合の勝者」なら、下に「富士見中と入間METSの勝者」を小さく添える
+      const team = (t: string, x: number, w: number) => {
+        const d = isRef(t) ? describeRef(t, pairs) : null;
+        if (d) {
+          p.fitText(t, x + 2, p.y + h * 0.36, w - 4, 10.5, 800, "center");
+          p.fitText(`（${d}）`, x + 1, p.y + h * 0.7, w - 2, 8, 600, "center");
+        } else p.fitText(t, x + 2, p.y + h / 2, w - 4, 11, 800, "center");
+      };
+      team(g.first, cx, cols[1]);
       cx += cols[1];
       p.font(9.5, 700);
       p.text("対", cx + cols[2] / 2, p.y + h / 2, "center");
       cx += cols[2];
-      p.fitText(g.third, cx + 2, p.y + h / 2, cols[3] - 4, 11, 800, "center");
+      team(g.third, cx, cols[3]);
       cx += cols[3];
       // 時刻
       if (g.time) {

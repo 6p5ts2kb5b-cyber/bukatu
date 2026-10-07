@@ -17,7 +17,7 @@ import {
   type Firestore,
 } from "firebase/firestore";
 import { firebaseApp } from "./firebase";
-import { todayString, type Activity } from "./activities";
+import { describeRef, isRef, normalizeTeam, todayString, type Activity } from "./activities";
 
 export const OUR_TEAM = "桜・浅羽野・住吉連合";
 
@@ -174,14 +174,21 @@ export function activityOpponents(a: Activity): string[] {
   if (!g) return [];
   return [
     ...new Set(
-      g.games.flatMap((x) => [x.opponent, x.others ? x.home ?? "" : ""]).filter((t) => t && t !== OUR_TEAM),
+      g.games
+        .flatMap((x) => [x.others ? normalizeTeam(x.home ?? "") : "", normalizeTeam(x.opponent)])
+        .filter((t) => t && t !== OUR_TEAM && !isPlaceholderTeam(t)),
     ),
   ];
 }
 
 // 勝者・敗者のような「チーム名でない」もの
 export function isPlaceholderTeam(t: string): boolean {
-  return /試合の(勝|敗)者|勝者|敗者/.test(t);
+  return isRef(t) || /勝者|敗者|勝ち|負け|対/.test(t);
+}
+
+// 試合のチーム名を、読む人に分かる形に（「第1試合の勝者」→「富士見中と入間METSの勝者」）
+export function teamText(t: string, games: NoticeGame[]): string {
+  return describeRef(t, games.map((g) => [g.first, g.third] as [string, string])) ?? t;
 }
 
 // 審判をひな形で入れる
@@ -192,6 +199,8 @@ export function fillUmpires(kind: NoticeKind, games: NoticeGame[], teams: string
     if (g.plate || g.base) return g;
     let ump = "両チームより";
     if (kind === "practice3") {
+      // 「第1試合の勝者」などが入った試合は、休みのチームが決まらないので空けておく
+      if (isPlaceholderTeam(g.first) || isPlaceholderTeam(g.third)) return g;
       const rest = teams.filter((t) => t !== g.first && t !== g.third);
       if (rest.length === 1) ump = rest[0];
     }
@@ -209,8 +218,8 @@ export function applyActivity(n: NoticeDraft, a: Activity): NoticeDraft {
   const kind: NoticeKind =
     g.type === "練習試合" ? (opponents.length >= 2 ? "practice3" : "practice2") : n.kind === "tournament" ? "tournament" : n.kind;
   let games: NoticeGame[] = g.games.map((x, i) => ({
-    first: x.others ? x.home ?? "" : OUR_TEAM,
-    third: x.opponent,
+    first: x.others ? normalizeTeam(x.home ?? "") : OUR_TEAM,
+    third: normalizeTeam(x.opponent),
     time: x.startTime,
     timeNote: i === 0 ? "開始" : "予定",
     plate: "",
@@ -317,8 +326,8 @@ export function parentMessage(n: NoticeDraft): string {
   if (games.length) {
     out.push("試合順は");
     games.forEach((g, i) => {
-      const ump = g.plate ? `　球審　${g.plate}` : "";
-      out.push(`${i + 1}試合目　${g.first || "未定"}　対　${g.third || "未定"}`);
+      const ump = g.plate ? `　球審　${teamText(g.plate, games)}` : "";
+      out.push(`${i + 1}試合目　${teamText(g.first, games) || "未定"}　対　${teamText(g.third, games) || "未定"}`);
       out.push(`${g.time ? `${clock(g.time)}〜` : "時間未定"}${ump}`);
       if (i < games.length - 1) out.push("");
     });

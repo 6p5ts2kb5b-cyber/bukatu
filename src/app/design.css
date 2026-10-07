@@ -1590,3 +1590,59 @@ textarea.f-input {
   font-size: 15px;
   font-weight: 800;
 }
+
+/* 「第1試合の勝者」などを選ぶボタンと、選んだ後の表示 */
+.pick--ref {
+  min-height: 36px;
+  padding: 0 10px;
+  font-size: 13px;
+  border-style: dashed;
+  color: var(--ink-2);
+}
+.ref-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 50px;
+  padding: 6px 6px 6px 14px;
+  border: 1.5px solid var(--board);
+  border-radius: 12px;
+  background: #fff;
+}
+.ref-pill > span {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.35;
+}
+.ref-pill b {
+  font-size: 16px;
+  font-weight: 800;
+}
+.ref-pill small {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+.ref-pill button {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #c42b3b;
+  font-size: 20px;
+  font-weight: 800;
+}
+.pick {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.25;
+}
+.pick__sub {
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.75;
+}

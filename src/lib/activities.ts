@@ -90,6 +90,55 @@ export type Game = {
   home?: string;
 };
 
+// ---- 「第1試合の勝者」のような、まだ決まっていない相手 ----
+// 手で「対 1試合目負け」「1試合目勝ち」などと書かれていても、同じ形にそろえる
+export function normalizeTeam(t: string): string {
+  const s = (t ?? "").replace(/^\s*(対|vs\.?)\s*/i, "").trim();
+  const m = s.match(/^第?\s*([0-9０-９]+)\s*試合目?\s*の?\s*(勝ち|勝者|勝|負け|敗者|負|敗)$/);
+  if (m) {
+    const n = Number(m[1].replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)));
+    return `第${n}試合の${/勝/.test(m[2]) ? "勝者" : "敗者"}`;
+  }
+  return s;
+}
+
+export function parseRef(t: string): { game: number; win: boolean } | null {
+  const m = normalizeTeam(t).match(/^第(\d+)試合の(勝者|敗者)$/);
+  return m ? { game: Number(m[1]), win: m[2] === "勝者" } : null;
+}
+
+export function isRef(t: string): boolean {
+  return parseRef(t) !== null;
+}
+
+// 1つの欄に「富士見 対 入間メッツ」と書かれていたら、2チームに分ける
+export function splitVs(t: string): [string, string] | null {
+  const parts = (t ?? "").split(/\s*(?:対|vs\.?)\s*/i).map((x) => x.trim());
+  if (parts.length === 2 && parts[0] && parts[1]) return [parts[0], parts[1]];
+  return null;
+}
+
+// 試合の書き方をそろえる（上の2つをまとめて）
+export function normalizeGame(x: Game): Game {
+  let g = { ...x, home: x.home ?? "", others: x.others === true };
+  if (!g.others) {
+    const sp = splitVs(g.opponent);
+    if (sp) g = { ...g, others: true, home: sp[0], opponent: sp[1] };
+  }
+  return { ...g, home: normalizeTeam(g.home ?? ""), opponent: normalizeTeam(g.opponent) };
+}
+
+// 「第1試合の勝者」→「富士見中と入間METSの勝者」（その試合の2チームが分かるとき）
+//   pair = 試合ごとの2チーム（[1塁側, 3塁側] など）
+export function describeRef(t: string, pairs: [string, string][]): string | null {
+  const r = parseRef(t);
+  if (!r) return null;
+  const p = pairs[r.game - 1];
+  if (!p || !p[0] || !p[1]) return null;
+  const name = (x: string) => (isRef(x) ? x.replace(/^第(\d+)試合の/, "第$1試合") : x);
+  return `${name(p[0])}と${name(p[1])}の${r.win ? "勝者" : "敗者"}`;
+}
+
 // うちが出ない試合（他チーム同士）か
 export function isOthersGame(x: Game): boolean {
   return x.others === true;
@@ -97,13 +146,13 @@ export function isOthersGame(x: Game): boolean {
 
 // 試合の表示名：「坂戸中」または「坂戸中 対 鶴ヶ島中」
 export function gameLabel(x: Game): string {
-  if (isOthersGame(x)) return `${x.home || "未定"} 対 ${x.opponent || "未定"}`;
-  return x.opponent;
+  if (isOthersGame(x)) return `${normalizeTeam(x.home ?? "") || "未定"} 対 ${normalizeTeam(x.opponent) || "未定"}`;
+  return normalizeTeam(x.opponent);
 }
 
 // うちの対戦相手だけ（重なりは1つに）
 export function ourOpponents(games: Game[]): string[] {
-  return [...new Set(games.filter((x) => !isOthersGame(x)).map((x) => x.opponent.trim()).filter(Boolean))];
+  return [...new Set(games.filter((x) => !isOthersGame(x)).map((x) => normalizeTeam(x.opponent)).filter(Boolean))];
 }
 
 // 試合がある種別
@@ -211,7 +260,14 @@ function toActivity(id: string, data: Record<string, unknown>): Activity {
       ...g,
       packing: Array.isArray(g.packing) ? g.packing : [],
       games: Array.isArray(g.games)
-        ? g.games.map((x) => ({ opponent: String(x.opponent ?? ""), startTime: String(x.startTime ?? ""), home: String(x.home ?? ""), others: x.others === true }))
+        ? g.games.map((x) =>
+            normalizeGame({
+              opponent: String(x.opponent ?? ""),
+              startTime: String(x.startTime ?? ""),
+              home: String(x.home ?? ""),
+              others: x.others === true,
+            }),
+          )
         : [],
       returnToSchool: g.returnToSchool === true,
       partners: Array.isArray(g.partners) ? g.partners : [],

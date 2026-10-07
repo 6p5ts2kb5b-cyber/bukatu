@@ -16,6 +16,7 @@ import {
   getNotice,
   isPlaceholderTeam,
   NOTICE_KINDS,
+  teamText,
   OUR_TEAM,
   parentMessage,
   saveNotice,
@@ -23,7 +24,7 @@ import {
   type NoticeGame,
 } from "@/lib/notices";
 import { shareOrDownload } from "@/lib/sharePdf";
-import { formatDate, isMatchType, listUpcoming, type Activity } from "@/lib/activities";
+import { formatDate, isMatchType, isRef, listUpcoming, type Activity } from "@/lib/activities";
 
 function Text({
   label,
@@ -68,11 +69,13 @@ function TeamPicker({
   value,
   options,
   onChange,
+  describe,
 }: {
   label: string;
   value: string;
   options: string[];
   onChange: (v: string) => void;
+  describe?: (v: string) => string | null;
 }) {
   const custom = !!value && !options.includes(value);
   const [typing, setTyping] = useState(false);
@@ -84,7 +87,7 @@ function TeamPicker({
           <button
             key={o}
             type="button"
-            className="pick"
+            className={`pick${isPlaceholderTeam(o) ? " pick--ref" : ""}`}
             aria-pressed={value === o}
             onClick={() => {
               setTyping(false);
@@ -92,6 +95,7 @@ function TeamPicker({
             }}
           >
             {o}
+            {describe?.(o) && <small className="pick__sub">{describe(o)}</small>}
           </button>
         ))}
         <button type="button" className="pick pick--other" aria-pressed={custom || typing} onClick={() => setTyping(!typing)}>
@@ -134,10 +138,12 @@ function GamesEditor({
   };
   const small = "h-10 w-10 rounded-lg text-sm text-navy-soft active:bg-white disabled:opacity-25";
   // 前の試合の「勝者・敗者」も選べるように（大会のとき）
+  // リーグ戦・トーナメントでは「第1試合の勝者／敗者」も選べる（2試合目から）
   const optionsFor = (i: number) => [
     ...teams,
-    ...(tournament ? games.slice(0, i).flatMap((_, k) => [`第${k + 1}試合の勝者`, `第${k + 1}試合の敗者`]) : []),
+    ...games.slice(0, i).flatMap((_, k) => [`第${k + 1}試合の勝者`, `第${k + 1}試合の敗者`]),
   ];
+  const describe = (v: string) => (isRef(v) ? teamText(v, games) : null);
   const umpOptions = (i: number) => [...optionsFor(i), ...(tournament ? [] : ["両チームより"])];
   // 予定から入っているので、ふだんは閉じて要約だけ見せる。直すときだけ開く
   const [open, setOpen] = useState<number[]>(() =>
@@ -179,19 +185,24 @@ function GamesEditor({
             </div>
             <button type="button" className="game-card__sum" onClick={() => toggle(i)} aria-expanded={open.includes(i)}>
               <span className="game-card__match">
-                <span>{g.first || "未定"}</span>
+                <span>{teamText(g.first, games) || "未定"}</span>
                 <i>対</i>
-                <span>{g.third || "未定"}</span>
+                <span>{teamText(g.third, games) || "未定"}</span>
               </span>
               <span className="game-card__meta">
                 <b>{clockText(g.time)}</b> {g.time && g.timeNote}
-                <span>審判 {g.plate === g.base ? g.plate || "未定" : `主審 ${g.plate || "未定"}・塁審 ${g.base || "未定"}`}</span>
+                <span>
+                  審判{" "}
+                  {g.plate === g.base
+                    ? teamText(g.plate, games) || "未定"
+                    : `主審 ${teamText(g.plate, games) || "未定"}・塁審 ${teamText(g.base, games) || "未定"}`}
+                </span>
               </span>
               <span className="game-card__edit">{open.includes(i) ? "閉じる" : "変更"}</span>
             </button>
             {open.includes(i) && (
             <div className="mt-3 flex flex-col gap-3">
-              <TeamPicker label="1塁ベンチ" value={g.first} options={optionsFor(i)} onChange={(v) => update(i, { first: v })} />
+              <TeamPicker label="1塁ベンチ" value={g.first} options={optionsFor(i)} describe={describe} onChange={(v) => update(i, { first: v })} />
               <div className="flex justify-center">
                 <button
                   type="button"
@@ -201,7 +212,7 @@ function GamesEditor({
                   ⇅ 1塁と3塁を入れ替える
                 </button>
               </div>
-              <TeamPicker label="3塁ベンチ" value={g.third} options={optionsFor(i)} onChange={(v) => update(i, { third: v })} />
+              <TeamPicker label="3塁ベンチ" value={g.third} options={optionsFor(i)} describe={describe} onChange={(v) => update(i, { third: v })} />
               <div className="grid grid-cols-[1fr_auto] items-end gap-2">
                 <div>
                   <span className="f-label">時刻</span>

@@ -14,8 +14,10 @@ import {
   type ActivityGroup,
   type DivisionKey,
   type Game,
+  describeRef,
   isMatchType,
   isOffType,
+  parseRef,
   isSimpleType,
   recentPlaces,
 } from "@/lib/activities";
@@ -125,6 +127,62 @@ function RemoveButton({ onClick, label }: { onClick: () => void; label: string }
   );
 }
 
+// 試合のチーム欄。2試合目からは「第1試合の勝者／敗者」をボタンで選べる
+//（そういうチームは無いので、名前ではなく「前の試合の結果」として持つ）
+function TeamSlot({
+  label,
+  value,
+  index,
+  pairs,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  index: number; // この試合の番号（0から）
+  pairs: [string, string][];
+  onChange: (v: string) => void;
+  placeholder: string;
+}) {
+  const ref = parseRef(value);
+  const refs = pairs.slice(0, index).flatMap((_, k) => [`第${k + 1}試合の勝者`, `第${k + 1}試合の敗者`]);
+  return (
+    <div>
+      <span className="f-label">{label}</span>
+      {ref ? (
+        <div className="ref-pill">
+          <span>
+            <b>{value}</b>
+            {describeRef(value, pairs) && <small>{describeRef(value, pairs)}</small>}
+          </span>
+          <button type="button" onClick={() => onChange("")} aria-label="取り消す">
+            ×
+          </button>
+        </div>
+      ) : (
+        <input
+          className={`${inputClass} f-input--white`}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          list="opponent-options"
+          autoComplete="off"
+          aria-label={label}
+        />
+      )}
+      {refs.length > 0 && !ref && (
+        <div className="picks mt-1.5">
+          {refs.map((r) => (
+            <button key={r} type="button" className="pick pick--ref" onClick={() => onChange(r)}>
+              {r}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function GamesEditor({
   no,
   games,
@@ -148,6 +206,9 @@ function GamesEditor({
     [next[i], next[j]] = [next[j], next[i]];
     onChange(next);
   };
+
+  // 試合ごとの2チーム（「第1試合の勝者」の説明に使う）
+  const pairs: [string, string][] = games.map((g) => [g.others ? g.home ?? "" : "うち", g.opponent]);
 
   return (
     <Card>
@@ -191,40 +252,34 @@ function GamesEditor({
               </div>
               <div className="flex flex-col gap-2">
                 {others ? (
-                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5">
-                    <input
-                      className={`${inputClass} f-input--white`}
+                  <>
+                    <TeamSlot
+                      label="チーム1"
                       value={g.home ?? ""}
-                      onChange={(e) => update(i, { home: e.target.value })}
+                      index={i}
+                      pairs={pairs}
+                      onChange={(v) => update(i, { home: v })}
                       placeholder="例：坂戸中"
-                      list="opponent-options"
-                      autoComplete="off"
-                      aria-label={`第${i + 1}試合のチーム1`}
                     />
-                    <span className="text-sm font-extrabold text-navy-soft">対</span>
-                    <input
-                      className={`${inputClass} f-input--white`}
+                    <span className="text-center text-sm font-extrabold text-navy-soft">対</span>
+                    <TeamSlot
+                      label="チーム2"
                       value={g.opponent}
-                      onChange={(e) => update(i, { opponent: e.target.value })}
+                      index={i}
+                      pairs={pairs}
+                      onChange={(v) => update(i, { opponent: v })}
                       placeholder="例：鶴ヶ島中"
-                      list="opponent-options"
-                      autoComplete="off"
-                      aria-label={`第${i + 1}試合のチーム2`}
                     />
-                  </div>
+                  </>
                 ) : (
-                  <div className="grid grid-cols-[auto_1fr] items-center gap-1.5">
-                    <span className="text-sm font-extrabold text-navy-soft">対</span>
-                    <input
-                      className={`${inputClass} f-input--white`}
-                      value={g.opponent}
-                      onChange={(e) => update(i, { opponent: e.target.value })}
-                      placeholder="例：坂戸中"
-                      list="opponent-options"
-                      autoComplete="off"
-                      aria-label={`第${i + 1}試合の対戦相手`}
-                    />
-                  </div>
+                  <TeamSlot
+                    label="対戦相手"
+                    value={g.opponent}
+                    index={i}
+                    pairs={pairs}
+                    onChange={(v) => update(i, { opponent: v })}
+                    placeholder="例：坂戸中"
+                  />
                 )}
                 <div className="flex items-center gap-2">
                   <span className="shrink-0 text-sm font-extrabold text-navy-soft">開始</span>
@@ -242,7 +297,7 @@ function GamesEditor({
           );
         })}
         <Suggest id="opponent-options" values={opponents} />
-        <p className="f-hint m-0">3チーム以上の日は、うちが出ない試合を「他チーム同士」にすると、順番どおりに並びます。</p>
+        <p className="f-hint m-0">3チーム以上の日は、うちが出ない試合を「他チーム同士」に。2試合目からは「第1試合の勝者／敗者」をボタンで選べます（リーグ戦・トーナメント用）。</p>
         <button type="button" onClick={add} className="btn btn--ghost">
           ＋ 試合を追加
         </button>
