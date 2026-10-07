@@ -2,7 +2,7 @@
 // 画面の見本・印刷・PDF のすべてで、この絵を使います（どこで見ても同じ仕上がり）。
 // 寸法は mm で決め、入りきらないときは全体を少しずつ小さくして1枚に収めます。
 
-import { reiwa, type NoticeDraft } from "./notices";
+import { formatPhone, reiwa, type NoticeDraft } from "./notices";
 import { describeRef, isRef } from "./activities";
 import { jpegPagesToPdf, toJpeg } from "./sharePdf";
 
@@ -128,7 +128,7 @@ function paint(p: Painter, n: NoticeDraft) {
   // ---- 送付先・発信元の枠 ----
   const LW = 24;
   const fromLine = [n.fromOrg, n.fromRole, n.fromName].filter(Boolean).join("　");
-  const tel = [n.fromPhone && `携帯 ${n.fromPhone}`, n.fromTel].filter(Boolean).join("　");
+  const tel = [n.fromPhone && `携帯 ${formatPhone(n.fromPhone)}`, n.fromTel].filter(Boolean).join("　");
   const head: { label: string; value: string; pt: number; weight: number; h: number; sama?: boolean }[] = [
     { label: "送付先", value: n.to, pt: 13, weight: 800, h: 12, sama: true },
     { label: "発信元", value: fromLine, pt: 11, weight: 700, h: 10 },
@@ -204,13 +204,16 @@ function paint(p: Painter, n: NoticeDraft) {
       main: n.reserveVenue,
       sub: n.reserveVenueAddress ? `住所　${n.reserveVenueAddress}` : undefined,
     });
+  if (n.groundIn) {
+    const [gh, gm] = n.groundIn.split(":");
+    rows.push({ label: "グラウンドイン", main: `${Number(gh)}:${gm}から` });
+  }
   if (n.rain) rows.push({ label: "雨天判定", main: n.rain });
   const t2 = p.y;
   rows.forEach((r, i) => {
     const h = p.sz(r.sub ? 13 : 9);
     p.shade(L, p.y, LW, h);
-    p.font(9.5, 800);
-    p.text(r.label, L + LW / 2, p.y + h / 2, "center");
+    p.fitText(r.label, L + 1, p.y + h / 2, LW - 2, 9.5, 800, "center");
     if (r.sub) {
       p.fitText(r.main, L + LW + 4, p.y + h * 0.34, W - LW - 8, 11.5, 800);
       p.fitText(r.sub, L + LW + 4, p.y + h * 0.72, W - LW - 8, 9.5, 500);

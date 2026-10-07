@@ -17,6 +17,7 @@ import {
   isPlaceholderTeam,
   NOTICE_KINDS,
   teamText,
+  formatPhone,
   OUR_TEAM,
   parentMessage,
   saveNotice,
@@ -24,6 +25,7 @@ import {
   type NoticeGame,
 } from "@/lib/notices";
 import { shareOrDownload } from "@/lib/sharePdf";
+import { addDirectory, deleteDirectory, listDirectory, type DirEntry, type DirKind } from "@/lib/directory";
 import { formatDate, isMatchType, isRef, listUpcoming, type Activity } from "@/lib/activities";
 
 function Text({
@@ -272,6 +274,99 @@ function GamesEditor({
   );
 }
 
+// 名簿（名前と電話・学校とFAX）からボタンで選ぶ。新しい人はその場で登録できる
+function DirPicker({
+  kind,
+  entries,
+  isOn,
+  onPick,
+  draft,
+  onChanged,
+}: {
+  kind: DirKind;
+  entries: DirEntry[];
+  isOn: (e: DirEntry) => boolean;
+  onPick: (e: DirEntry) => void;
+  draft?: { name: string; number: string }; // 今入っている内容（登録ボタン用）
+  onChanged: () => void;
+}) {
+  const list = entries.filter((e) => e.kind === kind);
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState("");
+  const [num, setNum] = useState("");
+  const words = kind === "fax" ? { name: "学校名", num: "FAX番号", ph: "例：住吉中", phn: "049-000-0000" } : { name: "名前", num: "携帯番号", ph: "例：玉城 義将", phn: "090-0000-0000" };
+  const canSaveDraft =
+    draft && draft.name.trim() && draft.number.trim() && !list.some((e) => e.name === draft.name.trim() && e.number === formatPhone(draft.number));
+  const save = async (nm: string, nb: string) => {
+    if (!nm.trim() || !nb.trim()) return;
+    const e = await addDirectory(kind, nm, formatPhone(nb));
+    setAdding(false);
+    setName("");
+    setNum("");
+    onChanged();
+    onPick(e);
+  };
+  return (
+    <div className="dir">
+      <div className="picks">
+        {list.map((e) => (
+          <button
+            key={e.id}
+            type="button"
+            className="pick dir__pick"
+            aria-pressed={isOn(e)}
+            onClick={async () => {
+              if (editing) {
+                if (confirm(`「${e.name}」を名簿から消しますか？`)) {
+                  await deleteDirectory(e.id);
+                  onChanged();
+                }
+                return;
+              }
+              onPick(e);
+            }}
+          >
+            {editing && <span className="dir__x">×</span>}
+            {e.name}
+            <small className="pick__sub">{e.number}</small>
+          </button>
+        ))}
+        <button type="button" className="pick pick--other" onClick={() => setAdding(!adding)}>
+          ＋ 登録
+        </button>
+        {list.length > 0 && (
+          <button type="button" className="dir__edit" onClick={() => setEditing(!editing)}>
+            {editing ? "おわる" : "名簿を整理"}
+          </button>
+        )}
+      </div>
+      {canSaveDraft && !adding && (
+        <button type="button" className="dir__save" onClick={() => save(draft!.name, draft!.number)}>
+          「{draft!.name}　{formatPhone(draft!.number)}」を名簿に登録する
+        </button>
+      )}
+      {adding && (
+        <div className="dir__form">
+          <input className={`${inputClass} f-input--white`} value={name} onChange={(e) => setName(e.target.value)} placeholder={words.ph} aria-label={words.name} autoComplete="off" />
+          <input
+            className={`${inputClass} f-input--white`}
+            value={num}
+            onChange={(e) => setNum(e.target.value)}
+            placeholder={words.phn}
+            aria-label={words.num}
+            inputMode="tel"
+            autoComplete="off"
+          />
+          <button type="button" className="btn btn--primary btn--small" onClick={() => save(name, num)}>
+            登録して使う
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // 保護者に送るLINEの文。入力から自動で作り、送る前に手直しもできる
 function ParentLine({ n, set }: { n: Notice; set: (p: Partial<Notice>) => void }) {
   const auto = parentMessage(n);
@@ -295,13 +390,6 @@ function ParentLine({ n, set }: { n: Notice; set: (p: Partial<Notice>) => void }
       <PanelTitle no={6}>保護者へのLINE</PanelTitle>
       <div className="flex flex-col gap-4">
         <Text label="地図のURL（任意）" value={n.mapUrl} onChange={(v) => set({ mapUrl: v })} placeholder="https://maps.app.goo.gl/…" />
-        <div className="grid grid-cols-[11rem_1fr] items-end gap-3">
-          <div>
-            <span className="f-label">グラウンドイン</span>
-            <TimePicker10 name="グラウンドイン" value={n.groundIn} onChange={(v) => set({ groundIn: v })} />
-          </div>
-          <p className="f-hint m-0 pb-2">「グラウンドイン7:30からです。」と入ります。</p>
-        </div>
         <Field label="駐車場の案内（任意）">
           <textarea
             className="f-input"
@@ -367,12 +455,19 @@ export default function NoticePage() {
   const loaded = useRef(false);
   const [matches, setMatches] = useState<Activity[]>([]);
   const [showPick, setShowPick] = useState(false);
+  const [dir, setDir] = useState<DirEntry[]>([]);
+  const reloadDir = () => {
+    listDirectory()
+      .then(setDir)
+      .catch(() => {});
+  };
 
   useEffect(() => {
     getNotice(id)
       .then(setN)
       .catch(() => setError("送付書を読み込めませんでした。電波の良い場所で開き直してください。"));
   }, [id]);
+  useEffect(reloadDir, []);
   useEffect(() => {
     listUpcoming()
       .then((list) => setMatches(list.filter((a) => a.groups.some((g) => isMatchType(g.type)))))
@@ -559,10 +654,32 @@ export default function NoticePage() {
               <Text label="役職" value={n.fromRole} onChange={(v) => set({ fromRole: v })} placeholder="例：部活動指導員" />
               <Text label="氏名" value={n.fromName} onChange={(v) => set({ fromName: v })} />
             </div>
-            <Text label="住所（任意）" value={n.fromAddress} onChange={(v) => set({ fromAddress: v })} placeholder="例：〒350-0000 坂戸市…" />
             <div className="grid grid-cols-2 gap-3">
               <Text label="携帯" value={n.fromPhone} onChange={(v) => set({ fromPhone: v })} placeholder="090-…" />
-              <Text label="電話・FAX（任意）" value={n.fromTel} onChange={(v) => set({ fromTel: v })} placeholder="TEL/FAX 049-…" />
+              <div />
+            </div>
+            <div>
+              <span className="f-label">名簿から選ぶ（氏名と携帯が入ります）</span>
+              <DirPicker
+                kind="person"
+                entries={dir}
+                isOn={(e) => e.name === n.fromName && e.number === formatPhone(n.fromPhone)}
+                onPick={(e) => set({ fromName: e.name, fromPhone: e.number })}
+                draft={{ name: n.fromName, number: n.fromPhone }}
+                onChanged={reloadDir}
+              />
+            </div>
+            <Text label="住所（任意）" value={n.fromAddress} onChange={(v) => set({ fromAddress: v })} placeholder="例：〒350-0000 坂戸市…" />
+            <Text label="FAX（任意）" value={n.fromTel} onChange={(v) => set({ fromTel: v })} placeholder="例：FAX 049-000-0000（住吉中）" />
+            <div>
+              <span className="f-label">FAXを学校から選ぶ</span>
+              <DirPicker
+                kind="fax"
+                entries={dir}
+                isOn={(e) => n.fromTel.includes(e.number)}
+                onPick={(e) => set({ fromTel: `FAX ${e.number}（${e.name}）` })}
+                onChanged={reloadDir}
+              />
             </div>
           </div>
         </Card>
@@ -581,6 +698,13 @@ export default function NoticePage() {
               placeholder="例：住吉中・池田（090-…）"
               hint="「何かありましたら、〇〇までご連絡をお願いいたします。」と本文の最後に入ります。"
             />
+            <DirPicker
+              kind="person"
+              entries={dir}
+              isOn={(e) => n.contact === `${e.name}（${e.number}）`}
+              onPick={(e) => set({ contact: `${e.name}（${e.number}）` })}
+              onChanged={reloadDir}
+            />
           </div>
         </Card>
 
@@ -597,7 +721,27 @@ export default function NoticePage() {
             {n.reserveVenue && (
               <Text label="予備日の会場の住所" value={n.reserveVenueAddress} onChange={(v) => set({ reserveVenueAddress: v })} />
             )}
+            <div className="grid grid-cols-[11rem_1fr] items-end gap-3">
+              <div>
+                <span className="f-label">グラウンドイン</span>
+                <TimePicker10 name="グラウンドイン" value={n.groundIn} onChange={(v) => set({ groundIn: v })} />
+              </div>
+              <p className="f-hint m-0 pb-2">送付書（相手チーム向け）にだけ載ります。</p>
+            </div>
             <Text label="雨天判定（任意）" value={n.rain} onChange={(v) => set({ rain: v })} placeholder="例：6:00 住吉中 池田（090-…）" />
+            <div>
+              <span className="f-label">雨天判定の連絡先を名簿から選ぶ</span>
+              <DirPicker
+                kind="person"
+                entries={dir}
+                isOn={(e) => n.rain.includes(e.number)}
+                onPick={(e) => {
+                  const time = n.rain.match(/^\s*\d{1,2}[:：]\d{2}/)?.[0]?.trim() ?? "6:00";
+                  set({ rain: `${time}　${e.name}（${e.number}）` });
+                }}
+                onChanged={reloadDir}
+              />
+            </div>
           </div>
         </Card>
 

@@ -1646,3 +1646,53 @@ textarea.f-input {
   font-weight: 700;
   opacity: 0.75;
 }
+
+/* 名簿から選ぶ */
+.dir {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dir__pick {
+  position: relative;
+}
+.dir__x {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #c42b3b;
+  color: #fff;
+  font-size: 13px;
+  line-height: 22px;
+}
+.dir__edit {
+  align-self: center;
+  border: 0;
+  background: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-3);
+  text-decoration: underline;
+  padding: 6px;
+}
+.dir__save {
+  align-self: flex-start;
+  border: 0;
+  background: none;
+  padding: 2px 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--board);
+  text-decoration: underline;
+  text-align: left;
+}
+.dir__form {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1.5px dashed var(--rule);
+  border-radius: 12px;
+}

@@ -75,11 +75,7 @@ export type Notice = {
 
 export type NoticeDraft = Omit<Notice, "id">;
 
-export const DEFAULT_NOTES = [
-  "駐車場が広くありませんので、乗り合いでお願いします。",
-  "送信が届きましたら、ショートメールでチーム名・お名前を送信してください。",
-  "学校に問い合わせ頂いても不在が多いため、何かありましたら下記の連絡先までお願いします。",
-].join("\n");
+export const DEFAULT_NOTES = "駐車場が広くありませんので、乗り合いでお願いします。";
 
 export function defaultBody(): string {
   return [
@@ -314,14 +310,22 @@ export function parentMessage(n: NoticeDraft): string {
   const out: string[] = [];
   if (n.parentGreeting.trim()) out.push(n.parentGreeting.trim(), "");
   const what = n.kind === "tournament" && n.subject ? `${n.subject}　` : n.kind !== "tournament" ? "練習試合　" : "";
-  if (n.date) out.push(`${shortDate(n.date)}${what}よろしくお願いします。`, "");
+  if (n.date) {
+    out.push(`${shortDate(n.date)}${what}よろしくお願いします。`);
+    // 予備日は上の方に（会場がちがえば、その会場も）
+    if (n.reserveDate) {
+      out.push(`予備日　${shortDate(n.reserveDate)}`);
+      if (n.reserveVenue) out.push(`予備日の会場　${n.reserveVenue}`);
+    }
+    out.push("");
+  }
   if (n.venue) {
     out.push(`✅会場　${n.venue}`);
     if (n.parking.trim()) out.push(n.parking.trim());
     out.push("");
   }
   if (n.mapUrl.trim()) out.push(n.mapUrl.trim(), "");
-  if (n.groundIn) out.push(`グラウンドイン${clock(n.groundIn)}からです。`, "");
+  // グラウンドインは相手チーム向け（送付書に載せる）。保護者の文には入れない
   const games = n.games.filter((g) => g.first || g.third);
   if (games.length) {
     out.push("試合順は");
@@ -333,7 +337,6 @@ export function parentMessage(n: NoticeDraft): string {
     });
     out.push("");
   }
-  if (n.reserveDate) out.push(`予備日　${shortDate(n.reserveDate)}`, "");
   if (n.parentNote.trim()) out.push(n.parentNote.trim(), "");
   while (out.length && !out[out.length - 1]) out.pop();
   return out.join("\n");
@@ -370,4 +373,12 @@ export async function saveNotice(n: Notice): Promise<void> {
 
 export async function deleteNotice(id: string): Promise<void> {
   await deleteDoc(doc(db(), "notices", id));
+}
+
+// 携帯番号を「090-1234-5678」の形に
+export function formatPhone(v: string): string {
+  const d = v.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).replace(/[^0-9]/g, "");
+  if (/^0[789]0\d{8}$/.test(d)) return `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}`;
+  if (/^0\d{9}$/.test(d)) return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
+  return v.trim();
 }
