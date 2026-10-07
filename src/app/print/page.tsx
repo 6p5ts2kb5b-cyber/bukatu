@@ -5,22 +5,20 @@
 // 区分は1つずつ付け外しもできます。
 // 審判・グラウンド候補・スタッフの内部メモなど、運営の情報は載せません。
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { PaperPreview } from "@/components/PaperPreview";
 import { Choices, ErrorText, Field, PageHead, Toast, ToggleButton } from "@/components/ui";
 import { elementToPdf, shareOrDownload } from "@/lib/sharePdf";
 import {
   DIVISIONS,
   divisionLabel,
-  gameLabel,
+  describeRef,
   gameStart,
   tournamentTitle,
   isMatchType,
-  ourOpponents,
   isOffType,
   listRange,
   weekday,
-  weekdayColor,
   type Activity,
   type ActivityGroup,
   type DivisionKey,
@@ -57,19 +55,24 @@ function thisMonth(offset = 0): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+// 「07:30」→「7:30」
+function clock(t: string): string {
+  if (!t) return "";
+  const [h, m] = t.split(":");
+  return `${Number(h)}:${m}`;
+}
+
 function time(start: string, end: string): string {
   if (!start && !end) return "";
-  return `${start}〜${end}`;
+  return `${clock(start)}〜${clock(end)}`;
 }
 
 // 持ち物（お弁当・軽食は目立たせて先頭に）
 const HIGHLIGHT = ["お弁当", "軽食"];
 
 // お弁当・軽食は右の欄に◯で表示するので、ここにはそれ以外の持ち物だけ載せる
-function Packing({ items }: { items: string[] }) {
-  const rest = items.filter((i) => !HIGHLIGHT.includes(i));
-  if (rest.length === 0) return null;
-  return <p>持ち物：{rest.join("・")}</p>;
+function packingText(items: string[]): string {
+  return items.filter((i) => !HIGHLIGHT.includes(i)).join("・");
 }
 
 // その日にお弁当・軽食が必要か（活動がある区分のどれかで選ばれていれば◯）
@@ -83,61 +86,83 @@ function needs(a: Activity, item: string): boolean {
 }
 
 function Mark({ on }: { on: boolean }) {
-  return (
-    <td className="w-14 border-l border-black/30 py-2 text-center align-middle text-2xl font-extrabold print:w-[13mm] print:text-[16pt]">
-      {on ? "◯" : ""}
-    </td>
-  );
+  return <td className="pl-mark">{on ? "◯" : ""}</td>;
 }
 
+// 1日の中の1区分ぶん。見出し（種類・大会名）と、項目名つきの一覧で見やすく
 function GroupLines({ g, showDivision }: { g: ActivityGroup; showDivision: boolean }) {
   const off = isOffType(g.type);
   // 平日の「部活あり」は、再登校のときだけ会場・持ち物を載せる
   const plainClubDay = g.type === "部活あり" && !g.returnToSchool;
-  const title = [
-    showDivision ? `【${divisionLabel(g.division)}】` : "",
-    g.type,
-    tournamentTitle(g) ? `（${tournamentTitle(g)}）` : "",
-  ].join("");
-  const opponents = isMatchType(g.type)
-    ? ourOpponents(g.games)
+  const quiet = off || plainClubDay;
+
+  // 試合：うちの試合は「vs 相手」、他チーム同士は薄く。「第1試合の勝者」は中身も書く
+  const pairs = g.games.map((x) => [x.others ? x.home ?? "" : "うち", x.opponent] as [string, string]);
+  const team = (t: string) => describeRef(t, pairs) ?? t;
+  const games = isMatchType(g.type)
+    ? g.games.filter((x) => x.opponent || x.home || gameStart(x))
     : [];
+
+  const rows: { k: string; v: ReactNode; strong?: boolean }[] = [];
+  if (!quiet) {
+    if (g.meetTime || g.meetPlace)
+      rows.push({ k: "集合", v: [clock(g.meetTime), g.meetPlace].filter(Boolean).join("　"), strong: true });
+    if (g.type === "部活あり" && g.returnToSchool)
+      rows.push({ k: "再登校", v: clock(g.returnTime) || "時間未定", strong: true });
+    if (time(g.startTime, g.endTime)) rows.push({ k: "時間", v: time(g.startTime, g.endTime) });
+    if (g.venue)
+      rows.push({
+        k: "会場",
+        v: (
+          <>
+            {g.venue}
+            {g.venueStation && <small className="pl-sub">{g.venueStation}</small>}
+          </>
+        ),
+      });
+    if (games.length)
+      rows.push({
+        k: "試合",
+        v: (
+          <span className="pl-games">
+            {games.map((x, i) => (
+              <span key={i} className={x.others ? "pl-game pl-game--others" : "pl-game"}>
+                <b>{x.afterLunch ? gameStart(x) : clock(x.startTime) || "時間未定"}</b>
+                {x.others
+                  ? `${team(x.home ?? "") || "未定"} 対 ${team(x.opponent) || "未定"}（うちは休み）`
+                  : `vs ${team(x.opponent) || "未定"}`}
+              </span>
+            ))}
+          </span>
+        ),
+      });
+    if (g.type === "合同練習" && g.partners.length) rows.push({ k: "合同", v: g.partners.join("・") });
+    if (packingText(g.packing)) rows.push({ k: "持ち物", v: packingText(g.packing) });
+    if (g.reserveDate)
+      rows.push({
+        k: "予備日",
+        v: `${Number(g.reserveDate.slice(5, 7))}/${Number(g.reserveDate.slice(8))}（${weekday(g.reserveDate)}）${g.reserveVenue ? `　${g.reserveVenue}` : ""}`,
+      });
+  }
+
   return (
-    <div className="flex flex-col gap-0.5">
-      <p className={`font-extrabold ${off ? "text-navy-soft/60" : ""}`}>{title}</p>
-      {!off && !plainClubDay && (
-        <>
-          {opponents.length > 0 && <p className="font-bold">vs {opponents.join("・")}</p>}
-          {g.type === "合同練習" && g.partners.length > 0 && (
-            <p className="font-bold">合同：{g.partners.join("・")}</p>
-          )}
-          {isMatchType(g.type) &&
-            g.games.some((x) => gameStart(x)) &&
-            g.games.length > 1 && (
-              <p>
-                {g.games
-                  .map((x, i) => `第${i + 1}試合 ${gameStart(x) || "未定"}${gameLabel(x) ? ` ${gameLabel(x)}` : ""}`)
-                  .join("／")}
-              </p>
-            )}
-          {(g.venue || g.startTime || g.endTime) && (
-            <p>
-              {g.venue && <>会場：{g.venue}{g.venueStation && `（${g.venueStation}）`}　</>}
-              {time(g.startTime, g.endTime) && <>時間：{time(g.startTime, g.endTime)}</>}
-            </p>
-          )}
-          {(g.meetTime || g.meetPlace) && (
-            <p className="font-extrabold">
-              集合：{g.meetTime} {g.meetPlace}
-            </p>
-          )}
-          {g.type === "部活あり" && g.returnToSchool && (
-            <p className="font-extrabold">再登校：{g.returnTime || "時間未定"}</p>
-          )}
-          {g.packing.length > 0 && <Packing items={g.packing} />}
-        </>
+    <div className={`pl-g${quiet ? " pl-g--quiet" : ""}`}>
+      <p className="pl-title">
+        {showDivision && <span className="pl-div">{divisionLabel(g.division)}</span>}
+        <b>{g.type}</b>
+        {tournamentTitle(g) && <span className="pl-tour">{tournamentTitle(g)}</span>}
+      </p>
+      {rows.length > 0 && (
+        <dl className="pl-dl">
+          {rows.map((r) => (
+            <Fragment key={r.k}>
+              <dt>{r.k}</dt>
+              <dd className={r.strong ? "pl-strong" : undefined}>{r.v}</dd>
+            </Fragment>
+          ))}
+        </dl>
       )}
-      {g.note && <p className="text-navy-soft">※{g.note}</p>}
+      {g.note && <p className="pl-note">※{g.note}</p>}
     </div>
   );
 }
@@ -305,31 +330,32 @@ export default function PrintPage() {
           </p>
         )}
 
-        <table className="mt-2 w-full border-collapse">
+        <table className="pl">
           <thead>
-            <tr className="border-b-2 border-black text-sm font-extrabold print:text-[9pt]">
-              <th className="py-1 text-left">日</th>
-              <th className="py-1 text-left">予定</th>
-              <th className="w-14 border-l border-black/30 py-1 print:w-[13mm]">お弁当</th>
-              <th className="w-14 border-l border-black/30 py-1 print:w-[13mm]">軽食</th>
+            <tr>
+              <th className="pl-day">日</th>
+              <th className="pl-main">予定</th>
+              <th className="pl-mark">お弁当</th>
+              <th className="pl-mark">軽食</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((a) => {
               const d = Number(a.date.slice(8));
+              const wd = weekday(a.date);
+              const weekend = wd === "土" || wd === "日";
+              const quiet = a.groups.every((g) => isOffType(g.type) || (g.type === "部活あり" && !g.returnToSchool)) && !a.note;
               return (
-                <tr key={a.id} className="break-inside-avoid border-b border-black/30 align-top">
-                  <td className="w-16 py-2 pr-2 print:w-[16mm]">
-                    <span className="block text-xl font-extrabold leading-none print:text-[14pt]">{d}</span>
-                    <span className={`text-sm font-extrabold ${weekdayColor(a.date)}`}>（{weekday(a.date)}）</span>
+                <tr key={a.id} className={`pl-row${weekend ? " pl-row--we" : ""}${quiet ? " pl-row--quiet" : ""}`}>
+                  <td className="pl-day">
+                    <b>{d}</b>
+                    <span className={wd === "土" ? "pl-sat" : wd === "日" ? "pl-sun" : undefined}>{wd}</span>
                   </td>
-                  <td className="py-2 pr-2">
-                    <div className="flex flex-col gap-2">
-                      {a.groups.map((g) => (
-                        <GroupLines key={g.division} g={g} showDivision={showDivision(a, g)} />
-                      ))}
-                      {a.note && <p className="text-navy-soft">※{a.note}</p>}
-                    </div>
+                  <td className="pl-main">
+                    {a.groups.map((g) => (
+                      <GroupLines key={g.division} g={g} showDivision={showDivision(a, g)} />
+                    ))}
+                    {a.note && <p className="pl-note">※{a.note}</p>}
                   </td>
                   <Mark on={needs(a, "お弁当")} />
                   <Mark on={needs(a, "軽食")} />

@@ -1703,3 +1703,166 @@ textarea.f-input {
   padding-top: 14px;
   border-top: 1px dashed var(--rule);
 }
+
+/* ───────── 保護者配布用の月間予定表（A4） ───────── */
+.pl {
+  width: 100%;
+  margin-top: 10px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.pl th {
+  padding: 5px 6px;
+  border-bottom: 2px solid #000;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: left;
+  letter-spacing: 0.08em;
+}
+.pl th.pl-mark {
+  text-align: center;
+  letter-spacing: 0;
+}
+.pl td {
+  vertical-align: top;
+  padding: 9px 6px;
+  border-bottom: 1px solid #bdbdbd;
+}
+.pl-day {
+  width: 50px;
+}
+td.pl-day {
+  text-align: center;
+  border-right: 1px solid #bdbdbd;
+}
+td.pl-day b {
+  display: block;
+  font-family: var(--num);
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1;
+}
+td.pl-day span {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 800;
+}
+.pl-sat {
+  color: #1d4ed8;
+}
+.pl-sun {
+  color: #c42b3b;
+}
+.pl-mark {
+  width: 52px;
+  text-align: center;
+  border-left: 1px solid #bdbdbd;
+}
+td.pl-mark {
+  vertical-align: middle;
+  font-size: 22px;
+  font-weight: 800;
+}
+.pl td.pl-main {
+  padding-left: 12px;
+}
+/* 土日は薄い色で区切る */
+.pl-row--we td {
+  background: #f3f5f2;
+}
+/* 部活なし・練習なしだけの日は低く、薄く */
+.pl-row--quiet td {
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+.pl-row--quiet td.pl-day b {
+  font-size: 18px;
+}
+.pl-g + .pl-g {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #c8c8c8;
+}
+.pl-title {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  font-size: 15px;
+  line-height: 1.35;
+}
+.pl-title b {
+  font-weight: 800;
+}
+.pl-tour {
+  font-weight: 800;
+}
+.pl-div {
+  padding: 0 6px;
+  border: 1px solid #000;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 800;
+}
+.pl-g--quiet .pl-title {
+  font-size: 13px;
+  color: #6b6b6b;
+}
+.pl-g--quiet .pl-div {
+  border-color: #9a9a9a;
+}
+.pl-dl {
+  display: grid;
+  grid-template-columns: 3.6em 1fr;
+  gap: 3px 8px;
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.pl-dl dt {
+  font-size: 11px;
+  font-weight: 800;
+  color: #555;
+  padding-top: 2px;
+}
+.pl-dl dd {
+  margin: 0;
+  min-width: 0;
+}
+.pl-strong {
+  font-weight: 800;
+  font-size: 14px;
+}
+.pl-sub {
+  display: block;
+  font-size: 11px;
+  color: #555;
+}
+.pl-games {
+  display: flex;
+  flex-direction: column;
+}
+.pl-game b {
+  display: inline-block;
+  min-width: 3.4em;
+  margin-right: 6px;
+  font-family: var(--num);
+  font-size: 14px;
+}
+.pl-game--others {
+  color: #6b6b6b;
+  font-size: 12px;
+}
+.pl-note {
+  margin: 5px 0 0;
+  font-size: 12px;
+  color: #444;
+}
+/* 1日の途中でページが切れないように */
+.pl-row,
+.pl-row td {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}

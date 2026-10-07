@@ -11,6 +11,7 @@ import {
   divisionLabel,
   gameLabel,
   gameStart,
+  isRef,
   formatDate,
   tournamentTitle,
   isOthersGame,
@@ -81,7 +82,9 @@ function meet(g: ActivityGroup) {
 // 「VS 坂戸中・鶴ヶ島中」「合同：鶴ヶ島中」
 function Opponents({ g }: { g: ActivityGroup }) {
   if (isMatchType(g.type)) {
-    const names = ourOpponents(g.games);
+    // 「第1試合の勝者」のようなまだ決まっていない相手は、VSの行には出さない（試合の行に出る）
+    const names = ourOpponents(g.games).filter((t) => !isRef(t));
+    if (!names.length && g.games.length) return null;
     return names.length ? (
       <p className="acard__vs">
         <b>VS</b>
