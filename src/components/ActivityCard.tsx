@@ -9,6 +9,9 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import {
   divisionLabel,
+  gameLabel,
+  isOthersGame,
+  ourOpponents,
   isMatchType,
   isOffType,
   todayString,
@@ -75,7 +78,7 @@ function meet(g: ActivityGroup) {
 // 「VS 坂戸中・鶴ヶ島中」「合同：鶴ヶ島中」
 function Opponents({ g }: { g: ActivityGroup }) {
   if (isMatchType(g.type)) {
-    const names = [...new Set(g.games.map((x) => x.opponent).filter(Boolean))];
+    const names = ourOpponents(g.games);
     return names.length ? (
       <p className="acard__vs">
         <b>VS</b>
@@ -119,12 +122,13 @@ function GroupDetails({ g }: { g: ActivityGroup }) {
     g.games.forEach((x, i) =>
       items.push([
         `第${i + 1}試合`,
-        x.startTime || x.opponent ? (
-          <>
+        x.startTime || gameLabel(x) ? (
+          <span className={isOthersGame(x) ? "acard__others" : undefined}>
             {x.startTime && <Num>{x.startTime}</Num>}
-            {x.startTime && x.opponent && "　"}
-            {x.opponent}
-          </>
+            {x.startTime && gameLabel(x) && "　"}
+            {gameLabel(x)}
+            {isOthersGame(x) && "（うちは休み）"}
+          </span>
         ) : null,
       ]),
     );

@@ -85,7 +85,26 @@ export function isSimpleType(type: string): boolean {
 export type Game = {
   opponent: string; // 対戦相手（例：坂戸中）
   startTime: string; // 試合開始 "09:00"
+  // 3チーム以上の日の「他チーム同士」の試合（うちは出ない）。home = 片方のチーム名
+  others?: boolean;
+  home?: string;
 };
+
+// うちが出ない試合（他チーム同士）か
+export function isOthersGame(x: Game): boolean {
+  return x.others === true;
+}
+
+// 試合の表示名：「坂戸中」または「坂戸中 対 鶴ヶ島中」
+export function gameLabel(x: Game): string {
+  if (isOthersGame(x)) return `${x.home || "未定"} 対 ${x.opponent || "未定"}`;
+  return x.opponent;
+}
+
+// うちの対戦相手だけ（重なりは1つに）
+export function ourOpponents(games: Game[]): string[] {
+  return [...new Set(games.filter((x) => !isOthersGame(x)).map((x) => x.opponent.trim()).filter(Boolean))];
+}
 
 // 試合がある種別
 export function isMatchType(type: string): boolean {
@@ -191,7 +210,9 @@ function toActivity(id: string, data: Record<string, unknown>): Activity {
       ...newGroup((g.division as DivisionKey) ?? "main"),
       ...g,
       packing: Array.isArray(g.packing) ? g.packing : [],
-      games: Array.isArray(g.games) ? g.games : [],
+      games: Array.isArray(g.games)
+        ? g.games.map((x) => ({ opponent: String(x.opponent ?? ""), startTime: String(x.startTime ?? ""), home: String(x.home ?? ""), others: x.others === true }))
+        : [],
       returnToSchool: g.returnToSchool === true,
       partners: Array.isArray(g.partners) ? g.partners : [],
     })) as ActivityGroup[],
@@ -276,7 +297,10 @@ export async function recentPlaces(): Promise<{
     groups.forEach((g) => {
       if (g.venue) venues.add(g.venue);
       if (g.meetPlace) meetPlaces.add(g.meetPlace);
-      (g.games ?? []).forEach((x) => x.opponent && opponents.add(x.opponent));
+      (g.games ?? []).forEach((x) => {
+        if (x.opponent) opponents.add(x.opponent);
+        if (x.home) opponents.add(x.home);
+      });
       (g.partners ?? []).forEach((x) => x && opponents.add(x));
     });
   });
@@ -295,7 +319,7 @@ export function missingFields(g: ActivityGroup): string[] {
     return [!g.returnTime && "再登校の時間", !g.venue && "会場"].filter(Boolean) as string[];
   }
   const out: string[] = [];
-  if (isMatchType(g.type) && !g.games.some((x) => x.opponent)) out.push("対戦相手");
+  if (isMatchType(g.type) && ourOpponents(g.games).length === 0) out.push("対戦相手");
   if (g.type === "合同練習" && g.partners.length === 0) out.push("合同練習の相手");
   if (!g.venue) out.push("会場");
   if (!g.meetTime && !g.meetPlace) out.push("集合");

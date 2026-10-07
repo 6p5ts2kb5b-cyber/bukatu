@@ -32,22 +32,6 @@ type Options = {
   onAddPacking: (name: string) => Promise<void>;
 };
 
-function TimeInput({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <Field label={label}>
-      <input type="time" step={300} className={inputClass} value={value} onChange={(e) => onChange(e.target.value)} />
-    </Field>
-  );
-}
-
 // 10分刻みで選ぶ時刻（「時」と「分」の2つの選択欄）。iPhoneでもくるくる回して選べる
 function TimeSelect10({
   label,
@@ -58,17 +42,36 @@ function TimeSelect10({
   value: string;
   onChange: (v: string) => void;
 }) {
+  return (
+    <div>
+      <span className="f-label">{label}</span>
+      <TimePicker10 name={label} value={value} onChange={onChange} />
+    </div>
+  );
+}
+
+export function TimePicker10({
+  name,
+  value,
+  onChange,
+  white,
+}: {
+  name: string;
+  value: string;
+  onChange: (v: string) => void;
+  white?: boolean;
+}) {
+  const cls = `${inputClass}${white ? " f-input--white" : ""}`;
+  const label = name;
   const [h, m] = value ? value.split(":") : ["", ""];
   const hours = Array.from({ length: 18 }, (_, i) => String(i + 5).padStart(2, "0")); // 5時〜22時
   if (h && !hours.includes(h)) hours.unshift(h);
   const mins = ["00", "10", "20", "30", "40", "50"];
   if (m && !mins.includes(m)) mins.push(m); // 前に入れた半端な分も消さずに残す
   return (
-    <div>
-      <span className="f-label">{label}</span>
       <div className="time-sel">
         <select
-          className={inputClass}
+          className={cls}
           aria-label={`${label}（時）`}
           value={h}
           onChange={(e) => onChange(e.target.value ? `${e.target.value}:${m || "00"}` : "")}
@@ -82,7 +85,7 @@ function TimeSelect10({
         </select>
         <b aria-hidden>:</b>
         <select
-          className={inputClass}
+          className={cls}
           aria-label={`${label}（分）`}
           value={h ? m : ""}
           disabled={!h}
@@ -96,7 +99,6 @@ function TimeSelect10({
           ))}
         </select>
       </div>
-    </div>
   );
 }
 
@@ -136,43 +138,111 @@ function GamesEditor({
 }) {
   const update = (i: number, patch: Partial<Game>) =>
     onChange(games.map((g, j) => (j === i ? { ...g, ...patch } : g)));
-  const add = () => onChange([...games, { opponent: "", startTime: "" }]);
+  const add = () => onChange([...games, { opponent: "", startTime: "", home: "", others: false }]);
   const remove = (i: number) => onChange(games.filter((_, j) => j !== i));
+  // 試合の順番を入れ替える
+  const move = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= games.length) return;
+    const next = [...games];
+    [next[i], next[j]] = [next[j], next[i]];
+    onChange(next);
+  };
 
   return (
     <Card>
       <PanelTitle no={no} aside={games.length ? `${games.length}試合` : undefined}>
-        対戦相手
+        試合
       </PanelTitle>
       <div className="flex flex-col gap-3">
-        {games.map((g, i) => (
-          <div key={i} className="rounded-xl border border-rule bg-[#f7f9f5] p-3">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-sm font-extrabold tracking-wide text-navy-soft">第{i + 1}試合</span>
-              <RemoveButton onClick={() => remove(i)} label={`第${i + 1}試合を削除`} />
+        {games.map((g, i) => {
+          const others = g.others === true;
+          return (
+            <div key={i} className="rounded-xl border border-rule bg-[#f7f9f5] p-3">
+              <div className="mb-2 flex items-center gap-1">
+                <span className="flex-1 text-sm font-extrabold tracking-wide text-navy-soft">第{i + 1}試合</span>
+                <button
+                  type="button"
+                  onClick={() => move(i, -1)}
+                  disabled={i === 0}
+                  aria-label={`第${i + 1}試合を前へ`}
+                  className="h-10 w-10 rounded-lg text-sm text-navy-soft active:bg-white disabled:opacity-25"
+                >
+                  ▲
+                </button>
+                <button
+                  type="button"
+                  onClick={() => move(i, 1)}
+                  disabled={i === games.length - 1}
+                  aria-label={`第${i + 1}試合を後へ`}
+                  className="h-10 w-10 rounded-lg text-sm text-navy-soft active:bg-white disabled:opacity-25"
+                >
+                  ▼
+                </button>
+                <RemoveButton onClick={() => remove(i)} label={`第${i + 1}試合を削除`} />
+              </div>
+              <div className="seg mb-2" role="group" aria-label={`第${i + 1}試合に出るチーム`}>
+                <button type="button" className="seg__btn" aria-pressed={!others} onClick={() => update(i, { others: false })}>
+                  うちの試合
+                </button>
+                <button type="button" className="seg__btn" aria-pressed={others} onClick={() => update(i, { others: true })}>
+                  他チーム同士
+                </button>
+              </div>
+              <div className="flex flex-col gap-2">
+                {others ? (
+                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5">
+                    <input
+                      className={`${inputClass} f-input--white`}
+                      value={g.home ?? ""}
+                      onChange={(e) => update(i, { home: e.target.value })}
+                      placeholder="例：坂戸中"
+                      list="opponent-options"
+                      autoComplete="off"
+                      aria-label={`第${i + 1}試合のチーム1`}
+                    />
+                    <span className="text-sm font-extrabold text-navy-soft">対</span>
+                    <input
+                      className={`${inputClass} f-input--white`}
+                      value={g.opponent}
+                      onChange={(e) => update(i, { opponent: e.target.value })}
+                      placeholder="例：鶴ヶ島中"
+                      list="opponent-options"
+                      autoComplete="off"
+                      aria-label={`第${i + 1}試合のチーム2`}
+                    />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-[auto_1fr] items-center gap-1.5">
+                    <span className="text-sm font-extrabold text-navy-soft">対</span>
+                    <input
+                      className={`${inputClass} f-input--white`}
+                      value={g.opponent}
+                      onChange={(e) => update(i, { opponent: e.target.value })}
+                      placeholder="例：坂戸中"
+                      list="opponent-options"
+                      autoComplete="off"
+                      aria-label={`第${i + 1}試合の対戦相手`}
+                    />
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <span className="shrink-0 text-sm font-extrabold text-navy-soft">開始</span>
+                  <div className="w-[11rem]">
+                    <TimePicker10
+                      white
+                      name={`第${i + 1}試合の開始`}
+                      value={g.startTime}
+                      onChange={(v) => update(i, { startTime: v })}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="grid grid-cols-[1fr_8.5rem] gap-2">
-              <input
-                className={`${inputClass} f-input--white`}
-                value={g.opponent}
-                onChange={(e) => update(i, { opponent: e.target.value })}
-                placeholder="例：坂戸中"
-                list="opponent-options"
-                autoComplete="off"
-                aria-label={`第${i + 1}試合の対戦相手`}
-              />
-              <input
-                type="time"
-                step={300}
-                className={`${inputClass} f-input--white`}
-                value={g.startTime}
-                onChange={(e) => update(i, { startTime: e.target.value })}
-                aria-label={`第${i + 1}試合の開始時刻`}
-              />
-            </div>
-          </div>
-        ))}
+          );
+        })}
         <Suggest id="opponent-options" values={opponents} />
+        <p className="f-hint m-0">3チーム以上の日は、うちが出ない試合を「他チーム同士」にすると、順番どおりに並びます。</p>
         <button type="button" onClick={add} className="btn btn--ghost">
           ＋ 試合を追加
         </button>
@@ -310,7 +380,7 @@ function GroupEditor({
               再登校あり
             </button>
             {group.returnToSchool && (
-              <TimeInput label="再登校の時間" value={group.returnTime} onChange={(v) => set({ returnTime: v })} />
+              <TimeSelect10 label="再登校の時間" value={group.returnTime} onChange={(v) => set({ returnTime: v })} />
             )}
           </div>
         )}
@@ -357,8 +427,10 @@ function GroupEditor({
       {showDetails && !isSimple && (
         <Card>
           <PanelTitle no={++no}>集合</PanelTitle>
-          <div className="grid grid-cols-[8.5rem_1fr] gap-3">
-            <TimeInput label="時間" value={group.meetTime} onChange={(v) => set({ meetTime: v })} />
+          <div className="flex flex-col gap-4">
+            <div className="w-1/2 min-w-[11rem] pr-1.5">
+              <TimeSelect10 label="時間" value={group.meetTime} onChange={(v) => set({ meetTime: v })} />
+            </div>
             <Field label="場所">
               <input
                 className={inputClass}
@@ -533,7 +605,9 @@ export function ActivityEditor({
       ...a,
       groups: a.groups.map((g) => ({
         ...g,
-        games: g.games.filter((x) => x.opponent.trim() || x.startTime),
+        games: g.games
+          .map((x) => ({ ...x, home: (x.home ?? "").trim() }))
+          .filter((x) => x.opponent.trim() || x.home || x.startTime),
         partners: g.partners.map((x) => x.trim()).filter(Boolean),
       })),
     };

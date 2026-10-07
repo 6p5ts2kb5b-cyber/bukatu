@@ -9,7 +9,9 @@ import { PaperPreview } from "@/components/PaperPreview";
 import { Choices, ErrorText, Field, PageHead, ToggleButton } from "@/components/ui";
 import {
   divisionLabel,
+  gameLabel,
   isMatchType,
+  ourOpponents,
   isOffType,
   listRange,
   weekday,
@@ -87,7 +89,7 @@ function GroupLines({ g, showDivision }: { g: ActivityGroup; showDivision: boole
     g.tournamentName ? `（${g.tournamentName}）` : "",
   ].join("");
   const opponents = isMatchType(g.type)
-    ? g.games.map((x) => x.opponent).filter(Boolean)
+    ? ourOpponents(g.games)
     : [];
   return (
     <div className="flex flex-col gap-0.5">
@@ -103,7 +105,7 @@ function GroupLines({ g, showDivision }: { g: ActivityGroup; showDivision: boole
             g.games.length > 1 && (
               <p>
                 {g.games
-                  .map((x, i) => `第${i + 1}試合 ${x.startTime || "未定"}${x.opponent ? ` ${x.opponent}` : ""}`)
+                  .map((x, i) => `第${i + 1}試合 ${x.startTime || "未定"}${gameLabel(x) ? ` ${gameLabel(x)}` : ""}`)
                   .join("／")}
               </p>
             )}

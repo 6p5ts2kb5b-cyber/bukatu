@@ -1061,7 +1061,8 @@ textarea.f-input {
   cursor: pointer;
   transition: background 0.2s, color 0.2s, box-shadow 0.2s;
 }
-.seg__btn[aria-selected="true"] {
+.seg__btn[aria-selected="true"],
+.seg__btn[aria-pressed="true"] {
   background: #fff;
   color: var(--ink);
   box-shadow: 0 1px 3px rgb(15 42 33 / 0.18);
@@ -1247,4 +1248,9 @@ textarea.f-input {
     transition: none !important;
     animation: none !important;
   }
+}
+
+/* 他チーム同士の試合（うちは出ない）は少し控えめに */
+.acard__others {
+  color: var(--ink-3);
 }
