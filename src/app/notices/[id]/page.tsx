@@ -449,6 +449,13 @@ function ParentLine({ n, set }: { n: Notice; set: (p: Partial<Notice>) => void }
             placeholder="例：バスの場合は隣のB面の砂利の駐車場に駐車をお願いします。"
           />
         </Field>
+        <Text
+          label="持ち物"
+          value={n.packing}
+          onChange={(v) => set({ packing: v })}
+          placeholder="例：お弁当・水筒・ユニフォーム"
+          hint={n.activityId ? "予定の持ち物が入ります。予定を変えたら上の「読み込み直す」で反映できます。" : "「・」で区切って書きます。"}
+        />
         <Text label="あいさつ" value={n.parentGreeting} onChange={(v) => set({ parentGreeting: v })} />
         <Field label="そのほかの連絡（任意）">
           <textarea
@@ -456,7 +463,7 @@ function ParentLine({ n, set }: { n: Notice; set: (p: Partial<Notice>) => void }
             rows={2}
             value={n.parentNote}
             onChange={(e) => set({ parentNote: e.target.value })}
-            placeholder="例：お弁当・水筒を持たせてください。"
+            placeholder="例：雨具も持たせてください。"
           />
         </Field>
 
@@ -503,6 +510,7 @@ export default function NoticePage() {
   const [making, setMaking] = useState(false);
   const [note, setNote] = useState("");
   const loaded = useRef(false);
+  const packingFilled = useRef(false);
   const [matches, setMatches] = useState<Activity[]>([]);
   const [showPick, setShowPick] = useState(false);
   const [dir, setDir] = useState<DirEntry[]>([]);
@@ -604,6 +612,12 @@ export default function NoticePage() {
     setN({ ...n, ...applyActivity(n, a) });
   };
   const linked = matches.find((a) => a.id === n.activityId);
+  // 持ち物がまだ空なら、つながっている予定の持ち物を入れる（試合順はそのまま）
+  const linkedPacking = linked?.groups.find((g) => g.games.length > 0 || g.tournamentName)?.packing ?? [];
+  if (linked && !n.packing && linkedPacking.length && !packingFilled.current) {
+    packingFilled.current = true;
+    queueMicrotask(() => setN((cur) => (cur && !cur.packing ? { ...cur, packing: linkedPacking.join("・") } : cur)));
+  }
   const title = `送付書_${n.subject || "大会"}${n.to ? `_${n.to.replace(/\s*代表者.*$/, "")}` : ""}`;
 
   const send = async () => {

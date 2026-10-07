@@ -83,7 +83,8 @@ export type Notice = {
   groundIn: string; // グラウンドイン "07:30"
   parking: string; // 駐車場の案内
   parentGreeting: string; // あいさつ
-  parentNote: string; // そのほかの連絡（持ち物など）
+  parentNote: string; // そのほかの連絡
+  packing: string; // 持ち物（予定から。「・」区切り）
 };
 
 export type NoticeDraft = Omit<Notice, "id">;
@@ -135,6 +136,7 @@ export function blankNotice(): NoticeDraft {
     parking: "",
     parentGreeting: "お疲れ様です。",
     parentNote: "",
+    packing: "",
   };
 }
 
@@ -243,6 +245,8 @@ export function applyActivity(n: NoticeDraft, a: Activity): NoticeDraft {
     kind,
     activityId: a.id,
     teams,
+    // 持ち物は予定から（お弁当・水筒など）
+    packing: g.packing.join("・"),
     subject: g.tournamentName || (g.type === "練習試合" ? "練習試合" : n.subject),
     date: a.date,
     venue: g.venue || n.venue,
@@ -315,6 +319,7 @@ function toNotice(id: string, x: Record<string, unknown>): Notice {
     parking: s("parking"),
     parentGreeting: s("parentGreeting"),
     parentNote: s("parentNote"),
+    packing: s("packing"),
   };
 }
 
@@ -362,6 +367,7 @@ export function parentMessage(n: NoticeDraft): string {
     });
     out.push("");
   }
+  if (n.packing.trim()) out.push(`持ち物　${n.packing.trim()}`, "");
   if (n.parentNote.trim()) out.push(n.parentNote.trim(), "");
   while (out.length && !out[out.length - 1]) out.pop();
   return out.join("\n");
