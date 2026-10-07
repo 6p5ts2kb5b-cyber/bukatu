@@ -1,7 +1,8 @@
 "use client";
 
 // 保護者配布用の「月間予定表」印刷画面です。
-// 学校を選ぶと、その学校が関わる予定だけを載せます（例：住吉中 → 住吉のみ・浅羽野と住吉・合同チーム）。
+// 送り先（学校・合同チーム）を選ぶと、関わる区分の予定だけを載せます（例：住吉中 → 住吉のみ・浅羽野と住吉・合同チーム）。
+// 区分は1つずつ付け外しもできます。
 // 審判・グラウンド候補・スタッフの内部メモなど、運営の情報は載せません。
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -9,6 +10,7 @@ import { PaperPreview } from "@/components/PaperPreview";
 import { Choices, ErrorText, Field, PageHead, Toast, ToggleButton } from "@/components/ui";
 import { elementToPdf, shareOrDownload } from "@/lib/sharePdf";
 import {
+  DIVISIONS,
   divisionLabel,
   gameLabel,
   isMatchType,
@@ -22,17 +24,23 @@ import {
   type DivisionKey,
 } from "@/lib/activities";
 
-type SchoolKey = "sumiyoshi" | "asabano" | "sakura";
+type TargetKey = "sumiyoshi" | "asabano" | "sakura" | "team";
 
-const SCHOOLS: { key: SchoolKey; label: string; divisions: DivisionKey[] }[] = [
+// 送り先ごとの、載せる区分。own = 見出しに【区分】を付けなくてよい区分
+const TARGETS: { key: TargetKey; label: string; heading: string; divisions: DivisionKey[]; own?: DivisionKey }[] = [
   {
     key: "sumiyoshi",
     label: "住吉中",
+    heading: "住吉中 野球部",
     divisions: ["main", "top", "academy", "sumiyoshi", "asabano_sumiyoshi"],
+    own: "sumiyoshi",
   },
-  { key: "asabano", label: "浅羽野中", divisions: ["main", "top", "academy", "asabano_sumiyoshi"] },
-  { key: "sakura", label: "桜中", divisions: ["main", "top", "academy", "sakura"] },
+  { key: "asabano", label: "浅羽野中", heading: "浅羽野中 野球部", divisions: ["main", "top", "academy", "asabano_sumiyoshi"] },
+  { key: "sakura", label: "桜中", heading: "桜中 野球部", divisions: ["main", "top", "academy", "sakura"], own: "sakura" },
+  { key: "team", label: "合同チーム", heading: "桜・浅羽野・住吉 連合チーム", divisions: ["main", "top", "academy"] },
 ];
+
+const sameSet = (a: DivisionKey[], b: DivisionKey[]) => a.length === b.length && a.every((x) => b.includes(x));
 
 function monthRange(ym: string): { from: string; to: string } {
   const [y, m] = ym.split("-").map(Number);
@@ -133,7 +141,8 @@ function GroupLines({ g, showDivision }: { g: ActivityGroup; showDivision: boole
 }
 
 export default function PrintPage() {
-  const [school, setSchool] = useState<SchoolKey>("sumiyoshi");
+  const [target, setTarget] = useState<TargetKey>("sumiyoshi");
+  const [divisions, setDivisions] = useState<DivisionKey[]>(TARGETS[0].divisions);
   const [month, setMonth] = useState(thisMonth());
   const [activities, setActivities] = useState<Activity[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -155,24 +164,37 @@ export default function PrintPage() {
       .catch(() => setError("予定を読み込めませんでした。電波の良い場所で開き直してください。"));
   }, [month]);
 
-  const schoolInfo = SCHOOLS.find((s) => s.key === school)!;
+  const targetInfo = TARGETS.find((t) => t.key === target)!;
+  // 送り先の決まった組み合わせから区分を付け外ししたら「区分を選んで作成」扱い
+  const custom = !sameSet(divisions, targetInfo.divisions);
+  const heading = custom
+    ? `桜・浅羽野・住吉　${DIVISIONS.filter((d) => divisions.includes(d.key)).map((d) => d.label).join("・")}`
+    : targetInfo.heading;
+  const pickTarget = (k: TargetKey) => {
+    setTarget(k);
+    setDivisions(TARGETS.find((t) => t.key === k)!.divisions);
+  };
+  const toggleDivision = (k: DivisionKey) =>
+    setDivisions((cur) => (cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k]));
+  const showDivision = (a: Activity, g: ActivityGroup) =>
+    a.groups.length > 1 || !(divisions.length === 1 || g.division === "main" || (!custom && g.division === targetInfo.own));
 
   // この学校が関わる予定だけに絞る
   const rows = useMemo(() => {
     if (!activities) return [];
     return activities
-      .map((a) => ({ ...a, groups: a.groups.filter((g) => schoolInfo.divisions.includes(g.division)) }))
+      .map((a) => ({ ...a, groups: a.groups.filter((g) => divisions.includes(g.division)) }))
       .filter((a) => a.groups.length > 0);
-  }, [activities, schoolInfo]);
+  }, [activities, divisions]);
 
   const [y, m] = month.split("-").map(Number);
-  const title = `${schoolInfo.label} 野球部 ${y}年${m}月の活動予定`;
+  const title = `${heading} ${y}年${m}月の活動予定`;
 
   // 内容が変わったら、作ったPDFは作り直す
   useEffect(() => {
     setPdf(null);
     setDownloaded(false);
-  }, [school, month, message, activities]);
+  }, [divisions, month, message, activities]);
 
   const send = async (file: File) => {
     try {
@@ -207,15 +229,35 @@ export default function PrintPage() {
     <>
       {/* ---- 操作パネル（印刷されない） ---- */}
       <div className="flex flex-col gap-3 print:hidden">
-        <PageHead kicker="PRINT" title="保護者配布用の印刷" lead="学校と月を選ぶと、A4縦の月間予定表ができます。" />
+        <PageHead kicker="PRINT" title="保護者配布用の印刷" lead="送り先と月を選ぶと、A4縦の月間予定表ができます。" />
         <section className="panel flex flex-col gap-4">
           <div>
-            <span className="f-label">学校</span>
-            <Choices cols={3}>
-              {SCHOOLS.map((s) => (
-                <ToggleButton key={s.key} on={school === s.key} label={s.label} onClick={() => setSchool(s.key)} />
+            <span className="f-label">送り先</span>
+            <Choices cols={2}>
+              {TARGETS.map((t) => (
+                <ToggleButton key={t.key} on={!custom && target === t.key} label={t.label} onClick={() => pickTarget(t.key)} />
               ))}
             </Choices>
+          </div>
+          <div>
+            <span className="f-label">載せる活動（いくつでも選べます）</span>
+            <div className="filters" style={{ flexWrap: "wrap" }}>
+              {DIVISIONS.map((d) => (
+                <button
+                  key={d.key}
+                  type="button"
+                  className="filter"
+                  aria-pressed={divisions.includes(d.key)}
+                  onClick={() => toggleDivision(d.key)}
+                >
+                  {divisions.includes(d.key) ? "✓ " : ""}
+                  {d.label}
+                </button>
+              ))}
+            </div>
+            <span className="f-hint block">
+              {custom ? "選んだ活動だけで予定表を作ります。" : `${targetInfo.label}に関わる活動を選んでいます。外したり足したりできます。`}
+            </span>
           </div>
           <div>
             <span className="f-label">月</span>
@@ -249,14 +291,16 @@ export default function PrintPage() {
       <article ref={sheet} className="px-[38px] py-[34px] text-[14px] leading-relaxed text-black print:p-0 print:text-[10.5pt]">
         <header className="border-b-2 border-black pb-2">
           <h2 className="text-[24px] font-extrabold print:text-[18pt]">
-            {schoolInfo.label} 野球部　{y}年{m}月の活動予定
+            {heading}　{y}年{m}月の活動予定
           </h2>
-          <p className="text-[12px] print:text-[9pt]">桜・浅羽野・住吉 連合チーム</p>
+          {!heading.startsWith("桜・浅羽野・住吉") && <p className="text-[12px] print:text-[9pt]">桜・浅羽野・住吉 連合チーム</p>}
         </header>
 
         {!activities && !error && <p className="py-6 text-center">読み込み中…</p>}
         {activities && rows.length === 0 && (
-          <p className="py-6 text-center">この月の予定はまだ登録されていません。</p>
+          <p className="py-6 text-center">
+            {divisions.length === 0 ? "載せる活動を選んでください。" : "この月の予定はまだ登録されていません。"}
+          </p>
         )}
 
         <table className="mt-2 w-full border-collapse">
@@ -280,7 +324,7 @@ export default function PrintPage() {
                   <td className="py-2 pr-2">
                     <div className="flex flex-col gap-2">
                       {a.groups.map((g) => (
-                        <GroupLines key={g.division} g={g} showDivision={a.groups.length > 1 || !(["main", school] as string[]).includes(g.division)} />
+                        <GroupLines key={g.division} g={g} showDivision={showDivision(a, g)} />
                       ))}
                       {a.note && <p className="text-navy-soft">※{a.note}</p>}
                     </div>
