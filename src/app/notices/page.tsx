@@ -13,7 +13,9 @@ import {
   activityOpponents,
   applyActivity,
   createNotice,
+  fillUmpires,
   fromPrevious,
+  OUR_TEAM,
   listNotices,
   NOTICE_KINDS,
   practiceGames,
@@ -29,7 +31,6 @@ export default function NoticesPage() {
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [kind, setKind] = useState<NoticeKind>("tournament");
-  const [picked, setPicked] = useState<Activity | null>(null);
   const [opp, setOpp] = useState(["", ""]);
 
   useEffect(() => {
@@ -41,15 +42,17 @@ export default function NoticesPage() {
       .catch(() => {});
   }, []);
 
-  const pick = (a: Activity | null) => {
-    setPicked(a);
-    if (!a) return;
-    const g = a.groups.find((x) => isMatchType(x.type));
-    const names = activityOpponents(a);
-    setOpp([names[0] ?? "", names[1] ?? ""]);
-    // 予定の種類から送付書の種類を決める
-    if (g?.type === "練習試合") setKind(names.length >= 2 ? "practice3" : "practice2");
-    else if (g) setKind("tournament");
+  // 予定を選んだら、そのまま作る（種類・相手・試合順・審判は予定から自動）
+  const createFrom = async (a: Activity) => {
+    setSaving(true);
+    try {
+      const draft = applyActivity(fromPrevious(notices?.[0] ?? null), a);
+      const id = await createNotice(draft);
+      router.push(`/notices/${id}`);
+    } catch {
+      setError("作成できませんでした。");
+      setSaving(false);
+    }
   };
 
   const create = async (copy?: Notice) => {
@@ -62,14 +65,13 @@ export default function NoticesPage() {
         draft = { ...rest, issueDate: draft.issueDate };
       } else {
         draft.kind = kind;
-        if (picked) draft = applyActivity(draft, picked);
         if (kind !== "tournament") {
           const [a, b] = opp.map((x) => x.trim());
-          draft.subject = draft.subject && draft.subject !== "練習試合" ? draft.subject : "練習試合";
-          draft.games = practiceGames(kind, a, b);
           const teams = (kind === "practice2" ? [a] : [a, b]).filter(Boolean);
+          draft.subject = "練習試合";
+          draft.teams = [OUR_TEAM, ...teams];
+          draft.games = fillUmpires(kind, practiceGames(kind, a, b), draft.teams);
           if (teams.length) draft.to = `${teams.join("・")}　代表者`;
-          draft.reserveDate = "";
         }
       }
       const id = await createNotice(draft);
@@ -92,76 +94,71 @@ export default function NoticesPage() {
 
       {creating ? (
         <Card>
-          <div className="flex flex-col gap-5">
-            <div>
-              <span className="f-label">種類</span>
-              <Choices cols={1}>
-                {NOTICE_KINDS.map((k) => (
-                  <ToggleButton key={k.key} on={kind === k.key} label={k.label} onClick={() => setKind(k.key)} />
-                ))}
-              </Choices>
-            </div>
-
-            <div>
-              <span className="f-label">予定から読み込む（任意）</span>
-              <span className="f-hint mb-2 block mt-0">
-                選ぶと、期日・会場・大会名・相手チームが入ります。
-              </span>
-              {matches.length === 0 && <p className="text-sm font-bold text-navy-soft">試合の予定はまだありません。</p>}
-              <div className="filters" style={{ flexWrap: "wrap" }}>
-                <button type="button" className="filter" aria-pressed={!picked} onClick={() => pick(null)}>
-                  使わない
-                </button>
-                {matches.map((a) => {
-                  const g = a.groups.find((x) => isMatchType(x.type))!;
-                  return (
-                    <button
-                      key={a.id}
-                      type="button"
-                      className="filter"
-                      aria-pressed={picked?.id === a.id}
-                      onClick={() => pick(a)}
-                    >
-                      {formatDate(a.date)} {g.tournamentName || g.type}
+          <div className="flex flex-col gap-3">
+            <p className="m-0 text-lg font-extrabold">どの試合の連絡ですか？</p>
+            <p className="f-hint m-0">
+              予定を押すと、すぐに作ります。期日・会場・相手チーム・試合順・審判は予定から入るので、入力はほとんどいりません。
+            </p>
+            {matches.length === 0 && <p className="text-sm font-bold text-navy-soft">これからの試合の予定はありません。</p>}
+            <ul className="list">
+              {matches.map((a) => {
+                const g = a.groups.find((x) => isMatchType(x.type))!;
+                const opps = activityOpponents(a);
+                return (
+                  <li key={a.id}>
+                    <button type="button" className="row" disabled={saving} onClick={() => createFrom(a)}>
+                      <span className="row__main">
+                        <span className="row__sub">{formatDate(a.date)}</span>
+                        <span className="row__title">{g.tournamentName || g.type}</span>
+                        <span className="tags">
+                          {opps.length > 0 && <span className="tag">vs {opps.join("・")}</span>}
+                          {g.games.length > 0 && <span className="tag">{g.games.length}試合</span>}
+                        </span>
+                      </span>
+                      <span className="row__chev" aria-hidden />
                     </button>
-                  );
-                })}
-              </div>
-            </div>
+                  </li>
+                );
+              })}
+            </ul>
 
-            {kind !== "tournament" && (
-              <div className="flex flex-col gap-3">
-                <Field label={kind === "practice3" ? "相手チーム1" : "相手チーム"}>
-                  <input
-                    className={inputClass}
-                    value={opp[0]}
-                    onChange={(e) => setOpp([e.target.value, opp[1]])}
-                    placeholder="例：坂戸中"
-                    autoComplete="off"
-                  />
-                </Field>
-                {kind === "practice3" && (
-                  <Field label="相手チーム2">
-                    <input
-                      className={inputClass}
-                      value={opp[1]}
-                      onChange={(e) => setOpp([opp[0], e.target.value])}
-                      placeholder="例：鶴ヶ島中"
-                      autoComplete="off"
-                    />
-                  </Field>
+            <details className="manual">
+              <summary>予定にない試合の連絡を作る</summary>
+              <div className="mt-3 flex flex-col gap-4">
+                <Choices cols={1}>
+                  {NOTICE_KINDS.map((k) => (
+                    <ToggleButton key={k.key} small on={kind === k.key} label={k.label} onClick={() => setKind(k.key)} />
+                  ))}
+                </Choices>
+                {kind !== "tournament" && (
+                  <>
+                    <Field label={kind === "practice3" ? "相手チーム1" : "相手チーム"}>
+                      <input
+                        className={inputClass}
+                        value={opp[0]}
+                        onChange={(e) => setOpp([e.target.value, opp[1]])}
+                        placeholder="例：坂戸中"
+                        autoComplete="off"
+                      />
+                    </Field>
+                    {kind === "practice3" && (
+                      <Field label="相手チーム2">
+                        <input
+                          className={inputClass}
+                          value={opp[1]}
+                          onChange={(e) => setOpp([opp[0], e.target.value])}
+                          placeholder="例：鶴ヶ島中"
+                          autoComplete="off"
+                        />
+                      </Field>
+                    )}
+                  </>
                 )}
-                <p className="f-hint m-0">
-                  {kind === "practice3"
-                    ? "試合順：うち対1 → 1対2 → 2対うち。審判は休みのチームが担当するひな形で入ります（あとで変えられます）。"
-                    : "試合順：うち対相手 → 相手対うち の2試合で入ります（あとで変えられます）。"}
-                </p>
+                <PrimaryButton onClick={() => create()} disabled={saving}>
+                  {saving ? "作成中…" : "作成する"}
+                </PrimaryButton>
               </div>
-            )}
-
-            <PrimaryButton onClick={() => create()} disabled={saving}>
-              {saving ? "作成中…" : "作成する"}
-            </PrimaryButton>
+            </details>
             <button type="button" className="text-sm font-bold text-navy-soft underline" onClick={() => setCreating(false)}>
               やめる
             </button>

@@ -12,7 +12,9 @@ import { drawNotice, noticeToPdf } from "@/lib/noticeDraw";
 import {
   deleteNotice,
   emptyGame,
+  applyActivity,
   getNotice,
+  isPlaceholderTeam,
   NOTICE_KINDS,
   OUR_TEAM,
   parentMessage,
@@ -21,6 +23,7 @@ import {
   type NoticeGame,
 } from "@/lib/notices";
 import { shareOrDownload } from "@/lib/sharePdf";
+import { formatDate, isMatchType, listUpcoming, type Activity } from "@/lib/activities";
 
 function Text({
   label,
@@ -59,7 +62,67 @@ function DateInput({ label, value, onChange }: { label: string; value: string; o
   );
 }
 
-function GamesEditor({ games, onChange }: { games: NoticeGame[]; onChange: (g: NoticeGame[]) => void }) {
+// チームをボタンで選ぶ（予定のチーム＋必要なら「勝者・敗者」）。ないときだけ手で入力
+function TeamPicker({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (v: string) => void;
+}) {
+  const custom = !!value && !options.includes(value);
+  const [typing, setTyping] = useState(false);
+  return (
+    <div>
+      <span className="f-label">{label}</span>
+      <div className="picks">
+        {options.map((o) => (
+          <button
+            key={o}
+            type="button"
+            className="pick"
+            aria-pressed={value === o}
+            onClick={() => {
+              setTyping(false);
+              onChange(value === o ? "" : o);
+            }}
+          >
+            {o}
+          </button>
+        ))}
+        <button type="button" className="pick pick--other" aria-pressed={custom || typing} onClick={() => setTyping(!typing)}>
+          {custom ? `✎ ${value}` : "手で入力"}
+        </button>
+      </div>
+      {(typing || custom) && (
+        <input
+          className={`${inputClass} f-input--white mt-2`}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="チーム名を入力"
+          autoComplete="off"
+          autoFocus={typing}
+        />
+      )}
+    </div>
+  );
+}
+
+function GamesEditor({
+  games,
+  teams,
+  tournament,
+  onChange,
+}: {
+  games: NoticeGame[];
+  teams: string[];
+  tournament: boolean;
+  onChange: (g: NoticeGame[]) => void;
+}) {
   const update = (i: number, patch: Partial<NoticeGame>) =>
     onChange(games.map((g, j) => (j === i ? { ...g, ...patch } : g)));
   const move = (i: number, dir: -1 | 1) => {
@@ -70,105 +133,128 @@ function GamesEditor({ games, onChange }: { games: NoticeGame[]; onChange: (g: N
     onChange(next);
   };
   const small = "h-10 w-10 rounded-lg text-sm text-navy-soft active:bg-white disabled:opacity-25";
+  // 前の試合の「勝者・敗者」も選べるように（大会のとき）
+  const optionsFor = (i: number) => [
+    ...teams,
+    ...(tournament ? games.slice(0, i).flatMap((_, k) => [`第${k + 1}試合の勝者`, `第${k + 1}試合の敗者`]) : []),
+  ];
+  const umpOptions = (i: number) => [...optionsFor(i), ...(tournament ? [] : ["両チームより"])];
+  // 予定から入っているので、ふだんは閉じて要約だけ見せる。直すときだけ開く
+  const [open, setOpen] = useState<number[]>(() =>
+    games.map((g, i) => (!g.first || !g.third ? i : -1)).filter((i) => i >= 0),
+  );
+  const toggle = (i: number) => setOpen((o) => (o.includes(i) ? o.filter((x) => x !== i) : [...o, i]));
+  const clockText = (t: string) => (t ? `${Number(t.split(":")[0])}:${t.split(":")[1]}` : "時刻未定");
   return (
     <div className="flex flex-col gap-3">
-      {games.map((g, i) => (
-        <div key={i} className="rounded-xl border border-rule bg-[#f7f9f5] p-3">
-          <div className="mb-2 flex items-center gap-1">
-            <span className="flex-1 text-sm font-extrabold text-navy-soft">第{i + 1}試合</span>
-            <button type="button" className={small} disabled={i === 0} onClick={() => move(i, -1)} aria-label="前へ">
-              ▲
-            </button>
-            <button
-              type="button"
-              className={small}
-              disabled={i === games.length - 1}
-              onClick={() => move(i, 1)}
-              aria-label="後へ"
-            >
-              ▼
-            </button>
-            <button
-              type="button"
-              className="h-10 w-10 rounded-lg text-lg font-bold text-[#c42b3b]"
-              onClick={() => onChange(games.filter((_, j) => j !== i))}
-              aria-label={`第${i + 1}試合を削除`}
-            >
-              ×
-            </button>
-          </div>
-          <div className="flex flex-col gap-1">
-            <Field label="1塁ベンチ">
-              <input
-                className={`${inputClass} f-input--white`}
-                value={g.first}
-                onChange={(e) => update(i, { first: e.target.value })}
-                list="notice-teams"
-                autoComplete="off"
-              />
-            </Field>
-            <span className="text-center text-sm font-extrabold text-navy-soft">対</span>
-            <Field label="3塁ベンチ">
-              <input
-                className={`${inputClass} f-input--white`}
-                value={g.third}
-                onChange={(e) => update(i, { third: e.target.value })}
-                list="notice-teams"
-                autoComplete="off"
-              />
-            </Field>
-          </div>
-          <div className="mt-3 grid grid-cols-[1fr_auto] items-end gap-2">
-            <div>
-              <span className="f-label">時刻</span>
-              <TimePicker10 white name={`第${i + 1}試合の時刻`} value={g.time} onChange={(v) => update(i, { time: v })} />
+      {games.map((g, i) => {
+        const split = g.plate !== g.base;
+        return (
+          <div key={i} className="game-card">
+            <div className="game-card__head">
+              <span className="game-card__no">第{i + 1}試合</span>
+              <span className="flex-1" />
+              <button type="button" className={small} disabled={i === 0} onClick={() => move(i, -1)} aria-label="前へ">
+                ▲
+              </button>
+              <button
+                type="button"
+                className={small}
+                disabled={i === games.length - 1}
+                onClick={() => move(i, 1)}
+                aria-label="後へ"
+              >
+                ▼
+              </button>
+              <button
+                type="button"
+                className="h-10 w-10 rounded-lg text-lg font-bold text-[#c42b3b]"
+                onClick={() => {
+                  if (confirm(`第${i + 1}試合を消しますか？`)) onChange(games.filter((_, j) => j !== i));
+                }}
+                aria-label={`第${i + 1}試合を削除`}
+              >
+                ×
+              </button>
             </div>
-            <div className="seg" role="group" aria-label="開始か予定か">
-              {(["開始", "予定"] as const).map((t) => (
+            <button type="button" className="game-card__sum" onClick={() => toggle(i)} aria-expanded={open.includes(i)}>
+              <span className="game-card__match">
+                <span>{g.first || "未定"}</span>
+                <i>対</i>
+                <span>{g.third || "未定"}</span>
+              </span>
+              <span className="game-card__meta">
+                <b>{clockText(g.time)}</b> {g.time && g.timeNote}
+                <span>審判 {g.plate === g.base ? g.plate || "未定" : `主審 ${g.plate || "未定"}・塁審 ${g.base || "未定"}`}</span>
+              </span>
+              <span className="game-card__edit">{open.includes(i) ? "閉じる" : "変更"}</span>
+            </button>
+            {open.includes(i) && (
+            <div className="mt-3 flex flex-col gap-3">
+              <TeamPicker label="1塁ベンチ" value={g.first} options={optionsFor(i)} onChange={(v) => update(i, { first: v })} />
+              <div className="flex justify-center">
                 <button
-                  key={t}
                   type="button"
-                  className="seg__btn px-3"
-                  aria-pressed={g.timeNote === t}
-                  onClick={() => update(i, { timeNote: t })}
+                  className="text-xs font-bold text-navy-soft underline"
+                  onClick={() => update(i, { first: g.third, third: g.first })}
                 >
-                  {t}
+                  ⇅ 1塁と3塁を入れ替える
                 </button>
-              ))}
+              </div>
+              <TeamPicker label="3塁ベンチ" value={g.third} options={optionsFor(i)} onChange={(v) => update(i, { third: v })} />
+              <div className="grid grid-cols-[1fr_auto] items-end gap-2">
+                <div>
+                  <span className="f-label">時刻</span>
+                  <TimePicker10 white name={`第${i + 1}試合の時刻`} value={g.time} onChange={(v) => update(i, { time: v })} />
+                </div>
+                <div className="seg" role="group" aria-label="開始か予定か">
+                  {(["開始", "予定"] as const).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      className="seg__btn px-3"
+                      aria-pressed={g.timeNote === t}
+                      onClick={() => update(i, { timeNote: t })}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {split ? (
+                <>
+                  <TeamPicker label="主審" value={g.plate} options={umpOptions(i)} onChange={(v) => update(i, { plate: v })} />
+                  <TeamPicker label="塁審" value={g.base} options={umpOptions(i)} onChange={(v) => update(i, { base: v })} />
+                </>
+              ) : (
+                <TeamPicker
+                  label="審判（主審・塁審）"
+                  value={g.plate}
+                  options={umpOptions(i)}
+                  onChange={(v) => update(i, { plate: v, base: v })}
+                />
+              )}
+              <button
+                type="button"
+                className="self-start text-xs font-bold text-navy-soft underline"
+                onClick={() => update(i, split ? { base: g.plate } : { base: "" })}
+              >
+                {split ? "主審と塁審を同じにする" : "主審と塁審を分ける"}
+              </button>
             </div>
+            )}
           </div>
-          <div className="mt-3 flex flex-col gap-2">
-            <Field label="主審">
-              <input
-                className={`${inputClass} f-input--white`}
-                value={g.plate}
-                onChange={(e) => update(i, { plate: e.target.value })}
-                list="notice-umpires"
-                autoComplete="off"
-              />
-            </Field>
-            <Field label="塁審">
-              <input
-                className={`${inputClass} f-input--white`}
-                value={g.base}
-                onChange={(e) => update(i, { base: e.target.value })}
-                list="notice-umpires"
-                autoComplete="off"
-              />
-            </Field>
-          </div>
-          {g.plate && g.plate !== g.base && (
-            <button
-              type="button"
-              className="mt-2 text-xs font-bold text-navy-soft underline"
-              onClick={() => update(i, { base: g.plate })}
-            >
-              塁審も「{g.plate}」にする
-            </button>
-          )}
-        </div>
-      ))}
-      <button type="button" className="btn btn--ghost" onClick={() => onChange([...games, emptyGame()])}>
+        );
+      })}
+      <button
+        type="button"
+        className="btn btn--ghost"
+        onClick={() => {
+          const last = games[games.length - 1];
+          onChange([...games, { ...emptyGame(), time: "", timeNote: last ? "予定" : "開始" }]);
+          setOpen((o) => [...o, games.length]);
+        }}
+      >
         ＋ 試合を追加
       </button>
     </div>
@@ -268,12 +354,19 @@ export default function NoticePage() {
   const [making, setMaking] = useState(false);
   const [note, setNote] = useState("");
   const loaded = useRef(false);
+  const [matches, setMatches] = useState<Activity[]>([]);
+  const [showPick, setShowPick] = useState(false);
 
   useEffect(() => {
     getNotice(id)
       .then(setN)
       .catch(() => setError("送付書を読み込めませんでした。電波の良い場所で開き直してください。"));
   }, [id]);
+  useEffect(() => {
+    listUpcoming()
+      .then((list) => setMatches(list.filter((a) => a.groups.some((g) => isMatchType(g.type)))))
+      .catch(() => {});
+  }, []);
 
   // 入力が止まったら自動で保存し、見本をえがき直す
   useEffect(() => {
@@ -304,7 +397,11 @@ export default function NoticePage() {
   const teams = useMemo(() => {
     if (!n) return [];
     return [
-      ...new Set([OUR_TEAM, ...n.games.flatMap((g) => [g.first, g.third])].filter((t) => t && !/試合の(勝|敗)者/.test(t))),
+      ...new Set(
+        [OUR_TEAM, ...n.teams, ...n.games.flatMap((g) => [g.first, g.third])].filter(
+          (t) => t && !isPlaceholderTeam(t),
+        ),
+      ),
     ];
   }, [n]);
   const otherTeams = teams.filter((t) => t !== OUR_TEAM);
@@ -323,9 +420,12 @@ export default function NoticePage() {
   }
 
   const set = (patch: Partial<Notice>) => setN({ ...n, ...patch });
-  const umpireOptions = [
-    ...new Set([...teams, ...n.games.flatMap((_, i) => [`第${i + 1}試合の勝者`, `第${i + 1}試合の敗者`])]),
-  ];
+  // 予定から読み込み直す（期日・会場・相手・試合順・審判）
+  const loadActivity = (a: Activity) => {
+    if (n.games.some((g) => g.first || g.third) && !confirm("試合順を、予定の内容で置き換えます。よろしいですか？")) return;
+    setN({ ...n, ...applyActivity(n, a) });
+  };
+  const linked = matches.find((a) => a.id === n.activityId);
   const title = `送付書_${n.subject || "大会"}${n.to ? `_${n.to.replace(/\s*代表者.*$/, "")}` : ""}`;
 
   const send = async () => {
@@ -370,6 +470,56 @@ export default function NoticePage() {
             </Link>
           }
         />
+
+        <section className="panel source">
+          <div className="source__row">
+            <span className="source__label">予定</span>
+            <span className="source__value">
+              {linked
+                ? `${formatDate(linked.date)} ${linked.groups.find((g) => isMatchType(g.type))?.tournamentName || "練習試合"}`
+                : n.activityId
+                  ? "読み込んだ予定（終わった予定）"
+                  : "予定から読み込んでいません"}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {linked && (
+              <button type="button" className="btn btn--ghost btn--small" onClick={() => loadActivity(linked)}>
+                読み込み直す
+              </button>
+            )}
+            <button
+              type="button"
+              className={`btn btn--ghost btn--small ${linked ? "" : "col-span-2"}`}
+              onClick={() => setShowPick(!showPick)}
+            >
+              {showPick ? "閉じる" : "別の予定を選ぶ"}
+            </button>
+          </div>
+          {showPick && (
+            <div className="filters mt-1" style={{ flexWrap: "wrap" }}>
+              {matches.length === 0 && <span className="text-sm font-bold text-navy-soft">試合の予定はありません。</span>}
+              {matches.map((a) => {
+                const g = a.groups.find((x) => isMatchType(x.type))!;
+                return (
+                  <button
+                    key={a.id}
+                    type="button"
+                    className="filter"
+                    aria-pressed={a.id === n.activityId}
+                    onClick={() => {
+                      loadActivity(a);
+                      setShowPick(false);
+                    }}
+                  >
+                    {formatDate(a.date)} {g.tournamentName || g.type}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <p className="f-hint m-0">予定の試合（相手・時刻・試合順）を変えたら「読み込み直す」で反映できます。</p>
+        </section>
 
         <Card>
           <PanelTitle no={1}>送付先と発信元</PanelTitle>
@@ -444,17 +594,12 @@ export default function NoticePage() {
           <PanelTitle no={4} aside={n.games.length ? `${n.games.length}試合` : undefined}>
             試合順と審判
           </PanelTitle>
-          <GamesEditor games={n.games} onChange={(games) => set({ games })} />
-          <datalist id="notice-teams">
-            {umpireOptions.map((t) => (
-              <option key={t} value={t} />
-            ))}
-          </datalist>
-          <datalist id="notice-umpires">
-            {umpireOptions.map((t) => (
-              <option key={t} value={t} />
-            ))}
-          </datalist>
+          <GamesEditor
+            games={n.games}
+            teams={teams}
+            tournament={n.kind === "tournament"}
+            onChange={(games) => set({ games })}
+          />
         </Card>
 
         <Card>

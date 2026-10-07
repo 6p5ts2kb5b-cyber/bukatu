@@ -1428,3 +1428,165 @@ textarea.f-input {
   line-height: 1.7;
   background: #fff;
 }
+
+/* ───────── 試合の連絡：チームを選ぶボタン ───────── */
+.picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pick {
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--rule);
+  background: #fff;
+  color: var(--ink-2);
+  font-family: var(--jp);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.pick[aria-pressed="true"] {
+  background: var(--board);
+  border-color: var(--board);
+  color: #fff;
+}
+.pick--other {
+  border-style: dashed;
+  color: var(--ink-3);
+}
+.pick--other[aria-pressed="true"] {
+  background: #fff;
+  color: var(--ink);
+  border-color: var(--board);
+  border-style: solid;
+}
+.game-card {
+  border: 1.5px solid var(--rule);
+  border-radius: 14px;
+  background: #f7f9f5;
+  padding: 10px 12px 14px;
+}
+.game-card__head {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+.game-card__no {
+  flex: none;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--board);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+.game-card__head {
+  margin-bottom: 4px;
+}
+/* 要約（押すと開いて変更できる） */
+.game-card__sum {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--rule);
+  border-radius: 12px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--jp);
+}
+.game-card__match {
+  grid-column: 1;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.45;
+  color: var(--ink);
+}
+.game-card__match span {
+  display: inline-block;
+  white-space: nowrap;
+}
+.game-card__match i {
+  font-style: normal;
+  font-size: 13px;
+  color: #c42b3b;
+  margin: 0 8px;
+}
+.game-card__meta {
+  grid-column: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+.game-card__meta b {
+  font-family: var(--num);
+  font-size: 19px;
+  color: var(--ink);
+}
+.game-card__edit {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--paper, #e6ebe3);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-2);
+}
+.game-card__sum[aria-expanded="true"] {
+  border-color: var(--board);
+}
+/* 「予定にない試合の連絡を作る」 */
+.manual {
+  border-top: 1px dashed var(--rule);
+  padding-top: 12px;
+}
+.manual > summary {
+  list-style: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink-2);
+}
+.manual > summary::-webkit-details-marker {
+  display: none;
+}
+.manual > summary::before {
+  content: "＋ ";
+}
+.manual[open] > summary::before {
+  content: "－ ";
+}
+/* 読み込んだ予定の帯 */
+.source {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-left: 5px solid var(--board);
+}
+.source__row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.source__label {
+  flex: none;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--ink-3);
+}
+.source__value {
+  font-size: 15px;
+  font-weight: 800;
+}

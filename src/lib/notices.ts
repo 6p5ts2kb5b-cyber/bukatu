@@ -42,6 +42,8 @@ export const NOTICE_KINDS: { key: NoticeKind; label: string; short: string }[] =
 export type Notice = {
   id: string;
   kind: NoticeKind;
+  activityId: string; // 読み込んだ予定
+  teams: string[]; // この日のチーム（ボタンで選べるように）
   issueDate: string; // 発信日 YYYY-MM-DD
   sheets: string; // 送信枚数（本票を含め）
   to: string; // 送付先
@@ -94,6 +96,8 @@ export function emptyGame(): NoticeGame {
 export function blankNotice(): NoticeDraft {
   return {
     kind: "tournament",
+    activityId: "",
+    teams: [OUR_TEAM],
     issueDate: todayString(),
     sheets: "1",
     to: "",
@@ -175,11 +179,36 @@ export function activityOpponents(a: Activity): string[] {
   ];
 }
 
-// 予定（試合の日）から、件名・期日・会場・試合順を入れる
+// 勝者・敗者のような「チーム名でない」もの
+export function isPlaceholderTeam(t: string): boolean {
+  return /試合の(勝|敗)者|勝者|敗者/.test(t);
+}
+
+// 審判をひな形で入れる
+//   3チーム：その試合に出ていないチーム／2チーム：両チームより
+export function fillUmpires(kind: NoticeKind, games: NoticeGame[], teams: string[]): NoticeGame[] {
+  if (kind === "tournament") return games;
+  return games.map((g) => {
+    if (g.plate || g.base) return g;
+    let ump = "両チームより";
+    if (kind === "practice3") {
+      const rest = teams.filter((t) => t !== g.first && t !== g.third);
+      if (rest.length === 1) ump = rest[0];
+    }
+    return { ...g, plate: ump, base: ump };
+  });
+}
+
+// 予定（試合の日）から、件名・期日・会場・相手チーム・試合順・審判を入れる
 export function applyActivity(n: NoticeDraft, a: Activity): NoticeDraft {
   const g = a.groups.find((x) => x.games.length > 0 || x.tournamentName) ?? a.groups[0];
   if (!g) return n;
-  const games: NoticeGame[] = g.games.map((x, i) => ({
+  const opponents = activityOpponents(a);
+  const teams = [OUR_TEAM, ...opponents];
+  // 種類：練習試合なら相手の数で 2チーム／3チーム
+  const kind: NoticeKind =
+    g.type === "練習試合" ? (opponents.length >= 2 ? "practice3" : "practice2") : n.kind === "tournament" ? "tournament" : n.kind;
+  let games: NoticeGame[] = g.games.map((x, i) => ({
     first: x.others ? x.home ?? "" : OUR_TEAM,
     third: x.opponent,
     time: x.startTime,
@@ -187,18 +216,18 @@ export function applyActivity(n: NoticeDraft, a: Activity): NoticeDraft {
     plate: "",
     base: "",
   }));
-  const teams = [
-    ...new Set(
-      g.games.flatMap((x) => [x.others ? x.home ?? "" : "", x.opponent]).filter((t) => t && t !== OUR_TEAM),
-    ),
-  ];
+  if (!games.length && kind !== "tournament") games = practiceGames(kind, opponents[0] ?? "", opponents[1] ?? "");
+  games = fillUmpires(kind, games, teams);
   return {
     ...n,
+    kind,
+    activityId: a.id,
+    teams,
     subject: g.tournamentName || (g.type === "練習試合" ? "練習試合" : n.subject),
     date: a.date,
     venue: g.venue || n.venue,
     games: games.length ? games : n.games,
-    to: n.to || (teams.length ? `${teams.join("・")}　代表者` : ""),
+    to: opponents.length ? `${opponents.join("・")}　代表者` : n.to,
   };
 }
 
@@ -223,6 +252,8 @@ function toNotice(id: string, x: Record<string, unknown>): Notice {
   return {
     id,
     kind,
+    activityId: String(x.activityId ?? ""),
+    teams: Array.isArray(x.teams) ? (x.teams as string[]) : [OUR_TEAM],
     issueDate: s("issueDate"),
     sheets: s("sheets"),
     to: s("to"),
