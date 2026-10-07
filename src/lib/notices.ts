@@ -268,6 +268,15 @@ export function applyActivity(n: NoticeDraft, a: Activity): NoticeDraft {
       return v ? { venue: v.name, venueAddress: v.number, venueStation: v.extra ?? "" } : {};
     })(),
     games: games.length ? games : n.games,
+    // 予備日と予備日の会場も予定から
+    ...(g.reserveDate
+      ? {
+          reserveDate: g.reserveDate,
+          reserveVenue: g.reserveVenue,
+          reserveVenueAddress: g.reserveVenueAddress,
+          reserveVenueStation: g.reserveVenueStation,
+        }
+      : {}),
     to: opponents.length ? `${opponents.join("・")}　代表者` : n.to,
   };
 }

@@ -1696,3 +1696,10 @@ textarea.f-input {
   border: 1.5px dashed var(--rule);
   border-radius: 12px;
 }
+
+/* 予定の「予備日」欄（上に区切り線） */
+.reserve {
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--rule);
+}

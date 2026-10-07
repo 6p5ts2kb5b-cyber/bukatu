@@ -422,6 +422,14 @@ function GroupEditor({
   const showDetails = !isOff && (!isSimple || group.returnToSchool);
   const set = (patch: Partial<ActivityGroup>) => onChange({ ...group, ...patch });
 
+  // 会場名だけ入っていて住所・最寄駅が空なら、登録した会場（3校など）から入れておく
+  useEffect(() => {
+    if (!group.venue || group.venueAddress || group.venueStation) return;
+    const f = findVenue(group.venue, venueList(options.dir));
+    if (f) onChange({ ...group, venueAddress: f.number, venueStation: f.extra ?? "" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [group.venue, options.dir]);
+
   const togglePacking = (name: string) => {
     const has = group.packing.includes(name);
     set({ packing: has ? group.packing.filter((p) => p !== name) : [...group.packing, name] });
@@ -580,6 +588,47 @@ function GroupEditor({
               <div className="grid grid-cols-2 gap-3">
                 <TimeSelect10 label="開始" value={group.startTime} onChange={(v) => set({ startTime: v })} />
                 <TimeSelect10 label="終了" value={group.endTime} onChange={(v) => set({ endTime: v })} />
+              </div>
+            )}
+            {/* 試合の日は予備日と予備日の会場（送付書・保護者へのLINEに入る） */}
+            {isMatchType(group.type) && (
+              <div className="reserve flex flex-col gap-3">
+                <Field label="予備日（任意）">
+                  <input
+                    type="date"
+                    className={inputClass}
+                    value={group.reserveDate}
+                    onChange={(e) => set({ reserveDate: e.target.value })}
+                  />
+                </Field>
+                {group.reserveDate && (
+                  <>
+                    <Field label="予備日の会場（ちがう場合だけ）">
+                      <input
+                        className={inputClass}
+                        value={group.reserveVenue}
+                        onChange={(e) => {
+                          const f = findVenue(e.target.value, venueList(options.dir));
+                          set({
+                            reserveVenue: e.target.value,
+                            ...(f ? { reserveVenueAddress: f.number, reserveVenueStation: f.extra ?? "" } : {}),
+                          });
+                        }}
+                        list="venue-options"
+                        autoComplete="off"
+                      />
+                    </Field>
+                    <DirPicker
+                      kind="venue"
+                      entries={venueList(options.dir)}
+                      isOn={(e) => e.name === group.reserveVenue}
+                      onPick={(e) =>
+                        set({ reserveVenue: e.name, reserveVenueAddress: e.number, reserveVenueStation: e.extra ?? "" })
+                      }
+                      onChanged={options.reloadDir}
+                    />
+                  </>
+                )}
               </div>
             )}
           </div>

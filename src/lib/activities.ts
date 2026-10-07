@@ -186,6 +186,10 @@ export type ActivityGroup = {
   venue: string; // 会場
   venueAddress: string; // 会場の住所
   venueStation: string; // 最寄駅（駅からの時間も）
+  reserveDate: string; // 予備日（試合のとき）
+  reserveVenue: string; // 予備日の会場（ちがう場合）
+  reserveVenueAddress: string;
+  reserveVenueStation: string;
   startTime: string; // 開始時間 "09:00"
   endTime: string; // 終了時間 "12:00"
   meetTime: string; // 集合時間 "08:30"
@@ -214,6 +218,10 @@ export function newGroup(division: DivisionKey, date = ""): ActivityGroup {
     venue: "",
     venueAddress: "",
     venueStation: "",
+    reserveDate: "",
+    reserveVenue: "",
+    reserveVenueAddress: "",
+    reserveVenueStation: "",
     startTime: "",
     endTime: "",
     meetTime: "",

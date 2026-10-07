@@ -11,6 +11,7 @@ import {
   divisionLabel,
   gameLabel,
   gameStart,
+  formatDate,
   tournamentTitle,
   isOthersGame,
   ourOpponents,
@@ -121,6 +122,8 @@ function GroupDetails({ g }: { g: ActivityGroup }) {
   }
   const items: [string, ReactNode | null][] = [["会場", g.venue || null]];
   if (g.venueStation) items.push(["最寄駅", g.venueStation]);
+  if (g.reserveDate)
+    items.push(["予備日", `${formatDate(g.reserveDate)}${g.reserveVenue ? `　${g.reserveVenue}` : ""}`]);
   if (isMatchType(g.type) && g.games.length > 0) {
     g.games.forEach((x, i) =>
       items.push([

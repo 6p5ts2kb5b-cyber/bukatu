@@ -373,6 +373,13 @@ function ParentLine({ n, set }: { n: Notice; set: (p: Partial<Notice>) => void }
               </button>
             )}
           </div>
+          {edited && text !== auto && (
+            <p className="m-0 mb-1.5 text-xs font-bold text-[#a15c00]">
+              手直しした文なので、入力の変更（予備日など）は入っていません。右上の「入力内容から作り直す」で入ります。
+            </p>
+          )}
+          <div className="hidden">
+          </div>
           <textarea
             className="f-input line-preview"
             rows={18}
@@ -513,11 +520,30 @@ export default function NoticePage() {
   const linkedGroup = linked?.groups.find((g) => g.games.length > 0 || g.tournamentName);
   const linkedPacking = linkedGroup?.packing.join("・") ?? "";
   const linkedMeet = linkedGroup ? meetText(linkedGroup.meetTime, linkedGroup.meetPlace) : "";
-  if (linked && ((!n.packing && linkedPacking) || (!n.meet && linkedMeet)) && !packingFilled.current) {
+  const linkedReserve = linkedGroup?.reserveDate
+    ? {
+        reserveDate: linkedGroup.reserveDate,
+        reserveVenue: linkedGroup.reserveVenue,
+        reserveVenueAddress: linkedGroup.reserveVenueAddress,
+        reserveVenueStation: linkedGroup.reserveVenueStation,
+      }
+    : null;
+  if (
+    linked &&
+    ((!n.packing && linkedPacking) || (!n.meet && linkedMeet) || (!n.reserveDate && linkedReserve)) &&
+    !packingFilled.current
+  ) {
     packingFilled.current = true;
     queueMicrotask(() =>
       setN((cur) =>
-        cur ? { ...cur, packing: cur.packing || linkedPacking, meet: cur.meet || linkedMeet } : cur,
+        cur
+          ? {
+              ...cur,
+              packing: cur.packing || linkedPacking,
+              meet: cur.meet || linkedMeet,
+              ...(!cur.reserveDate && linkedReserve ? linkedReserve : {}),
+            }
+          : cur,
       ),
     );
   }
