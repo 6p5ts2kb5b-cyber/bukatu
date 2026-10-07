@@ -13,6 +13,7 @@ const I = {
   diamond: "M12 3l9 9-9 9-9-9zM12 8.5l3.5 3.5-3.5 3.5-3.5-3.5z",
   cap: "M4 14a8 8 0 0 1 16 0v1H4zM2 15h20M12 6V4",
   school: "M3 21h18M5 21V10l7-5 7 5v11M9 21v-5h6v5",
+  mail: "M4 6h16v12H4zM4 7l8 6 8-6",
   people: "M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.3a3.5 3.5 0 0 1 0 6.4M18 14.4c2.1.7 3.5 2.6 3.5 5.6",
 };
 
@@ -27,6 +28,7 @@ const GROUPS: { label: string; items: { href: string; label: string; desc: strin
   {
     label: "試合",
     items: [
+      { href: "/notices", label: "大会の連絡（送付書）", desc: "相手チーム・自チームへ。PDFでLINEに", icon: I.mail, red: true },
       { href: "/lineups", label: "メンバー表", desc: "守備位置と打順を決めて印刷", icon: I.diamond },
       { href: "/players", label: "選手名簿", desc: "背番号・学校・学年", icon: I.cap },
     ],

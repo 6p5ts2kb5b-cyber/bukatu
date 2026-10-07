@@ -179,7 +179,7 @@ function isActive(href: string, pathname: string): boolean {
   if (href === "/") return pathname === "/";
   if (href === "/activities") return pathname.startsWith("/activities") && pathname !== "/activities/new";
   if (href === "/menu")
-    return ["/menu", "/teams", "/staff", "/print", "/players", "/lineups"].some((p) => pathname.startsWith(p));
+    return ["/menu", "/teams", "/staff", "/print", "/players", "/lineups", "/notices"].some((p) => pathname.startsWith(p));
   return pathname === href;
 }
 

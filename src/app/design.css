@@ -1399,3 +1399,12 @@ textarea.f-input {
 .acard__others {
   color: var(--ink-3);
 }
+
+/* 送付書の印刷：えがいた絵をA4いっぱいに */
+@media print {
+  .notice-print {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+}
