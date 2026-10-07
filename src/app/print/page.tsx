@@ -171,6 +171,8 @@ export default function PrintPage() {
   const [target, setTarget] = useState<TargetKey>("sumiyoshi");
   const [divisions, setDivisions] = useState<DivisionKey[]>(TARGETS[0].divisions);
   const [month, setMonth] = useState(thisMonth());
+  // 期間：1カ月 / 前半（1〜15日） / 後半（16日〜末日）
+  const [half, setHalf] = useState<"all" | "first" | "second">("all");
   const [activities, setActivities] = useState<Activity[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -209,19 +211,24 @@ export default function PrintPage() {
   // この学校が関わる予定だけに絞る
   const rows = useMemo(() => {
     if (!activities) return [];
+    const day = (a: Activity) => Number(a.date.slice(8, 10));
     return activities
+      .filter((a) => half === "all" || (half === "first" ? day(a) <= 15 : day(a) >= 16))
       .map((a) => ({ ...a, groups: a.groups.filter((g) => divisions.includes(g.division)) }))
       .filter((a) => a.groups.length > 0);
-  }, [activities, divisions]);
+  }, [activities, divisions, half]);
 
   const [y, m] = month.split("-").map(Number);
-  const title = `${heading} ${y}年${m}月の活動予定`;
+  const lastDay = new Date(y, m, 0).getDate();
+  const period =
+    half === "first" ? `${m}月前半（1日〜15日）` : half === "second" ? `${m}月後半（16日〜${lastDay}日）` : `${m}月`;
+  const title = `${heading} ${y}年${period}の活動予定`;
 
   // 内容が変わったら、作ったPDFは作り直す
   useEffect(() => {
     setPdf(null);
     setDownloaded(false);
-  }, [divisions, month, message, activities]);
+  }, [divisions, month, half, message, activities]);
 
   const send = async (file: File) => {
     try {
@@ -300,6 +307,17 @@ export default function PrintPage() {
               ))}
             </Choices>
           </div>
+          <div>
+            <span className="f-label">期間</span>
+            <Choices cols={3}>
+              <ToggleButton small on={half === "all"} label="1カ月" onClick={() => setHalf("all")} />
+              <ToggleButton small on={half === "first"} label="前半" onClick={() => setHalf("first")} />
+              <ToggleButton small on={half === "second"} label="後半" onClick={() => setHalf("second")} />
+            </Choices>
+            <span className="f-hint block">
+              {half === "first" ? `${m}月1日〜15日` : half === "second" ? `${m}月16日〜${lastDay}日` : `${m}月1日〜${lastDay}日`}を載せます。
+            </span>
+          </div>
           <Field label="保護者へのひとこと（任意）" hint="印刷の一番下に載ります。">
             <textarea
               className="f-input"
@@ -318,7 +336,7 @@ export default function PrintPage() {
       <article ref={sheet} className="px-[38px] py-[34px] text-[14px] leading-relaxed text-black print:p-0 print:text-[10.5pt]">
         <header className="border-b-2 border-black pb-2">
           <h2 className="text-[24px] font-extrabold print:text-[18pt]">
-            {heading}　{y}年{m}月の活動予定
+            {heading}　{y}年{period}の活動予定
           </h2>
           {!heading.startsWith("桜・浅羽野・住吉") && <p className="text-[12px] print:text-[9pt]">桜・浅羽野・住吉 連合チーム</p>}
         </header>
@@ -326,7 +344,7 @@ export default function PrintPage() {
         {!activities && !error && <p className="py-6 text-center">読み込み中…</p>}
         {activities && rows.length === 0 && (
           <p className="py-6 text-center">
-            {divisions.length === 0 ? "載せる活動を選んでください。" : "この月の予定はまだ登録されていません。"}
+            {divisions.length === 0 ? "載せる活動を選んでください。" : half === "all" ? "この月の予定はまだ登録されていません。" : "この期間の予定はまだ登録されていません。"}
           </p>
         )}
 
