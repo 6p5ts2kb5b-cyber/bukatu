@@ -11,7 +11,15 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { ErrorText } from "@/components/ui";
-import { listUpcoming, todayString, tournamentTitle, weekday, type Activity } from "@/lib/activities";
+import {
+  isRef,
+  listUpcoming,
+  normalizeTeam,
+  todayString,
+  tournamentTitle,
+  weekday,
+  type Activity,
+} from "@/lib/activities";
 import { listNotices } from "@/lib/notices";
 import {
   collectIssues,
@@ -55,6 +63,17 @@ function daysUntil(date: string): number {
 }
 function untilText(n: number): string {
   return n <= 0 ? "今日" : n === 1 ? "明日" : `あと${n}日`;
+}
+
+// 一覧に出す短い名前：練習試合は相手チーム名、それ以外（大会など）は種類のまま
+function shortLabel(g: Unit["group"]): string {
+  if (g.type === "練習試合") {
+    const names = [
+      ...new Set(g.games.filter((x) => !x.others).map((x) => normalizeTeam(x.opponent)).filter((t) => t && !isRef(t))),
+    ];
+    if (names.length) return `vs ${names.join("・")}`;
+  }
+  return g.type;
 }
 
 const LEVEL_WORD: Record<Level, string> = { ok: "準備OK", warn: "確認中", ng: "未確定", none: "" };
@@ -169,7 +188,7 @@ export default function Home() {
   }
 
   const nextUnits = unitsOf(next, noticeFor);
-  const types = [...new Set(next.groups.map((g) => tournamentTitle(g) || g.type))].join("・");
+  const types = [...new Set(next.groups.map((g) => tournamentTitle(g) || shortLabel(g)))].join("・");
 
   return (
     <div className="home">
@@ -259,7 +278,10 @@ export default function Home() {
                     const quiet = isQuiet(u.group);
                     return (
                       <span key={u.division} className={`mini mini--${u.division}`}>
-                        <span className="mini__name">{quiet || a.groups.length === 1 ? u.group.type : u.name}</span>
+                        <span className="mini__name">
+                          {a.groups.length > 1 && !quiet ? `${u.name}・` : ""}
+                          {shortLabel(u.group)}
+                        </span>
                         <span className="mini__lamps">
                           {u.checks.map((c) => (
                             <Lamp key={c.key} level={c.level} i={0} />

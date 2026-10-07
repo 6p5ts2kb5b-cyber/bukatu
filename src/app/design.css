@@ -2034,9 +2034,9 @@ td.pl-mark {
 .issue__chev { align-self: center; width: 9px; height: 9px; border-top: 2px solid var(--ink-3); border-right: 2px solid var(--ink-3); transform: rotate(45deg); }
 .div-tag { display: inline-flex; margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: #e6ece7; color: var(--ink-2); font-size: 11px; font-weight: 700; vertical-align: 1px; }
 .later__units { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.mini { display: grid; grid-template-columns: 84px 1fr auto; align-items: center; gap: 10px; font-size: 14px; }
-.mini__name { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; white-space: nowrap; overflow: hidden; }
-.mini__name::before { content: ""; width: 3px; height: 14px; border-radius: 2px; background: var(--sb-board); flex: none; }
+.mini { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; font-size: 14px; }
+.mini__name { display: block; position: relative; padding-left: 9px; font-size: 13px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mini__name::before { content: ""; position: absolute; left: 0; top: 50%; width: 3px; height: 14px; margin-top: -7px; border-radius: 2px; background: var(--sb-board); }
 .mini--top .mini__name::before { background: #2b59c3; }
 .mini--academy .mini__name::before { background: #7a4bd0; }
 .mini__lamps { display: flex; gap: 6px; }
