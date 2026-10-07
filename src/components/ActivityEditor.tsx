@@ -48,6 +48,58 @@ function TimeInput({
   );
 }
 
+// 10分刻みで選ぶ時刻（「時」と「分」の2つの選択欄）。iPhoneでもくるくる回して選べる
+function TimeSelect10({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [h, m] = value ? value.split(":") : ["", ""];
+  const hours = Array.from({ length: 18 }, (_, i) => String(i + 5).padStart(2, "0")); // 5時〜22時
+  if (h && !hours.includes(h)) hours.unshift(h);
+  const mins = ["00", "10", "20", "30", "40", "50"];
+  if (m && !mins.includes(m)) mins.push(m); // 前に入れた半端な分も消さずに残す
+  return (
+    <div>
+      <span className="f-label">{label}</span>
+      <div className="time-sel">
+        <select
+          className={inputClass}
+          aria-label={`${label}（時）`}
+          value={h}
+          onChange={(e) => onChange(e.target.value ? `${e.target.value}:${m || "00"}` : "")}
+        >
+          <option value="">--</option>
+          {hours.map((x) => (
+            <option key={x} value={x}>
+              {Number(x)}
+            </option>
+          ))}
+        </select>
+        <b aria-hidden>:</b>
+        <select
+          className={inputClass}
+          aria-label={`${label}（分）`}
+          value={h ? m : ""}
+          disabled={!h}
+          onChange={(e) => onChange(`${h}:${e.target.value}`)}
+        >
+          {!h && <option value="">--</option>}
+          {mins.map((x) => (
+            <option key={x} value={x}>
+              {x}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+}
+
 function Suggest({ id, values }: { id: string; values: string[] }) {
   return (
     <datalist id={id}>
@@ -294,8 +346,8 @@ function GroupEditor({
             <Suggest id="venue-options" values={options.venues} />
             {!isSimple && (
               <div className="grid grid-cols-2 gap-3">
-                <TimeInput label="開始" value={group.startTime} onChange={(v) => set({ startTime: v })} />
-                <TimeInput label="終了" value={group.endTime} onChange={(v) => set({ endTime: v })} />
+                <TimeSelect10 label="開始" value={group.startTime} onChange={(v) => set({ startTime: v })} />
+                <TimeSelect10 label="終了" value={group.endTime} onChange={(v) => set({ endTime: v })} />
               </div>
             )}
           </div>
