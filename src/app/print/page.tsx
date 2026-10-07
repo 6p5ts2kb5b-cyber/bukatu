@@ -4,9 +4,10 @@
 // 学校を選ぶと、その学校が関わる予定だけを載せます（例：住吉中 → 住吉のみ・浅羽野と住吉・合同チーム）。
 // 審判・グラウンド候補・スタッフの内部メモなど、運営の情報は載せません。
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PaperPreview } from "@/components/PaperPreview";
-import { Choices, ErrorText, Field, PageHead, ToggleButton } from "@/components/ui";
+import { Choices, ErrorText, Field, PageHead, Toast, ToggleButton } from "@/components/ui";
+import { elementToPdf, shareOrDownload } from "@/lib/sharePdf";
 import {
   divisionLabel,
   gameLabel,
@@ -137,6 +138,13 @@ export default function PrintPage() {
   const [activities, setActivities] = useState<Activity[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+  const sheet = useRef<HTMLElement>(null);
+  // PDF：作る → 送る（スマホは「共有」からLINE・メールを選ぶ）
+  const [pdf, setPdf] = useState<File | null>(null);
+  const [making, setMaking] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [downloaded, setDownloaded] = useState(false);
+  const clearToast = useCallback(() => setToast(null), []);
 
   useEffect(() => {
     setActivities(null);
@@ -158,6 +166,41 @@ export default function PrintPage() {
   }, [activities, schoolInfo]);
 
   const [y, m] = month.split("-").map(Number);
+  const title = `${schoolInfo.label} 野球部 ${y}年${m}月の活動予定`;
+
+  // 内容が変わったら、作ったPDFは作り直す
+  useEffect(() => {
+    setPdf(null);
+    setDownloaded(false);
+  }, [school, month, message, activities]);
+
+  const send = async (file: File) => {
+    try {
+      const r = await shareOrDownload(file, title);
+      if (r === "downloaded") {
+        setDownloaded(true);
+      }
+    } catch {
+      // 作るのに時間がかかると、スマホが共有画面を開かせてくれないことがある → もう一度押してもらう
+      setToast("「送る」をもう一度押してください");
+    }
+  };
+
+  const makePdf = async () => {
+    if (!sheet.current || making) return;
+    if (pdf) return send(pdf);
+    setMaking(true);
+    try {
+      const file = await elementToPdf(sheet.current, `${title.replace(/\s+/g, "_")}.pdf`);
+      setPdf(file);
+      await send(file);
+    } catch {
+      setError("PDFを作れませんでした。電波の良い場所でもう一度お試しください。");
+    } finally {
+      setMaking(false);
+    }
+  };
+
   const monthOptions = [-1, 0, 1, 2, 3].map((o) => thisMonth(o));
 
   return (
@@ -203,7 +246,7 @@ export default function PrintPage() {
 
       {/* ---- 印刷される部分 ---- */}
       <PaperPreview>
-      <article className="px-[38px] py-[34px] text-[14px] leading-relaxed text-black print:p-0 print:text-[10.5pt]">
+      <article ref={sheet} className="px-[38px] py-[34px] text-[14px] leading-relaxed text-black print:p-0 print:text-[10.5pt]">
         <header className="border-b-2 border-black pb-2">
           <h2 className="text-[24px] font-extrabold print:text-[18pt]">
             {schoolInfo.label} 野球部　{y}年{m}月の活動予定
@@ -254,14 +297,31 @@ export default function PrintPage() {
       </article>
       </PaperPreview>
 
-      <div className="h-16 print:hidden" aria-hidden />
+      <div className="h-28 print:hidden" aria-hidden />
       <div className="savebar print:hidden">
-        <div>
-          <button type="button" onClick={() => window.print()} className="btn btn--accent">
-            印刷・PDFにする
-          </button>
+        <div className="flex flex-col gap-2">
+          {downloaded && (
+            <p className="m-0 rounded-xl border border-rule bg-white p-3 text-sm font-bold leading-relaxed">
+              PDFを保存しました。LINEやメールに添付して送ってください。
+              <a
+                className="ml-1 font-extrabold underline"
+                href={`mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(`${title}を送ります。PDFをご確認ください。`)}`}
+              >
+                メールを開く
+              </a>
+            </p>
+          )}
+          <div className="grid grid-cols-[1fr_auto] gap-2">
+            <button type="button" onClick={makePdf} disabled={!activities || making} className="btn btn--accent">
+              {making ? "PDFを作っています…" : pdf ? "PDFを送る" : "PDFでLINE・メールに送る"}
+            </button>
+            <button type="button" onClick={() => window.print()} className="btn btn--ghost px-5">
+              印刷
+            </button>
+          </div>
         </div>
       </div>
+      <Toast message={toast} onDone={clearToast} />
     </>
   );
 }
