@@ -63,9 +63,9 @@ function normalizeColors(root: HTMLElement) {
 }
 
 // ---- 画像（JPEG）を並べただけの、ごく小さな PDF を作る ----
-type JpegPage = { data: Uint8Array; width: number; height: number };
+export type JpegPage = { data: Uint8Array; width: number; height: number };
 
-function jpegPagesToPdf(pages: JpegPage[]): Blob {
+export function jpegPagesToPdf(pages: JpegPage[]): Blob {
   const enc = new TextEncoder();
   const parts: Uint8Array[] = [];
   const offsets: number[] = [];
@@ -113,7 +113,7 @@ function jpegPagesToPdf(pages: JpegPage[]): Blob {
   return new Blob(parts as BlobPart[], { type: "application/pdf" });
 }
 
-function toJpeg(c: HTMLCanvasElement): Promise<JpegPage> {
+export function toJpeg(c: HTMLCanvasElement): Promise<JpegPage> {
   return new Promise((resolve, reject) =>
     c.toBlob(
       async (b) => {

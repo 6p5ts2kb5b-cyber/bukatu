@@ -12,7 +12,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { PaperPreview } from "@/components/PaperPreview";
 import { ErrorText, Field, inputClass, SecondaryButton } from "@/components/ui";
 import { formatDateLong } from "@/lib/activities";
-import { elementToPdf, shareOrDownload } from "@/lib/sharePdf";
+import { shareOrDownload } from "@/lib/sharePdf";
+import { lineupToPdf, type SheetRow } from "@/lib/lineupPdf";
 import {
   deleteLineup,
   getLineup,
@@ -188,6 +189,8 @@ export default function LineupPage() {
     setPdf(null);
     setPdfNote("");
   }, [lineup, players, teams]);
+  const sheetDataRef = useRef<(() => Parameters<typeof lineupToPdf>[0]) | null>(null);
+  const sheetData = () => sheetDataRef.current!();
   const sendPdf = async () => {
     if (!sheetRef.current || making) return;
     const title = lineup?.title || "メンバー表";
@@ -202,7 +205,7 @@ export default function LineupPage() {
     if (pdf) return share(pdf);
     setMaking(true);
     try {
-      const f = await elementToPdf(sheetRef.current, `${title.replace(/[\s/\\]+/g, "_")}.pdf`, { onePage: true });
+      const f = await lineupToPdf(sheetData(), `${title.replace(/[\s/\\]+/g, "_")}.pdf`);
       setPdf(f);
       await share(f);
     } catch {
@@ -292,6 +295,37 @@ export default function LineupPage() {
 
   const filled = POSITIONS.filter((p) => lineup.positions[p.key]).length;
   const bench = lineup.bench.map((b) => byId.get(b)).filter(Boolean) as Player[];
+  // PDF に描く内容（画面のメンバー表と同じ）
+  sheetDataRef.current = () => {
+    const starters: SheetRow[] = Array.from({ length: 9 }).map((_, i) => {
+      const pid = order[i];
+      const p = pid ? byId.get(pid) : undefined;
+      return {
+        order: i + 1,
+        pos: pid ? positionOf(lineup, pid) : "",
+        number: p?.number ?? "",
+        name: p?.name ?? "",
+        grade: p ? `${p.grade}年` : "",
+        school: p ? teamName(p.teamId) : "",
+      };
+    });
+    const rows: SheetRow[] = bench.map((p, i) => ({
+      order: i + 1,
+      number: p.number,
+      name: p.name,
+      grade: `${p.grade}年`,
+      school: teamName(p.teamId),
+    }));
+    for (let i = rows.length; i < 5; i++) rows.push({ order: i + 1, number: "", name: "", grade: "", school: "" });
+    return {
+      team: "桜・浅羽野・住吉 連合チーム",
+      title: lineup.title || "メンバー表",
+      date: lineup.date ? formatDateLong(lineup.date) : "",
+      opponent: lineup.opponent,
+      starters,
+      bench: rows,
+    };
+  };
   const notPlaying = players.filter((p) => p.active && !positionOf(lineup, p.id));
 
   return (
@@ -481,65 +515,98 @@ export default function LineupPage() {
           </div>
           {pdfNote && <p className="m-0 rounded-xl border border-rule bg-white p-3 text-sm font-bold print:hidden">{pdfNote}</p>}
           <PaperPreview>
-          <article ref={sheetRef} className="sheet-one px-[48px] py-[44px] text-black print:p-0">
-            <header className="border-b-2 border-black pb-2">
-              <p className="text-sm print:text-[10pt]">桜・浅羽野・住吉 連合チーム</p>
-              <h2 className="text-[30px] font-extrabold print:text-[20pt]">{lineup.title || "メンバー表"}</h2>
-              <p className="text-base font-bold print:text-[11pt]">
-                {lineup.date && formatDateLong(lineup.date)}
-                {lineup.opponent && `　vs ${lineup.opponent}`}
-              </p>
+          <article ref={sheetRef} className="ms">
+            <header className="ms-head">
+              <p className="ms-team">桜・浅羽野・住吉 連合チーム</p>
+              <h2 className="ms-title">{lineup.title || "メンバー表"}</h2>
+              <dl className="ms-meta">
+                <div>
+                  <dt>日付</dt>
+                  <dd>{lineup.date ? formatDateLong(lineup.date) : ""}</dd>
+                </div>
+                <div>
+                  <dt>対戦相手</dt>
+                  <dd>{lineup.opponent}</dd>
+                </div>
+              </dl>
             </header>
-            <table className="mt-3 w-full border-collapse text-[19px] print:text-[13pt]">
+
+            <table className="ms-table">
+              <colgroup>
+                <col style={{ width: "11%" }} />
+                <col style={{ width: "11%" }} />
+                <col style={{ width: "12%" }} />
+                <col />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "15%" }} />
+              </colgroup>
               <thead>
-                <tr className="border-b-2 border-black text-sm print:text-[10pt]">
-                  <th className="w-12 py-1">打順</th>
-                  <th className="w-16 py-1">守備</th>
-                  <th className="w-14 py-1">背番号</th>
-                  <th className="min-w-[14em] py-1 text-left">氏名</th>
-                  <th className="w-12 py-1">学年</th>
-                  <th className="w-20 py-1">学校</th>
+                <tr>
+                  <th>打順</th>
+                  <th>守備</th>
+                  <th>背番号</th>
+                  <th>氏名</th>
+                  <th>学年</th>
+                  <th>学校</th>
                 </tr>
               </thead>
               <tbody>
                 {Array.from({ length: 9 }).map((_, i) => {
                   const pid = order[i];
                   const p = pid ? byId.get(pid) : undefined;
-                  const pos = pid ? POSITIONS.find((x) => x.key === positionOf(lineup, pid)) : undefined;
+                  const pos = pid ? positionOf(lineup, pid) : undefined;
                   return (
-                    <tr key={i} className="border-b border-black/40">
-                      <td className="py-3 text-center text-[26px] font-extrabold print:text-[16pt]">{i + 1}</td>
-                      <td className="py-3 text-center font-extrabold">
-                        {pos ? `${pos.key} ${pos.short}` : ""}
-                      </td>
-                      <td className="py-3 text-center font-bold">{p?.number ?? ""}</td>
-                      <td className="py-3 text-[23px] font-extrabold print:text-[15pt]">{p?.name ?? ""}</td>
-                      <td className="py-3 text-center">{p ? `${p.grade}年` : ""}</td>
-                      <td className="py-3 text-center">{p ? teamName(p.teamId) : ""}</td>
+                    <tr key={i}>
+                      <td className="ms-order">{i + 1}</td>
+                      <td className="ms-num">{pos ?? ""}</td>
+                      <td className="ms-num">{p?.number ?? ""}</td>
+                      <td className="ms-name">{p?.name ?? ""}</td>
+                      <td>{p ? `${p.grade}年` : ""}</td>
+                      <td>{p ? teamName(p.teamId) : ""}</td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
 
-            <h3 className="mt-5 border-b-2 border-black pb-1 text-lg font-extrabold print:text-[12pt]">
-              控え選手（{bench.length}人）
-            </h3>
-            <table className="w-full border-collapse text-[18px] print:text-[12pt]">
+            <h3 className="ms-sub">控え選手（{bench.length}人）</h3>
+            <table className="ms-table ms-table--bench">
+              <colgroup>
+                <col style={{ width: "11%" }} />
+                <col style={{ width: "12%" }} />
+                <col />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "15%" }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>No.</th>
+                  <th>背番号</th>
+                  <th>氏名</th>
+                  <th>学年</th>
+                  <th>学校</th>
+                </tr>
+              </thead>
               <tbody>
-                {bench.map((p) => (
-                  <tr key={p.id} className="border-b border-black/30">
-                    <td className="w-14 py-1.5 text-center font-bold">{p.number}</td>
-                    <td className="py-1.5 font-bold">{p.name}</td>
-                    <td className="w-12 py-1.5 text-center">{p.grade}年</td>
-                    <td className="w-20 py-1.5 text-center">{teamName(p.teamId)}</td>
+                {bench.map((p, i) => (
+                  <tr key={p.id}>
+                    <td>{i + 1}</td>
+                    <td className="ms-num">{p.number}</td>
+                    <td className="ms-name">{p.name}</td>
+                    <td>{p.grade}年</td>
+                    <td>{teamName(p.teamId)}</td>
                   </tr>
                 ))}
-                {bench.length === 0 && (
-                  <tr>
-                    <td className="py-3 text-sm text-navy-soft/70">（なし）</td>
+                {/* 書き足せるように、空の行を足して最低5行にする */}
+                {Array.from({ length: Math.max(0, 5 - bench.length) }).map((_, i) => (
+                  <tr key={`blank${i}`}>
+                    <td>{bench.length + i + 1}</td>
+                    <td />
+                    <td />
+                    <td />
+                    <td />
                   </tr>
-                )}
+                ))}
               </tbody>
             </table>
           </article>
