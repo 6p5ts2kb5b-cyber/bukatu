@@ -369,7 +369,7 @@ function DirPicker({
           >
             {editing && !e.preset && <span className="dir__x">×</span>}
             {e.name}
-            {(e.number || e.extra) && <small className="pick__sub">{kind === "venue" ? e.extra || e.number : e.number}</small>}
+            {(e.number || e.extra) && <small className="pick__sub">{kind === "venue" ? (e.extra || e.number).replace(/(駅).*/, "$1") : e.number}</small>}
           </button>
         ))}
         <button type="button" className="pick pick--other" onClick={() => setAdding(!adding)}>
