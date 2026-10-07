@@ -13,7 +13,9 @@ import {
   deleteNotice,
   emptyGame,
   getNotice,
+  NOTICE_KINDS,
   OUR_TEAM,
+  parentMessage,
   saveNotice,
   type Notice,
   type NoticeGame,
@@ -173,6 +175,88 @@ function GamesEditor({ games, onChange }: { games: NoticeGame[]; onChange: (g: N
   );
 }
 
+// 保護者に送るLINEの文。入力から自動で作り、送る前に手直しもできる
+function ParentLine({ n, set }: { n: Notice; set: (p: Partial<Notice>) => void }) {
+  const auto = parentMessage(n);
+  const [text, setText] = useState(auto);
+  const [edited, setEdited] = useState(false);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!edited) setText(auto);
+  }, [auto, edited]);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  };
+  return (
+    <Card>
+      <PanelTitle no={6}>保護者へのLINE</PanelTitle>
+      <div className="flex flex-col gap-4">
+        <Text label="地図のURL（任意）" value={n.mapUrl} onChange={(v) => set({ mapUrl: v })} placeholder="https://maps.app.goo.gl/…" />
+        <div className="grid grid-cols-[11rem_1fr] items-end gap-3">
+          <div>
+            <span className="f-label">グラウンドイン</span>
+            <TimePicker10 name="グラウンドイン" value={n.groundIn} onChange={(v) => set({ groundIn: v })} />
+          </div>
+          <p className="f-hint m-0 pb-2">「グラウンドイン7:30からです。」と入ります。</p>
+        </div>
+        <Field label="駐車場の案内（任意）">
+          <textarea
+            className="f-input"
+            rows={2}
+            value={n.parking}
+            onChange={(e) => set({ parking: e.target.value })}
+            placeholder="例：バスの場合は隣のB面の砂利の駐車場に駐車をお願いします。"
+          />
+        </Field>
+        <Text label="あいさつ" value={n.parentGreeting} onChange={(v) => set({ parentGreeting: v })} />
+        <Field label="そのほかの連絡（任意）">
+          <textarea
+            className="f-input"
+            rows={2}
+            value={n.parentNote}
+            onChange={(e) => set({ parentNote: e.target.value })}
+            placeholder="例：お弁当・水筒を持たせてください。"
+          />
+        </Field>
+
+        <div>
+          <div className="mb-1.5 flex items-baseline justify-between">
+            <span className="f-label m-0">送る文（手直しできます）</span>
+            {edited && (
+              <button type="button" className="text-xs font-bold text-navy-soft underline" onClick={() => setEdited(false)}>
+                入力内容から作り直す
+              </button>
+            )}
+          </div>
+          <textarea
+            className="f-input line-preview"
+            rows={18}
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value);
+              setEdited(true);
+            }}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <a className="btn btn--line" href={`https://line.me/R/share?text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer">
+            LINEで送る
+          </a>
+          <button type="button" className="btn btn--ghost" onClick={copy}>
+            {copied ? "コピーしました" : "文をコピー"}
+          </button>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 export default function NoticePage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -278,7 +362,7 @@ export default function NoticePage() {
       <div className="print:hidden flex flex-col gap-3">
         <PageHead
           kicker="NOTICE"
-          title="送付書"
+          title={NOTICE_KINDS.find((k) => k.key === n.kind)?.label ?? "送付書"}
           lead={saveState === "saving" ? "保存中…" : saveState === "error" ? "保存できませんでした。電波を確認してください。" : "入力すると自動で保存されます。"}
           action={
             <Link href="/notices" className="btn btn--ghost btn--small shrink-0">
@@ -325,8 +409,8 @@ export default function NoticePage() {
         <Card>
           <PanelTitle no={2}>件名と本文</PanelTitle>
           <div className="flex flex-col gap-4">
-            <Text label="件名（大会名）" value={n.subject} onChange={(v) => set({ subject: v })} placeholder="例：第47回JJBF埼玉県中学生選抜野球大会" />
-            <Field label="本文" hint="1行が1つの段落になります。">
+            <Text label={n.kind === "tournament" ? "件名（大会名）" : "件名"} value={n.subject} onChange={(v) => set({ subject: v })} placeholder="例：第47回JJBF埼玉県中学生選抜野球大会" />
+            <Field label="本文" hint="1行が1つの段落になります。予備日がないときは「予備日」を含む行は載りません。">
               <textarea className="f-input" rows={5} value={n.body} onChange={(e) => set({ body: e.target.value })} />
             </Field>
             <Text
@@ -380,7 +464,9 @@ export default function NoticePage() {
           </Field>
         </Card>
 
-        <p className="group-label">見本（このままPDFになります）</p>
+        <ParentLine n={n} set={set} />
+
+        <p className="group-label">送付書の見本（このままPDFになります）</p>
         <div className="overflow-hidden rounded-xl border border-rule bg-white shadow-sm">
           {preview ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -409,7 +495,7 @@ export default function NoticePage() {
       <div className="savebar print:hidden">
         <div className="grid grid-cols-[1fr_auto] gap-2">
           <button type="button" onClick={send} disabled={making} className="btn btn--accent">
-            {making ? "PDFを作っています…" : pdf ? "PDFを送る" : "PDFでLINE・メールに送る"}
+            {making ? "PDFを作っています…" : pdf ? "PDFを送る" : "送付書をPDFで送る"}
           </button>
           <button type="button" onClick={() => window.print()} className="btn btn--ghost px-5">
             印刷

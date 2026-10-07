@@ -1408,3 +1408,23 @@ textarea.f-input {
     height: auto;
   }
 }
+
+/* LINEで送るボタン（LINEの緑） */
+.btn--line {
+  background: #06c755;
+  color: #fff;
+  border-color: #06c755;
+  box-shadow: 0 3px 0 #04913e;
+  text-decoration: none;
+}
+.btn--line:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #04913e;
+}
+/* LINEの文の見本は、送る文と同じ見え方に */
+.f-input.line-preview {
+  font-weight: 500;
+  font-size: 15px;
+  line-height: 1.7;
+  background: #fff;
+}

@@ -169,7 +169,11 @@ function paint(p: Painter, n: NoticeDraft) {
   // ---- 本文 ----
   p.font(10.5, 500);
   const lh = p.sz(6.2);
-  const paras = n.body.split("\n").filter((s) => s.trim());
+  // 予備日がないときは、予備日の文は載せない
+  const paras = n.body
+    .split("\n")
+    .filter((s) => s.trim())
+    .filter((s) => n.reserveDate || !s.includes("予備日"));
   if (n.contact) paras.push(`何かありましたら、${n.contact}までご連絡をお願いいたします。`);
   for (const para of paras) {
     const lines = p.wrap(`　${para.trim()}`, W);

@@ -28,7 +28,7 @@ const GROUPS: { label: string; items: { href: string; label: string; desc: strin
   {
     label: "試合",
     items: [
-      { href: "/notices", label: "大会の連絡（送付書）", desc: "相手チーム・自チームへ。PDFでLINEに", icon: I.mail, red: true },
+      { href: "/notices", label: "試合の連絡", desc: "送付書（相手チーム）と保護者へのLINE文", icon: I.mail, red: true },
       { href: "/lineups", label: "メンバー表", desc: "守備位置と打順を決めて印刷", icon: I.diamond },
       { href: "/players", label: "選手名簿", desc: "背番号・学校・学年", icon: I.cap },
     ],

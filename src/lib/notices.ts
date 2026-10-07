@@ -31,8 +31,17 @@ export type NoticeGame = {
   base: string; // 塁審
 };
 
+// 送付書の種類
+export type NoticeKind = "tournament" | "practice2" | "practice3";
+export const NOTICE_KINDS: { key: NoticeKind; label: string; short: string }[] = [
+  { key: "tournament", label: "大会", short: "大会" },
+  { key: "practice2", label: "練習試合（2チーム）", short: "練習試合・2チーム" },
+  { key: "practice3", label: "練習試合（3チーム）", short: "練習試合・3チーム" },
+];
+
 export type Notice = {
   id: string;
+  kind: NoticeKind;
   issueDate: string; // 発信日 YYYY-MM-DD
   sheets: string; // 送信枚数（本票を含め）
   to: string; // 送付先
@@ -54,6 +63,12 @@ export type Notice = {
   rain: string; // 雨天判定（例：6:00 住吉中 池田 090-…）
   contact: string; // 問い合わせ先
   notes: string; // 連絡事項（1行に1つ）
+  // ---- 保護者へのLINE文で使う ----
+  mapUrl: string; // 地図のURL
+  groundIn: string; // グラウンドイン "07:30"
+  parking: string; // 駐車場の案内
+  parentGreeting: string; // あいさつ
+  parentNote: string; // そのほかの連絡（持ち物など）
 };
 
 export type NoticeDraft = Omit<Notice, "id">;
@@ -78,6 +93,7 @@ export function emptyGame(): NoticeGame {
 
 export function blankNotice(): NoticeDraft {
   return {
+    kind: "tournament",
     issueDate: todayString(),
     sheets: "1",
     to: "",
@@ -99,7 +115,32 @@ export function blankNotice(): NoticeDraft {
     rain: "",
     contact: "",
     notes: DEFAULT_NOTES,
+    mapUrl: "",
+    groundIn: "",
+    parking: "",
+    parentGreeting: "お疲れ様です。",
+    parentNote: "",
   };
+}
+
+// 練習試合のひな形（試合順と審判）。休みのチームが審判をする
+//   2チーム：うち 対 相手 → 相手 対 うち
+//   3チーム：うち 対 A（審判 B）→ A 対 B（審判 うち）→ B 対 うち（審判 A）
+export function practiceGames(kind: NoticeKind, a: string, b: string): NoticeGame[] {
+  const A = a || "相手チーム1";
+  const B = b || "相手チーム2";
+  const g = (first: string, third: string, time: string, ump: string, i: number): NoticeGame => ({
+    first,
+    third,
+    time,
+    timeNote: i === 0 ? "開始" : "予定",
+    plate: ump,
+    base: ump,
+  });
+  if (kind === "practice2") {
+    return [g(OUR_TEAM, A, "09:00", "両チームより", 0), g(A, OUR_TEAM, "11:00", "両チームより", 1)];
+  }
+  return [g(OUR_TEAM, A, "09:00", B, 0), g(A, B, "11:00", OUR_TEAM, 1), g(B, OUR_TEAM, "13:30", A, 2)];
 }
 
 // 前回の送付書から、毎回同じになる部分（発信元・連絡事項など）を引き継ぐ
@@ -118,7 +159,20 @@ export function fromPrevious(prev: Notice | null): NoticeDraft {
     rain: prev.rain,
     contact: prev.contact,
     notes: prev.notes,
+    parking: prev.parking,
+    parentGreeting: prev.parentGreeting || b.parentGreeting,
   };
+}
+
+// 予定の対戦相手（うちの相手を先に）
+export function activityOpponents(a: Activity): string[] {
+  const g = a.groups.find((x) => x.games.length > 0) ?? a.groups[0];
+  if (!g) return [];
+  return [
+    ...new Set(
+      g.games.flatMap((x) => [x.opponent, x.others ? x.home ?? "" : ""]).filter((t) => t && t !== OUR_TEAM),
+    ),
+  ];
 }
 
 // 予定（試合の日）から、件名・期日・会場・試合順を入れる
@@ -165,8 +219,10 @@ function db(): Firestore {
 function toNotice(id: string, x: Record<string, unknown>): Notice {
   const b = blankNotice();
   const s = (k: keyof NoticeDraft) => (x[k] === undefined ? (b[k] as string) : String(x[k] ?? ""));
+  const kind = x.kind === "practice2" || x.kind === "practice3" ? x.kind : "tournament";
   return {
     id,
+    kind,
     issueDate: s("issueDate"),
     sheets: s("sheets"),
     to: s("to"),
@@ -194,7 +250,53 @@ function toNotice(id: string, x: Record<string, unknown>): Notice {
     rain: s("rain"),
     contact: s("contact"),
     notes: s("notes"),
+    mapUrl: s("mapUrl"),
+    groundIn: s("groundIn"),
+    parking: s("parking"),
+    parentGreeting: s("parentGreeting"),
+    parentNote: s("parentNote"),
   };
+}
+
+// ---- 保護者に送るLINEの文 ----
+function shortDate(date: string): string {
+  if (!date) return "";
+  const [y, m, d] = date.split("-").map(Number);
+  return `${m}.${d}（${WD[new Date(y, m - 1, d).getDay()]}）`;
+}
+function clock(t: string): string {
+  if (!t) return "";
+  const [h, m] = t.split(":");
+  return `${Number(h)}:${m}`;
+}
+
+export function parentMessage(n: NoticeDraft): string {
+  const out: string[] = [];
+  if (n.parentGreeting.trim()) out.push(n.parentGreeting.trim(), "");
+  const what = n.kind === "tournament" && n.subject ? `${n.subject}　` : n.kind !== "tournament" ? "練習試合　" : "";
+  if (n.date) out.push(`${shortDate(n.date)}${what}よろしくお願いします。`, "");
+  if (n.venue) {
+    out.push(`✅会場　${n.venue}`);
+    if (n.parking.trim()) out.push(n.parking.trim());
+    out.push("");
+  }
+  if (n.mapUrl.trim()) out.push(n.mapUrl.trim(), "");
+  if (n.groundIn) out.push(`グラウンドイン${clock(n.groundIn)}からです。`, "");
+  const games = n.games.filter((g) => g.first || g.third);
+  if (games.length) {
+    out.push("試合順は");
+    games.forEach((g, i) => {
+      const ump = g.plate ? `　球審　${g.plate}` : "";
+      out.push(`${i + 1}試合目　${g.first || "未定"}　対　${g.third || "未定"}`);
+      out.push(`${g.time ? `${clock(g.time)}〜` : "時間未定"}${ump}`);
+      if (i < games.length - 1) out.push("");
+    });
+    out.push("");
+  }
+  if (n.reserveDate) out.push(`予備日　${shortDate(n.reserveDate)}`, "");
+  if (n.parentNote.trim()) out.push(n.parentNote.trim(), "");
+  while (out.length && !out[out.length - 1]) out.pop();
+  return out.join("\n");
 }
 
 export async function listNotices(): Promise<Notice[]> {

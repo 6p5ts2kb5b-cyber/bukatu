@@ -1,15 +1,25 @@
 "use client";
 
-// 大会の連絡（送付書）の一覧と新規作成の画面です。
-// 新しく作るときは、前回の送付書から発信元や連絡事項を引き継ぎ、
-// 選んだ予定（試合の日）から件名・期日・会場・試合順を入れます。
+// 大会・練習試合の連絡（送付書）の一覧と新規作成の画面です。
+// 新しく作るときは、種類（大会／練習試合2チーム／3チーム）と予定を選びます。
+// 発信元や連絡事項は前回の送付書から引き継ぎ、練習試合は試合順と審判をひな形で入れます。
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Card, ErrorText, Loading, PageHead, PrimaryButton, SecondaryButton } from "@/components/ui";
+import { Card, Choices, ErrorText, Field, inputClass, Loading, PageHead, PrimaryButton, ToggleButton } from "@/components/ui";
 import { formatDate, isMatchType, listUpcoming, type Activity } from "@/lib/activities";
-import { applyActivity, createNotice, fromPrevious, listNotices, type Notice } from "@/lib/notices";
+import {
+  activityOpponents,
+  applyActivity,
+  createNotice,
+  fromPrevious,
+  listNotices,
+  NOTICE_KINDS,
+  practiceGames,
+  type Notice,
+  type NoticeKind,
+} from "@/lib/notices";
 
 export default function NoticesPage() {
   const router = useRouter();
@@ -18,6 +28,9 @@ export default function NoticesPage() {
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [kind, setKind] = useState<NoticeKind>("tournament");
+  const [picked, setPicked] = useState<Activity | null>(null);
+  const [opp, setOpp] = useState(["", ""]);
 
   useEffect(() => {
     listNotices()
@@ -28,16 +41,37 @@ export default function NoticesPage() {
       .catch(() => {});
   }, []);
 
-  const create = async (from: { activity?: Activity; copy?: Notice }) => {
+  const pick = (a: Activity | null) => {
+    setPicked(a);
+    if (!a) return;
+    const g = a.groups.find((x) => isMatchType(x.type));
+    const names = activityOpponents(a);
+    setOpp([names[0] ?? "", names[1] ?? ""]);
+    // 予定の種類から送付書の種類を決める
+    if (g?.type === "練習試合") setKind(names.length >= 2 ? "practice3" : "practice2");
+    else if (g) setKind("tournament");
+  };
+
+  const create = async (copy?: Notice) => {
     setSaving(true);
     try {
       let draft = fromPrevious(notices?.[0] ?? null);
-      if (from.copy) {
-        const { id: _id, ...rest } = from.copy;
-        void _id;
+      if (copy) {
+        const { id, ...rest } = copy;
+        void id;
         draft = { ...rest, issueDate: draft.issueDate };
+      } else {
+        draft.kind = kind;
+        if (picked) draft = applyActivity(draft, picked);
+        if (kind !== "tournament") {
+          const [a, b] = opp.map((x) => x.trim());
+          draft.subject = draft.subject && draft.subject !== "練習試合" ? draft.subject : "練習試合";
+          draft.games = practiceGames(kind, a, b);
+          const teams = (kind === "practice2" ? [a] : [a, b]).filter(Boolean);
+          if (teams.length) draft.to = `${teams.join("・")}　代表者`;
+          draft.reserveDate = "";
+        }
       }
-      if (from.activity) draft = applyActivity(draft, from.activity);
       const id = await createNotice(draft);
       router.push(`/notices/${id}`);
     } catch {
@@ -46,47 +80,95 @@ export default function NoticesPage() {
     }
   };
 
+  const kindLabel = (k: NoticeKind) => NOTICE_KINDS.find((x) => x.key === k)?.short ?? "";
+
   return (
     <>
       <PageHead
         kicker="NOTICE"
-        title="大会の連絡（送付書）"
-        lead="相手チーム・自チームへの送付書を作り、PDFにしてLINEで送ります。"
+        title="試合の連絡（送付書）"
+        lead="相手チームへの送付書と、保護者へのLINE文を作ります。PDFにしてLINEで送れます。"
       />
 
       {creating ? (
         <Card>
-          <div className="flex flex-col gap-3">
-            <p className="f-label m-0">どの予定の送付書ですか？</p>
-            <p className="f-hint m-0">
-              選ぶと、件名・期日・会場・試合順が入ります。発信元や連絡事項は前回の送付書から引き継ぎます。
-            </p>
-            {matches.length === 0 && <p className="text-sm font-bold text-navy-soft">試合の予定はまだありません。</p>}
-            <ul className="list">
-              {matches.map((a) => {
-                const g = a.groups.find((x) => isMatchType(x.type))!;
-                return (
-                  <li key={a.id}>
-                    <button type="button" className="row" disabled={saving} onClick={() => create({ activity: a })}>
-                      <span className="row__main">
-                        <span className="row__sub">{formatDate(a.date)}</span>
-                        <span className="row__title">{g.tournamentName || g.type}</span>
-                        {g.venue && <span className="row__sub">{g.venue}</span>}
-                      </span>
-                      <span className="row__chev" aria-hidden />
+          <div className="flex flex-col gap-5">
+            <div>
+              <span className="f-label">種類</span>
+              <Choices cols={1}>
+                {NOTICE_KINDS.map((k) => (
+                  <ToggleButton key={k.key} on={kind === k.key} label={k.label} onClick={() => setKind(k.key)} />
+                ))}
+              </Choices>
+            </div>
+
+            <div>
+              <span className="f-label">予定から読み込む（任意）</span>
+              <span className="f-hint mb-2 block mt-0">
+                選ぶと、期日・会場・大会名・相手チームが入ります。
+              </span>
+              {matches.length === 0 && <p className="text-sm font-bold text-navy-soft">試合の予定はまだありません。</p>}
+              <div className="filters" style={{ flexWrap: "wrap" }}>
+                <button type="button" className="filter" aria-pressed={!picked} onClick={() => pick(null)}>
+                  使わない
+                </button>
+                {matches.map((a) => {
+                  const g = a.groups.find((x) => isMatchType(x.type))!;
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      className="filter"
+                      aria-pressed={picked?.id === a.id}
+                      onClick={() => pick(a)}
+                    >
+                      {formatDate(a.date)} {g.tournamentName || g.type}
                     </button>
-                  </li>
-                );
-              })}
-            </ul>
-            <SecondaryButton onClick={() => create({})}>予定を使わずに作る</SecondaryButton>
+                  );
+                })}
+              </div>
+            </div>
+
+            {kind !== "tournament" && (
+              <div className="flex flex-col gap-3">
+                <Field label={kind === "practice3" ? "相手チーム1" : "相手チーム"}>
+                  <input
+                    className={inputClass}
+                    value={opp[0]}
+                    onChange={(e) => setOpp([e.target.value, opp[1]])}
+                    placeholder="例：坂戸中"
+                    autoComplete="off"
+                  />
+                </Field>
+                {kind === "practice3" && (
+                  <Field label="相手チーム2">
+                    <input
+                      className={inputClass}
+                      value={opp[1]}
+                      onChange={(e) => setOpp([opp[0], e.target.value])}
+                      placeholder="例：鶴ヶ島中"
+                      autoComplete="off"
+                    />
+                  </Field>
+                )}
+                <p className="f-hint m-0">
+                  {kind === "practice3"
+                    ? "試合順：うち対1 → 1対2 → 2対うち。審判は休みのチームが担当するひな形で入ります（あとで変えられます）。"
+                    : "試合順：うち対相手 → 相手対うち の2試合で入ります（あとで変えられます）。"}
+                </p>
+              </div>
+            )}
+
+            <PrimaryButton onClick={() => create()} disabled={saving}>
+              {saving ? "作成中…" : "作成する"}
+            </PrimaryButton>
             <button type="button" className="text-sm font-bold text-navy-soft underline" onClick={() => setCreating(false)}>
               やめる
             </button>
           </div>
         </Card>
       ) : (
-        <PrimaryButton onClick={() => setCreating(true)}>＋ 新しい送付書を作る</PrimaryButton>
+        <PrimaryButton onClick={() => setCreating(true)}>＋ 新しく作る</PrimaryButton>
       )}
 
       {error && <ErrorText>{error}</ErrorText>}
@@ -103,13 +185,16 @@ export default function NoticesPage() {
               <span className="row__main">
                 <span className="row__sub">{n.date ? formatDate(n.date) : "期日未定"}</span>
                 <span className="row__title">{n.subject || "（件名なし）"}</span>
-                {n.to && <span className="row__sub">送付先：{n.to}</span>}
+                <span className="tags">
+                  <span className={`tag ${n.kind === "tournament" ? "tag--red" : ""}`}>{kindLabel(n.kind)}</span>
+                  {n.to && <span className="tag">{n.to.replace(/\s*代表者.*$/, "")}宛て</span>}
+                </span>
               </span>
               <span className="row__chev" aria-hidden />
             </Link>
             <button
               type="button"
-              onClick={() => create({ copy: n })}
+              onClick={() => create(n)}
               disabled={saving}
               className="w-full border-t border-dashed border-rule py-2.5 text-xs font-bold text-navy-soft active:bg-field"
             >
