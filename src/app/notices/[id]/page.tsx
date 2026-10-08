@@ -201,7 +201,7 @@ function GamesEditor({
                   審判{" "}
                   {g.plate === g.base
                     ? teamText(g.plate, games) || "未定"
-                    : `主審 ${teamText(g.plate, games) || "未定"}・塁審 ${teamText(g.base, games) || "未定"}`}
+                    : `球審 ${teamText(g.plate, games) || "未定"}・塁審 ${teamText(g.base, games) || "未定"}`}
                 </span>
               </span>
               <span className="game-card__edit">{open.includes(i) ? "閉じる" : "変更"}</span>
@@ -269,12 +269,12 @@ function GamesEditor({
               </div>
               {split ? (
                 <>
-                  <TeamPicker label="主審" value={g.plate} options={umpOptions(i)} onChange={(v) => update(i, { plate: v })} />
+                  <TeamPicker label="球審" value={g.plate} options={umpOptions(i)} onChange={(v) => update(i, { plate: v })} />
                   <TeamPicker label="塁審" value={g.base} options={umpOptions(i)} onChange={(v) => update(i, { base: v })} />
                 </>
               ) : (
                 <TeamPicker
-                  label="審判（主審・塁審）"
+                  label="審判（球審・塁審）"
                   value={g.plate}
                   options={umpOptions(i)}
                   onChange={(v) => update(i, { plate: v, base: v })}
@@ -285,7 +285,7 @@ function GamesEditor({
                 className="self-start text-xs font-bold text-navy-soft underline"
                 onClick={() => update(i, split ? { base: g.plate } : { base: "" })}
               >
-                {split ? "主審と塁審を同じにする" : "主審と塁審を分ける"}
+                {split ? "球審と塁審を同じにする" : "球審と塁審を分ける"}
               </button>
             </div>
             )}

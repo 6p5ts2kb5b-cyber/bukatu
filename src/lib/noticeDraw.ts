@@ -291,11 +291,11 @@ function paint(p: Painter, n: NoticeDraft) {
       const same = g.plate && g.plate === g.base;
       if (same) {
         p.font(8, 700);
-        p.text("主審・塁審", cx + cols[5] / 2, p.y + h * 0.32, "center");
+        p.text("球審・塁審", cx + cols[5] / 2, p.y + h * 0.32, "center");
         p.fitText(g.plate, cx + 2, p.y + h * 0.66, cols[5] - 4, 10, 800, "center");
       } else if (g.plate || g.base) {
         p.font(8, 700);
-        p.text("主審", cx + 3, p.y + h * 0.32);
+        p.text("球審", cx + 3, p.y + h * 0.32);
         p.text("塁審", cx + 3, p.y + h * 0.7);
         p.fitText(g.plate, cx + 11, p.y + h * 0.32, cols[5] - 13, 9.5, 800);
         p.fitText(g.base, cx + 11, p.y + h * 0.7, cols[5] - 13, 9.5, 800);

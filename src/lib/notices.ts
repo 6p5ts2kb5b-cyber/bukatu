@@ -28,7 +28,7 @@ export type NoticeGame = {
   third: string;
   time: string; // "09:00"
   timeNote: "開始" | "予定";
-  plate: string; // 主審
+  plate: string; // 球審
   base: string; // 塁審
   afterLunch?: boolean; // 時刻の代わりに「昼食後○分後」
   lunchMin?: number; // 昼食後の分（ふつう40）
