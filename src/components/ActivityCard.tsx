@@ -140,7 +140,7 @@ function GroupDetails({ g }: { g: ActivityGroup }) {
             {x.afterLunch ? gameStart(x) : x.startTime && <Num>{x.startTime}</Num>}
             {gameStart(x) && gameLabel(x) && "　"}
             {gameLabel(x)}
-            {isOthersGame(x) && "（うちは休み）"}
+            {isOthersGame(x) && "（他チーム同士の試合）"}
           </span>
         ) : null,
       ]),
