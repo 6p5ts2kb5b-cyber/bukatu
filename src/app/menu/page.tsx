@@ -22,6 +22,7 @@ const GROUPS: { label: string; items: { href: string; label: string; desc: strin
     label: "予定",
     items: [
       { href: "/activities", label: "予定一覧", desc: "これからの予定と過去の予定", icon: I.calendar },
+      { href: "/activities/bulk", label: "部活あり・なしをまとめて入力", desc: "1カ月分を押すだけで", icon: I.calendar },
       { href: "/print", label: "保護者配布用の印刷", desc: "学校ごとの月間予定表（A4）", icon: I.print, red: true },
     ],
   },

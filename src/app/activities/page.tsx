@@ -75,9 +75,14 @@ export default function ActivitiesPage() {
         kicker="SCHEDULE"
         title="予定"
         action={
-          <Link href="/print" className="btn btn--ghost btn--small shrink-0">
-            印刷する
-          </Link>
+          <div className="flex shrink-0 gap-2">
+            <Link href="/activities/bulk" className="btn btn--ghost btn--small">
+              まとめて入力
+            </Link>
+            <Link href="/print" className="btn btn--ghost btn--small">
+              印刷
+            </Link>
+          </div>
         }
       />
 

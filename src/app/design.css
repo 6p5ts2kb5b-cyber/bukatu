@@ -2047,3 +2047,81 @@ td.pl-mark {
 .mini__state--ng { color: var(--stop-ink); }
 .home-empty { display: flex; flex-direction: column; gap: 8px; padding: 24px 18px; border-radius: 14px; background: #fff; border: 1px solid var(--h-line); text-align: center; }
 .home-empty__title { margin: 0; font-size: 17px; font-weight: 900; }
+
+/* ───────── 部活あり・なしをまとめて入力 ───────── */
+.qk {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid var(--rule);
+}
+.qk__row {
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 6px 8px;
+  border-bottom: 1px solid var(--rule);
+}
+.qk__row:last-child {
+  border-bottom: 0;
+}
+.qk__row--we {
+  background: #f3f5f2;
+}
+.qk__row--edited {
+  box-shadow: inset 4px 0 0 #f2b705;
+}
+.qk__date {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  justify-content: center;
+}
+.qk__date b {
+  font-family: var(--num);
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1;
+}
+.qk__date span {
+  font-size: 12px;
+  font-weight: 800;
+}
+.qk__btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.qk__btn {
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1.5px solid var(--rule);
+  background: #fff;
+  color: var(--ink-3);
+  font-family: var(--jp);
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.qk__btn--on[aria-pressed="true"] {
+  background: var(--board);
+  border-color: var(--board);
+  color: #fff;
+}
+.qk__btn--off[aria-pressed="true"] {
+  background: #6b7a72;
+  border-color: #6b7a72;
+  color: #fff;
+}
+.qk__other {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-2);
+  text-decoration: underline;
+}
