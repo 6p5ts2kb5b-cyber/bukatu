@@ -133,7 +133,7 @@ function GroupLines({ g, showDivision }: { g: ActivityGroup; showDivision: boole
               <span key={i} className={x.others ? "pl-game pl-game--others" : "pl-game"}>
                 <b>{x.afterLunch ? gameStart(x) : clock(x.startTime) || "時間未定"}</b>
                 {x.others
-                  ? `${team(x.home ?? "") || "未定"} 対 ${team(x.opponent) || "未定"}（他チーム同士の試合）`
+                  ? `${team(x.home ?? "") || "未定"} 対 ${team(x.opponent) || "未定"}（観戦・補助役員）`
                   : `vs ${team(x.opponent) || "未定"}`}
               </span>
             ))}
