@@ -122,8 +122,8 @@ export default function BulkPage() {
     <>
       <PageHead
         kicker="QUICK"
-        title="部活あり・なしをまとめて入力"
-        lead="日ごとに「あり」「なし」を押して、最後に保存するだけ。"
+        title="部活あり・休養日をまとめて入力"
+        lead="日ごとに「部活あり」「休養日」「空欄」を押して、最後に保存するだけ。"
         action={
           <Link href="/activities" className="btn btn--ghost btn--small shrink-0">
             予定へ
@@ -178,10 +178,10 @@ export default function BulkPage() {
             全部あり
           </button>
           <button type="button" className="btn btn--ghost btn--small" onClick={() => setAll("なし")}>
-            全部なし
+            全部休養日
           </button>
           <button type="button" className="btn btn--ghost btn--small" onClick={() => setAll("")}>
-            全部消す
+            全部空欄
           </button>
         </div>
       </section>
@@ -192,7 +192,7 @@ export default function BulkPage() {
       {acts && (
         <>
           <p className="group-label">
-            {m}月　あり {count("あり")}日・なし {count("なし")}日・未入力 {count("")}日
+            {m}月　部活あり {count("あり")}日・休養日 {count("なし")}日・空欄 {count("")}日
           </p>
           <ul className="qk">
             {days.map((d) => {
@@ -216,17 +216,25 @@ export default function BulkPage() {
                         type="button"
                         className="qk__btn qk__btn--on"
                         aria-pressed={mk === "あり"}
-                        onClick={() => setMarks({ ...marks, [d]: mk === "あり" ? "" : "あり" })}
+                        onClick={() => setMarks({ ...marks, [d]: "あり" })}
                       >
-                        あり
+                        部活あり
                       </button>
                       <button
                         type="button"
                         className="qk__btn qk__btn--off"
                         aria-pressed={mk === "なし"}
-                        onClick={() => setMarks({ ...marks, [d]: mk === "なし" ? "" : "なし" })}
+                        onClick={() => setMarks({ ...marks, [d]: "なし" })}
                       >
-                        なし
+                        休養日
+                      </button>
+                      <button
+                        type="button"
+                        className="qk__btn qk__btn--blank"
+                        aria-pressed={mk === ""}
+                        onClick={() => setMarks({ ...marks, [d]: "" })}
+                      >
+                        空欄
                       </button>
                     </span>
                   )}

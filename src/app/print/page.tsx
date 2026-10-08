@@ -21,6 +21,7 @@ import {
   reserveLabel,
   reservesByDate,
   heldPlanText,
+  typeLabel,
   weekday,
   type Activity,
   type ActivityGroup,
@@ -152,7 +153,7 @@ function GroupLines({ g, showDivision }: { g: ActivityGroup; showDivision: boole
     <div className={`pl-g${quiet ? " pl-g--quiet" : ""}`}>
       <p className="pl-title">
         {showDivision && <span className="pl-div">{divisionLabel(g.division)}</span>}
-        <b>{g.type}</b>
+        <b className={off ? "pl-rest" : undefined}>{typeLabel(g.type)}</b>
         {tournamentTitle(g) && <span className="pl-tour">{tournamentTitle(g)}</span>}
       </p>
       {rows.length > 0 && (
@@ -410,7 +411,7 @@ export default function PrintPage() {
                         </p>
                         <p>
                           <b>実施のとき</b>
-                          {heldPlanText(a.groups)}
+                          <strong className="pl-rest">{heldPlanText(a.groups)}</strong>
                         </p>
                       </div>
                     )}

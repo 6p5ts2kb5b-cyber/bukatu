@@ -188,10 +188,15 @@ export function reserveOnlyDays(list: Activity[], from: string, to: string): Act
   return out;
 }
 
-// 予備日の日に「大会が実施されたとき」の予定を1行で（休みなら「休み」）
+// 画面・印刷での種類の書き方。「部活なし」「練習なし」は「休養日」と書く
+export function typeLabel(type: string): string {
+  return type === "部活なし" || type === "練習なし" ? "休養日" : type;
+}
+
+// 予備日の日に「大会が実施されたとき」の予定を1行で（休みなら「休養日」）
 export function heldPlanText(groups: ActivityGroup[]): string {
   const active = groups.filter((g) => !isOffType(g.type));
-  if (!active.length) return "休み";
+  if (!active.length) return "休養日";
   const hm = (t: string) => (t ? `${Number(t.split(":")[0])}:${t.split(":")[1]}` : "");
   return active
     .map((g) =>

@@ -211,9 +211,10 @@
   font-weight: 800;
   letter-spacing: 0.02em;
 }
+/* 休養日（部活なし・練習なし）は太字ではっきり */
 .acard__type--off {
-  color: var(--ink-3);
-  font-weight: 700;
+  color: var(--ink);
+  font-weight: 800;
 }
 .acard__tournament {
   font-family: var(--jp);
@@ -1816,6 +1817,13 @@ td.pl-mark {
   font-size: 11px;
   color: #6b6b6b;
 }
+/* 休養日は太字で黒く、分かりやすく */
+.pl-g--quiet .pl-title .pl-rest,
+.pl-rest {
+  color: #000;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
 .pl-g--quiet .pl-div {
   border-color: #9a9a9a;
 }
@@ -2095,11 +2103,12 @@ td.pl-mark {
 }
 .qk__btns {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  grid-template-columns: 1fr 1fr 0.7fr;
+  gap: 6px;
 }
 .qk__btn {
   min-height: 44px;
+  padding: 0 4px;
   border-radius: 10px;
   border: 1.5px solid var(--rule);
   background: #fff;
@@ -2115,9 +2124,19 @@ td.pl-mark {
   color: #fff;
 }
 .qk__btn--off[aria-pressed="true"] {
-  background: #6b7a72;
-  border-color: #6b7a72;
+  background: #c42b3b;
+  border-color: #c42b3b;
   color: #fff;
+  font-weight: 900;
+}
+.qk__btn--blank {
+  font-size: 13px;
+  border-style: dashed;
+}
+.qk__btn--blank[aria-pressed="true"] {
+  background: #eef1ed;
+  border-color: #9aa9a2;
+  color: var(--ink-2);
 }
 .qk__other {
   font-size: 13px;

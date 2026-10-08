@@ -16,6 +16,7 @@ import {
   tournamentTitle,
   reserveLabel,
   heldPlanText,
+  typeLabel,
   type ReserveInfo,
   isOthersGame,
   ourOpponents,
@@ -223,7 +224,7 @@ export function ActivityCard({
           <div key={g.division} className="acard__group">
             <div className="acard__head">
               {g.division !== "main" && <span className="acard__div">{divisionLabel(g.division)}</span>}
-              <span className={`acard__type${isOffType(g.type) ? " acard__type--off" : ""}`}>{g.type}</span>
+              <span className={`acard__type${isOffType(g.type) ? " acard__type--off" : ""}`}>{typeLabel(g.type)}</span>
               {tournamentTitle(g) && <span className="acard__tournament">{tournamentTitle(g)}</span>}
             </div>
             <Opponents g={g} />

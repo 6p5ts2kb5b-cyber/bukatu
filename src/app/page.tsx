@@ -17,6 +17,7 @@ import {
   normalizeTeam,
   todayString,
   tournamentTitle,
+  typeLabel,
   weekday,
   type Activity,
 } from "@/lib/activities";
@@ -73,7 +74,7 @@ function shortLabel(g: Unit["group"]): string {
     ];
     if (names.length) return `vs ${names.join("・")}`;
   }
-  return g.type;
+  return typeLabel(g.type);
 }
 
 const LEVEL_WORD: Record<Level, string> = { ok: "準備OK", warn: "確認中", ng: "未確定", none: "" };
@@ -88,7 +89,7 @@ function Board({ u }: { u: Unit }) {
       <div className="board__head">
         <span className="board__name">
           {u.name}
-          <small>{g.type}</small>
+          <small>{typeLabel(g.type)}</small>
         </span>
         {!quiet && (
           <span className={`board__state board__state--${u.level}`}>
