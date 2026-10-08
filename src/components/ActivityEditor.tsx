@@ -24,6 +24,13 @@ import {
 } from "@/lib/activities";
 import { addPackingItem, listPackingItems, type PackingItem } from "@/lib/packing";
 import { findVenue, listDirectory, venueList, type DirEntry } from "@/lib/directory";
+import {
+  isWeekend as isWeekendDate,
+  listRange,
+  reserveLabel,
+  reservesByDate,
+  type ReserveInfo,
+} from "@/lib/activities";
 import { DirPicker } from "@/components/DirPicker";
 import { Card, Choices, ErrorText, Field, inputClass, PanelTitle, PrimaryButton, ToggleButton } from "@/components/ui";
 
@@ -740,6 +747,17 @@ export function ActivityEditor({
   const [error, setError] = useState<string | null>(null);
   const [packingItems, setPackingItems] = useState<PackingItem[]>([]);
   const [dir, setDir] = useState<DirEntry[]>([]);
+  // この日が、ほかの大会の「予備日」になっているか
+  const [reserveOf, setReserveOf] = useState<ReserveInfo[]>([]);
+  useEffect(() => {
+    if (!a.date) return;
+    const d = new Date(`${a.date}T00:00:00`);
+    d.setDate(d.getDate() - 60);
+    const from = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    listRange(from, a.date)
+      .then((list) => setReserveOf(reservesByDate(list).get(a.date) ?? []))
+      .catch(() => setReserveOf([]));
+  }, [a.date]);
   const reloadDir = useCallback(() => {
     listDirectory()
       .then(setDir)
@@ -880,6 +898,33 @@ export function ActivityEditor({
             </Choices>
             <p className="f-hint">平日は「住吉のみ」、土日は月に合わせて自動で選ばれます。</p>
           </div>
+          {reserveOf.length > 0 && current && (
+            <div className="reserve-note">
+              <p className="reserve-note__title">☂ この日は {reserveOf.map(reserveLabel).join("・")} の予備日です</p>
+              <p className="reserve-note__body">
+                大会が延期になったら、この日が大会になります（予定表・印刷には自動でそう出ます）。
+                下には「大会が実施されたとき」のこの日の予定を入れてください。
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--small"
+                  aria-pressed={isOffType(current.type)}
+                  onClick={() => updateGroup({ ...current, type: isWeekendDate(a.date) ? "練習なし" : "部活なし" })}
+                >
+                  実施なら休み
+                </button>
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--small"
+                  aria-pressed={current.type === "練習"}
+                  onClick={() => updateGroup({ ...current, type: "練習" })}
+                >
+                  実施なら練習
+                </button>
+              </div>
+            </div>
+          )}
           <Field label="この日全体のメモ">
             <textarea
               className={inputClass}

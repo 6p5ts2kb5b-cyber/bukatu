@@ -2125,3 +2125,98 @@ td.pl-mark {
   color: var(--ink-2);
   text-decoration: underline;
 }
+
+/* 大会の予備日の帯（予定カード） */
+.acard__reserve {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #eef3fb;
+  border: 1px solid #c9d8f0;
+}
+.acard__reserve-title {
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #1f4fa3;
+}
+.acard__reserve-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+.acard__reserve-row small {
+  font-weight: 600;
+  color: var(--ink-3);
+}
+.acard__if {
+  flex: none;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--rule);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink-2);
+}
+.acard__if--rain {
+  border-color: #9db8e6;
+  color: #1f4fa3;
+}
+
+/* 印刷：大会の予備日 */
+.pl-reserve {
+  margin-bottom: 4px;
+  padding: 3px 6px;
+  border: 1px solid #9db8e6;
+  border-radius: 4px;
+  background: #eef3fb;
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+.pl-reserve p {
+  margin: 0;
+}
+.pl-reserve__title {
+  font-weight: 800;
+  color: #1f4fa3;
+}
+.pl-reserve b {
+  display: inline-block;
+  min-width: 5.2em;
+  font-size: 9.5px;
+  color: #444;
+}
+
+/* 予定の入力：この日が大会の予備日のときの案内 */
+.reserve-note {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #eef3fb;
+  border: 1px solid #c9d8f0;
+}
+.reserve-note__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: #1f4fa3;
+}
+.reserve-note__body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.reserve-note .btn[aria-pressed="true"] {
+  background: var(--board);
+  color: #fff;
+}

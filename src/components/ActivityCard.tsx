@@ -14,6 +14,9 @@ import {
   isRef,
   formatDate,
   tournamentTitle,
+  reserveLabel,
+  heldPlanText,
+  type ReserveInfo,
   isOthersGame,
   ourOpponents,
   isMatchType,
@@ -148,7 +151,39 @@ function GroupDetails({ g }: { g: ActivityGroup }) {
   return <Rows items={items} />;
 }
 
-export function ActivityCard({ activity, featured = false }: { activity: Activity; featured?: boolean }) {
+// 大会の予備日の帯：「延期のとき」と「実施のとき」を並べる
+function ReserveBanner({ reserves, groups }: { reserves: ReserveInfo[]; groups: ActivityGroup[] }) {
+  return (
+    <div className="acard__reserve">
+      <p className="acard__reserve-title">
+        <span aria-hidden>☂</span> {reserves.map(reserveLabel).join("・")} の予備日
+      </p>
+      <p className="acard__reserve-row">
+        <span className="acard__if acard__if--rain">延期のとき</span>
+        <span>
+          {reserves.map((r) => r.title).join("・")}
+          {reserves[0].venue && <small>（{reserves.map((r) => r.venue).filter(Boolean).join("・")}）</small>}
+        </span>
+      </p>
+      <p className="acard__reserve-row">
+        <span className="acard__if">実施のとき</span>
+        <span>{heldPlanText(groups)}</span>
+      </p>
+    </div>
+  );
+}
+
+export function ActivityCard({
+  activity,
+  featured = false,
+  reserves = [],
+}: {
+  activity: Activity;
+  featured?: boolean;
+  reserves?: ReserveInfo[];
+}) {
+  // 予備日だけの日（その日の予定が未登録）は、大会の予定へ
+  const href = activity.groups.length || !reserves.length ? `/activities/${activity.id}` : `/activities/${reserves[0].activityId}`;
   const when = whenLabel(activity.date);
   const month = Number(activity.date.slice(5, 7));
   const day = Number(activity.date.slice(8, 10));
@@ -157,7 +192,7 @@ export function ActivityCard({ activity, featured = false }: { activity: Activit
 
   return (
     <Link
-      href={`/activities/${activity.id}`}
+      href={href}
       className={`acard${featured ? " acard--featured" : ""}`}
       aria-label={`${month}月${day}日（${wd}）の予定を開く`}
     >
@@ -182,7 +217,9 @@ export function ActivityCard({ activity, featured = false }: { activity: Activit
         )}
       </div>
       <div className="acard__body">
-        {activity.groups.map((g) => (
+        {reserves.length > 0 && <ReserveBanner reserves={reserves} groups={activity.groups} />}
+        {/* 予備日の日は、休み（練習なし など）の行は帯の「実施のとき」に出ているので重ねない */}
+        {activity.groups.filter((g) => !(reserves.length && isOffType(g.type))).map((g) => (
           <div key={g.division} className="acard__group">
             <div className="acard__head">
               {g.division !== "main" && <span className="acard__div">{divisionLabel(g.division)}</span>}

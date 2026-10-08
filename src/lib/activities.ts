@@ -151,6 +151,62 @@ export function tournamentTitle(g: Pick<ActivityGroup, "tournamentName" | "stage
   return [g.tournamentName, g.stage].filter(Boolean).join(" ");
 }
 
+// ---- 大会の予備日 ----
+// 大会・公式戦の予定に「予備日」が入っていると、その日は
+//   ・大会が延期になったら → 大会（予備日）
+//   ・大会が実施されたら   → その日の予定（休み・練習など）
+// になる。予備日の日に、どちらになるかを分かるように出す。
+export type ReserveInfo = { activityId: string; date: string; title: string; venue: string };
+
+export function reservesByDate(list: Activity[]): Map<string, ReserveInfo[]> {
+  const map = new Map<string, ReserveInfo[]>();
+  for (const a of list) {
+    for (const g of a.groups) {
+      if (!g.reserveDate) continue;
+      const info: ReserveInfo = {
+        activityId: a.id,
+        date: a.date,
+        title: tournamentTitle(g) || g.type,
+        venue: g.reserveVenue || g.venue,
+      };
+      map.set(g.reserveDate, [...(map.get(g.reserveDate) ?? []), info]);
+    }
+  }
+  return map;
+}
+
+// 予備日だけで、その日に予定が入っていない日の「仮の予定」（一覧・印刷に出すため）
+export function reserveOnlyDays(list: Activity[], from: string, to: string): Activity[] {
+  const map = reservesByDate(list);
+  const out: Activity[] = [];
+  map.forEach((infos, date) => {
+    if (date < from || date > to) return;
+    if (list.some((a) => a.date === date)) return;
+    out.push({ id: `reserve-${date}`, date, note: "", groups: [] });
+    void infos;
+  });
+  return out;
+}
+
+// 予備日の日に「大会が実施されたとき」の予定を1行で（休みなら「休み」）
+export function heldPlanText(groups: ActivityGroup[]): string {
+  const active = groups.filter((g) => !isOffType(g.type));
+  if (!active.length) return "休み";
+  const hm = (t: string) => (t ? `${Number(t.split(":")[0])}:${t.split(":")[1]}` : "");
+  return active
+    .map((g) =>
+      [g.type, g.venue, g.startTime || g.endTime ? `${hm(g.startTime)}〜${hm(g.endTime)}` : ""]
+        .filter(Boolean)
+        .join("　"),
+    )
+    .join("／");
+}
+
+// 「10/12 JJBF大会 1日目」の短い書き方
+export function reserveLabel(r: ReserveInfo): string {
+  return `${Number(r.date.slice(5, 7))}/${Number(r.date.slice(8))} ${r.title}`;
+}
+
 // 試合の開始の書き方（「9:00」または「昼食後40分後」）
 export function gameStart(x: Game): string {
   if (x.afterLunch) return `昼食後${x.lunchMin || 40}分後`;

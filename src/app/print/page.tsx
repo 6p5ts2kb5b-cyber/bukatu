@@ -18,6 +18,9 @@ import {
   isMatchType,
   isOffType,
   listRange,
+  reserveLabel,
+  reservesByDate,
+  heldPlanText,
   weekday,
   type Activity,
   type ActivityGroup,
@@ -174,6 +177,7 @@ export default function PrintPage() {
   // 期間：1カ月 / 前半（1〜15日） / 後半（16日〜末日）
   const [half, setHalf] = useState<"all" | "first" | "second">("all");
   const [activities, setActivities] = useState<Activity[] | null>(null);
+  const [pool, setPool] = useState<Activity[]>([]); // 予備日を調べるため、前の月も含めた予定
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const sheet = useRef<HTMLElement>(null);
@@ -188,8 +192,15 @@ export default function PrintPage() {
     setActivities(null);
     setError(null);
     const { from, to } = monthRange(month);
-    listRange(from, to)
-      .then(setActivities)
+    // 前の月の大会の「予備日」がこの月に来ることがあるので、少し前から読む
+    const d = new Date(`${from}T00:00:00`);
+    d.setDate(d.getDate() - 40);
+    const early = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    listRange(early, to)
+      .then((list) => {
+        setPool(list);
+        setActivities(list.filter((a) => a.date >= from));
+      })
       .catch(() => setError("予定を読み込めませんでした。電波の良い場所で開き直してください。"));
   }, [month]);
 
@@ -209,14 +220,31 @@ export default function PrintPage() {
     a.groups.length > 1 || !(divisions.length === 1 || g.division === "main" || (!custom && g.division === targetInfo.own));
 
   // この学校が関わる予定だけに絞る
+  // 大会の予備日（選んだ区分の大会だけ）
+  const reserves = useMemo(
+    () =>
+      reservesByDate(
+        pool.map((a) => ({ ...a, groups: a.groups.filter((g) => divisions.includes(g.division)) })),
+      ),
+    [pool, divisions],
+  );
+
   const rows = useMemo(() => {
     if (!activities) return [];
     const day = (a: Activity) => Number(a.date.slice(8, 10));
-    return activities
-      .filter((a) => half === "all" || (half === "first" ? day(a) <= 15 : day(a) >= 16))
+    const { from, to } = monthRange(month);
+    const list = activities
       .map((a) => ({ ...a, groups: a.groups.filter((g) => divisions.includes(g.division)) }))
-      .filter((a) => a.groups.length > 0);
-  }, [activities, divisions, half]);
+      .filter((a) => a.groups.length > 0 || reserves.has(a.date));
+    // 予定がなく、予備日だけの日も1行にする
+    reserves.forEach((_, date) => {
+      if (date >= from && date <= to && !list.some((a) => a.date === date))
+        list.push({ id: `reserve-${date}`, date, note: "", groups: [] });
+    });
+    return list
+      .filter((a) => half === "all" || (half === "first" ? day(a) <= 15 : day(a) >= 16))
+      .sort((x, y) => (x.date < y.date ? -1 : x.date > y.date ? 1 : 0));
+  }, [activities, divisions, half, reserves, month]);
 
   const [y, m] = month.split("-").map(Number);
   const lastDay = new Date(y, m, 0).getDate();
@@ -362,7 +390,10 @@ export default function PrintPage() {
               const d = Number(a.date.slice(8));
               const wd = weekday(a.date);
               const weekend = wd === "土" || wd === "日";
-              const quiet = a.groups.every((g) => isOffType(g.type) || (g.type === "部活あり" && !g.returnToSchool)) && !a.note;
+              const quiet =
+                a.groups.every((g) => isOffType(g.type) || (g.type === "部活あり" && !g.returnToSchool)) &&
+                !a.note &&
+                !reserves.has(a.date);
               return (
                 <tr key={a.id} className={`pl-row${weekend ? " pl-row--we" : ""}${quiet ? " pl-row--quiet" : ""}`}>
                   <td className="pl-day">
@@ -370,7 +401,20 @@ export default function PrintPage() {
                     <span className={wd === "土" ? "pl-sat" : wd === "日" ? "pl-sun" : undefined}>{wd}</span>
                   </td>
                   <td className="pl-main">
-                    {a.groups.map((g) => (
+                    {reserves.get(a.date) && (
+                      <div className="pl-reserve">
+                        <p className="pl-reserve__title">☂ {reserves.get(a.date)!.map(reserveLabel).join("・")} の予備日</p>
+                        <p>
+                          <b>延期のとき</b>
+                          {reserves.get(a.date)!.map((x) => `${x.title}${x.venue ? `（${x.venue}）` : ""}`).join("・")}
+                        </p>
+                        <p>
+                          <b>実施のとき</b>
+                          {heldPlanText(a.groups)}
+                        </p>
+                      </div>
+                    )}
+                    {a.groups.filter((g) => !(reserves.has(a.date) && isOffType(g.type))).map((g) => (
                       <GroupLines key={g.division} g={g} showDivision={showDivision(a, g)} />
                     ))}
                     {a.note && <p className="pl-note">※{a.note}</p>}

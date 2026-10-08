@@ -3,10 +3,18 @@
 // 活動予定の一覧画面です。月ごとに区切って並べます。
 
 import Link from "next/link";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { ActivityCard } from "@/components/ActivityCard";
 import { ErrorText, Loading, PageHead, SecondaryButton, cssVars } from "@/components/ui";
-import { listPast, listUpcoming, type Activity } from "@/lib/activities";
+import {
+  listPast,
+  listUpcoming,
+  reserveOnlyDays,
+  reservesByDate,
+  todayString,
+  type Activity,
+  type ReserveInfo,
+} from "@/lib/activities";
 
 // 月ごとにまとめる
 function byMonth(list: Activity[]): { key: string; year: number; month: number; items: Activity[] }[] {
@@ -23,7 +31,7 @@ function byMonth(list: Activity[]): { key: string; year: number; month: number; 
   return out;
 }
 
-function MonthList({ list, faded }: { list: Activity[]; faded?: boolean }) {
+function MonthList({ list, faded, reserves }: { list: Activity[]; faded?: boolean; reserves: Map<string, ReserveInfo[]> }) {
   return (
     <>
       {byMonth(list).map((m, mi) => (
@@ -40,7 +48,7 @@ function MonthList({ list, faded }: { list: Activity[]; faded?: boolean }) {
           <ul className={`month-group flex flex-col gap-2.5 ${faded ? "opacity-75" : ""}`}>
             {m.items.map((a) => (
               <li key={a.id}>
-                <ActivityCard activity={a} />
+                <ActivityCard activity={a} reserves={reserves.get(a.date)} />
               </li>
             ))}
           </ul>
@@ -69,6 +77,14 @@ export default function ActivitiesPage() {
       .catch(() => setError("過去の予定を読み込めませんでした。"));
   }, [showPast, past]);
 
+  // 大会の予備日（予定がない日も「予備日」として並べる）
+  const reserves = useMemo(() => reservesByDate([...(past ?? []), ...(upcoming ?? [])]), [past, upcoming]);
+  const withReserve = useMemo(() => {
+    if (!upcoming) return [];
+    const extra = reserveOnlyDays([...(past ?? []), ...upcoming], todayString(), "9999-12-31");
+    return [...upcoming, ...extra].sort((x, y) => (x.date < y.date ? -1 : x.date > y.date ? 1 : 0));
+  }, [past, upcoming]);
+
   return (
     <>
       <PageHead
@@ -94,7 +110,7 @@ export default function ActivitiesPage() {
           <p className="mt-1 text-sm text-navy-soft">下の「予定を追加」から登録できます。</p>
         </section>
       )}
-      {upcoming && <MonthList list={upcoming} />}
+      {upcoming && <MonthList list={withReserve} reserves={reserves} />}
 
       <div className="mt-3">
         {!showPast ? (
@@ -106,7 +122,7 @@ export default function ActivitiesPage() {
             {past && past.length === 0 && (
               <p className="py-4 text-center text-sm text-navy-soft">過去の予定はありません。</p>
             )}
-            {past && <MonthList list={past} faded />}
+            {past && <MonthList list={past} faded reserves={reserves} />}
           </>
         )}
       </div>
