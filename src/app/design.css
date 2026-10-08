@@ -2239,3 +2239,15 @@ td.pl-mark {
   background: var(--board);
   color: #fff;
 }
+
+/* 印刷のときは動き（ふわっと出る・数字がめくれる）を止めて、すぐ全部見えるように。
+   画面で隠れていた部品（送付書の印刷用の絵など）が、透明のまま印刷されるのを防ぐ */
+@media print {
+  .page > *,
+  .tile,
+  .lamp {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
