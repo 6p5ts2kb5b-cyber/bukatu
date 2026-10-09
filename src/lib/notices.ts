@@ -68,6 +68,8 @@ export type Notice = {
   body: string; // 本文
   date: string; // 期日
   reserveDate: string; // 予備日
+  reserveDate2: string; // 予備日の予備日
+  reserveVenue2: string;
   venue: string;
   venueAddress: string;
   venueStation: string; // 最寄駅
@@ -121,6 +123,8 @@ export function blankNotice(): NoticeDraft {
     body: defaultBody(),
     date: "",
     reserveDate: "",
+    reserveDate2: "",
+    reserveVenue2: "",
     venue: "",
     venueAddress: "",
     venueStation: "",
@@ -275,6 +279,8 @@ export function applyActivity(n: NoticeDraft, a: Activity): NoticeDraft {
           reserveVenue: g.reserveVenue,
           reserveVenueAddress: g.reserveVenueAddress,
           reserveVenueStation: g.reserveVenueStation,
+          reserveDate2: g.reserveDate2,
+          reserveVenue2: g.reserveVenue2,
         }
       : {}),
     to: opponents.length ? `${opponents.join("・")}　代表者` : n.to,
@@ -317,6 +323,8 @@ function toNotice(id: string, x: Record<string, unknown>): Notice {
     body: s("body"),
     date: s("date"),
     reserveDate: s("reserveDate"),
+    reserveDate2: s("reserveDate2"),
+    reserveVenue2: s("reserveVenue2"),
     venue: s("venue"),
     venueAddress: s("venueAddress"),
     venueStation: s("venueStation"),
@@ -368,6 +376,10 @@ export function parentMessage(n: NoticeDraft): string {
     if (n.reserveDate) {
       out.push(`予備日　${shortDate(n.reserveDate)}`);
       if (n.reserveVenue) out.push(`予備日の会場　${n.reserveVenue}`);
+      if (n.reserveDate2) {
+        out.push(`予備日の予備日　${shortDate(n.reserveDate2)}`);
+        if (n.reserveVenue2) out.push(`予備日の予備日の会場　${n.reserveVenue2}`);
+      }
     }
     out.push("");
   }

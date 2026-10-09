@@ -195,7 +195,9 @@ function paint(p: Painter, n: NoticeDraft) {
   rows.push({
     label: "期日",
     main: reiwa(n.date) || "　",
-    sub: n.reserveDate ? `予備日　${reiwa(n.reserveDate, false)}` : undefined,
+    sub: n.reserveDate
+      ? `予備日　${reiwa(n.reserveDate, false)}${n.reserveDate2 ? `　／　予備日の予備日　${reiwa(n.reserveDate2, false)}${n.reserveVenue2 ? `（${n.reserveVenue2}）` : ""}` : ""}`
+      : undefined,
   });
   // 住所と最寄駅を1行に
   const place = (addr: string, st: string) =>

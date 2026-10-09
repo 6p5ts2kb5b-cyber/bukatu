@@ -526,6 +526,8 @@ export default function NoticePage() {
         reserveVenue: linkedGroup.reserveVenue,
         reserveVenueAddress: linkedGroup.reserveVenueAddress,
         reserveVenueStation: linkedGroup.reserveVenueStation,
+        reserveDate2: linkedGroup.reserveDate2,
+        reserveVenue2: linkedGroup.reserveVenue2,
       }
     : null;
   if (
@@ -730,6 +732,12 @@ export default function NoticePage() {
               <DateInput label="期日" value={n.date} onChange={(v) => set({ date: v })} />
               <DateInput label="予備日（任意）" value={n.reserveDate} onChange={(v) => set({ reserveDate: v })} />
             </div>
+            {n.reserveDate && (
+              <div className="grid grid-cols-2 gap-3">
+                <DateInput label="予備日の予備日（任意）" value={n.reserveDate2} onChange={(v) => set({ reserveDate2: v })} />
+                <Text label="その会場（ちがう場合）" value={n.reserveVenue2} onChange={(v) => set({ reserveVenue2: v })} />
+              </div>
+            )}
             <Text label="会場" value={n.venue} onChange={(v) => set({ venue: v, ...linkVenue(v, "main") })} placeholder="例：坂戸市立浅羽野中学校" />
             <DirPicker
               kind="venue"

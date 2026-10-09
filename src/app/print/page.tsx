@@ -18,7 +18,8 @@ import {
   isMatchType,
   isOffType,
   listRange,
-  reserveLabel,
+  reserveTitle,
+  advanceView,
   reservesByDate,
   reserveView,
   type ReserveInfo,
@@ -97,6 +98,21 @@ function Mark({ on }: { on: boolean }) {
 
 // 1日の中の1区分ぶん。見出し（種類・大会名）と、項目名つきの一覧で見やすく
 function GroupLines({ g, showDivision }: { g: ActivityGroup; showDivision: boolean }) {
+  // 勝ち上がり次第の日で「敗退」と決まったら、その日の予定（練習・休養日）だけを出す
+  const av = advanceView(g);
+  if (av.mode === "lose") {
+    return (
+      <div className="pl-g">
+        <div className="pl-decided">
+          <p>
+            {showDivision && <span className="pl-div">{divisionLabel(g.division)}</span>}
+            <strong className={av.rest ? "pl-rest" : undefined}>{av.head}</strong>
+          </p>
+          <p className="pl-decided__why">{av.reason}</p>
+        </div>
+      </div>
+    );
+  }
   const off = isOffType(g.type);
   // 平日の「部活あり」は、再登校のときだけ会場・持ち物を載せる
   const plainClubDay = g.type === "部活あり" && !g.returnToSchool;
@@ -144,11 +160,25 @@ function GroupLines({ g, showDivision }: { g: ActivityGroup; showDivision: boole
       });
     if (g.type === "合同練習" && g.partners.length) rows.push({ k: "合同", v: g.partners.join("・") });
     if (packingText(g.packing)) rows.push({ k: "持ち物", v: packingText(g.packing) });
-    if (g.reserveDate)
+    if (g.reserveDate) {
+      const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8))}（${weekday(d)}）`;
       rows.push({
         k: "予備日",
-        v: `${Number(g.reserveDate.slice(5, 7))}/${Number(g.reserveDate.slice(8))}（${weekday(g.reserveDate)}）${g.reserveVenue ? `　${g.reserveVenue}` : ""}`,
+        v: (
+          <>
+            {md(g.reserveDate)}
+            {g.reserveVenue && `　${g.reserveVenue}`}
+            {g.reserveDate2 && (
+              <>
+                <br />
+                予備日の予備日 {md(g.reserveDate2)}
+                {g.reserveVenue2 && `　${g.reserveVenue2}`}
+              </>
+            )}
+          </>
+        ),
       });
+    }
   }
 
   return (
@@ -158,6 +188,18 @@ function GroupLines({ g, showDivision }: { g: ActivityGroup; showDivision: boole
         <b className={off ? "pl-rest" : undefined}>{typeLabel(g.type)}</b>
         {tournamentTitle(g) && <span className="pl-tour">{tournamentTitle(g)}</span>}
       </p>
+      {av.mode === "both" && (
+        <div className="pl-reserve pl-reserve--adv">
+          <p className="pl-reserve__title">🏆 勝ち上がり次第</p>
+          <p>
+            <b>勝ち上がりのとき</b>大会（{av.win}）
+          </p>
+          <p>
+            <b>敗退のとき</b>
+            <strong className={av.loseRest ? "pl-rest" : undefined}>{av.lose}</strong>
+          </p>
+        </div>
+      )}
       {rows.length > 0 && (
         <dl className="pl-dl">
           {rows.map((r) => (
@@ -189,7 +231,7 @@ function PrintReserve({ reserves, a }: { reserves: ReserveInfo[]; a: Activity })
   }
   return (
     <div className="pl-reserve">
-      <p className="pl-reserve__title">☂ {reserves.map(reserveLabel).join("・")} の予備日</p>
+      <p className="pl-reserve__title">☂ {reserveTitle(reserves)}</p>
       <p>
         <b>延期のとき</b>
         {reserves.map((x) => `${x.title}${x.venue ? `（${x.venue}）` : ""}`).join("・")}

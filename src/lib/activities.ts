@@ -156,7 +156,7 @@ export function tournamentTitle(g: Pick<ActivityGroup, "tournamentName" | "stage
 //   ・大会が延期になったら → 大会（予備日）
 //   ・大会が実施されたら   → その日の予定（休み・練習など）
 // になる。予備日の日に、どちらになるかを分かるように出す。
-export type ReserveInfo = { activityId: string; date: string; title: string; venue: string };
+export type ReserveInfo = { activityId: string; date: string; title: string; venue: string; second?: boolean };
 
 export function reservesByDate(list: Activity[]): Map<string, ReserveInfo[]> {
   const map = new Map<string, ReserveInfo[]>();
@@ -170,6 +170,11 @@ export function reservesByDate(list: Activity[]): Map<string, ReserveInfo[]> {
         venue: g.reserveVenue || g.venue,
       };
       map.set(g.reserveDate, [...(map.get(g.reserveDate) ?? []), info]);
+      // 予備日の予備日
+      if (g.reserveDate2 && g.reserveDate2 !== g.reserveDate) {
+        const second: ReserveInfo = { ...info, venue: g.reserveVenue2 || info.venue, second: true };
+        map.set(g.reserveDate2, [...(map.get(g.reserveDate2) ?? []), second]);
+      }
     }
   }
   return map;
@@ -247,6 +252,41 @@ export function reserveLabel(r: ReserveInfo): string {
   return `${Number(r.date.slice(5, 7))}/${Number(r.date.slice(8))} ${r.title}`;
 }
 
+// 「10/12 JJBF 1日目 の予備日」「… の予備日の予備日」
+export function reserveTitle(rs: ReserveInfo[]): string {
+  return rs.map((r) => `${reserveLabel(r)} の${r.second ? "予備日の予備日" : "予備日"}`).join("・");
+}
+
+// ---- 勝ち上がり次第の日 ----
+const hmText = (t: string) => (t ? `${Number(t.split(":")[0])}:${t.split(":")[1]}` : "");
+
+// 敗退したときの予定を1行で（「練習　浅羽野中　6:45〜12:00」または「休養日」）
+export function losePlanText(g: ActivityGroup): string {
+  if (g.ifLose !== "練習") return "休養日";
+  const time = g.loseStart || g.loseEnd ? `${hmText(g.loseStart)}〜${hmText(g.loseEnd)}` : "";
+  return ["練習", g.loseVenue, time].filter(Boolean).join("　");
+}
+
+export type AdvanceView =
+  | { mode: "none" }
+  | { mode: "both"; win: string; lose: string; loseRest: boolean }
+  | { mode: "lose"; head: string; rest: boolean; reason: string };
+
+export function advanceView(g: ActivityGroup): AdvanceView {
+  if (!isMatchType(g.type) || !g.ifLose || g.advance === "win") return { mode: "none" };
+  const title = tournamentTitle(g) || g.type;
+  const lose = losePlanText(g);
+  const rest = g.ifLose !== "練習";
+  if (g.advance === "lose")
+    return {
+      mode: "lose",
+      head: lose,
+      rest,
+      reason: `${g.tournamentName || "大会"}で敗退したため、${rest ? "この日の練習はありません" : "この日は練習です"}。`,
+    };
+  return { mode: "both", win: title, lose, loseRest: rest };
+}
+
 // 試合の開始の書き方（「9:00」または「昼食後40分後」）
 export function gameStart(x: Game): string {
   if (x.afterLunch) return `昼食後${x.lunchMin || 40}分後`;
@@ -286,6 +326,14 @@ export type ActivityGroup = {
   reserveVenue: string; // 予備日の会場（ちがう場合）
   reserveVenueAddress: string;
   reserveVenueStation: string;
+  reserveDate2: string; // 予備日の予備日
+  reserveVenue2: string; // 予備日の予備日の会場（ちがう場合）
+  // 勝ち上がり次第の日（大会の2日目など）。ifLose が "" なら使わない
+  ifLose: "" | "練習" | "休養日"; // 敗退したときの予定
+  loseVenue: string; // 敗退→練習のときの会場
+  loseStart: string;
+  loseEnd: string;
+  advance: "" | "win" | "lose"; // 結果（"" = 確認中）
   startTime: string; // 開始時間 "09:00"
   endTime: string; // 終了時間 "12:00"
   meetTime: string; // 集合時間 "08:30"
@@ -320,6 +368,13 @@ export function newGroup(division: DivisionKey, date = ""): ActivityGroup {
     reserveVenue: "",
     reserveVenueAddress: "",
     reserveVenueStation: "",
+    reserveDate2: "",
+    reserveVenue2: "",
+    ifLose: "",
+    loseVenue: "",
+    loseStart: "",
+    loseEnd: "",
+    advance: "",
     startTime: "",
     endTime: "",
     meetTime: "",

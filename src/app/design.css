@@ -2317,6 +2317,35 @@ td.pl-mark {
   background: #1f4fa3;
 }
 
+/* 勝ち上がり次第の帯（金色） */
+.acard__reserve--adv {
+  margin-top: 6px;
+  background: #fbf6e6;
+  border-color: #ead9a0;
+}
+.acard__reserve--adv .acard__reserve-title {
+  color: #7a5a00;
+}
+.acard__if--win {
+  border-color: #d9be63;
+  color: #7a5a00;
+}
+.acard__rest {
+  font-weight: 900;
+}
+.pl-reserve--adv {
+  margin: 2px 0 3px;
+  border-color: #d9be63;
+  background: #fbf6e6;
+}
+.pl-reserve--adv b {
+  min-width: 7.6em;
+  margin-right: 4px;
+}
+.pl-reserve--adv .pl-reserve__title {
+  color: #7a5a00;
+}
+
 /* 印刷：大会しだいの予定が決まったとき */
 .pl-decided {
   margin-bottom: 3px;

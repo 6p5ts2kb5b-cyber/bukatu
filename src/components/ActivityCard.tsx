@@ -14,7 +14,8 @@ import {
   isRef,
   formatDate,
   tournamentTitle,
-  reserveLabel,
+  reserveTitle,
+  advanceView,
   reserveView,
   heldPlanText,
   typeLabel,
@@ -131,7 +132,20 @@ function GroupDetails({ g }: { g: ActivityGroup }) {
   const items: [string, ReactNode | null][] = [["会場", g.venue || null]];
   if (g.venueStation) items.push(["最寄駅", g.venueStation]);
   if (g.reserveDate)
-    items.push(["予備日", `${formatDate(g.reserveDate)}${g.reserveVenue ? `　${g.reserveVenue}` : ""}`]);
+    items.push([
+      "予備日",
+      <>
+        {formatDate(g.reserveDate)}
+        {g.reserveVenue && `　${g.reserveVenue}`}
+        {g.reserveDate2 && (
+          <>
+            <br />
+            予備日の予備日　{formatDate(g.reserveDate2)}
+            {g.reserveVenue2 && `　${g.reserveVenue2}`}
+          </>
+        )}
+      </>,
+    ]);
   if (isMatchType(g.type) && g.games.length > 0) {
     g.games.forEach((x, i) =>
       items.push([
@@ -153,6 +167,52 @@ function GroupDetails({ g }: { g: ActivityGroup }) {
   return <Rows items={items} />;
 }
 
+// 区分ごとの1かたまり。勝ち上がり次第の日は、結果に合わせて出し方を変える
+function GroupBlock({ g }: { g: ActivityGroup }) {
+  const av = advanceView(g);
+  if (av.mode === "lose") {
+    return (
+      <div className="acard__group">
+        {g.division !== "main" && (
+          <div className="acard__head">
+            <span className="acard__div">{divisionLabel(g.division)}</span>
+          </div>
+        )}
+        <div className="acard__decided">
+          <p className={`acard__decided-head${av.rest ? " is-rest" : ""}`}>{av.head}</p>
+          <p className="acard__decided-why">{av.reason}</p>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="acard__group">
+      <div className="acard__head">
+        {g.division !== "main" && <span className="acard__div">{divisionLabel(g.division)}</span>}
+        <span className={`acard__type${isOffType(g.type) ? " acard__type--off" : ""}`}>{typeLabel(g.type)}</span>
+        {tournamentTitle(g) && <span className="acard__tournament">{tournamentTitle(g)}</span>}
+      </div>
+      {av.mode === "both" && (
+        <div className="acard__reserve acard__reserve--adv">
+          <p className="acard__reserve-title">
+            <span aria-hidden>🏆</span> 勝ち上がり次第
+          </p>
+          <p className="acard__reserve-row">
+            <span className="acard__if acard__if--win">勝ち上がりのとき</span>
+            <span>大会（{av.win}）</span>
+          </p>
+          <p className="acard__reserve-row">
+            <span className="acard__if">敗退のとき</span>
+            <span className={av.loseRest ? "acard__rest" : undefined}>{av.lose}</span>
+          </p>
+        </div>
+      )}
+      <Opponents g={g} />
+      <GroupDetails g={g} />
+    </div>
+  );
+}
+
 // 大会の予備日の帯：決まるまでは「延期のとき」と「実施のとき」を並べ、決まったら1つだけ大きく出す
 function ReserveBanner({ reserves, activity }: { reserves: ReserveInfo[]; activity: Activity }) {
   const view = reserveView(activity.reserveStatus, reserves, activity.groups);
@@ -168,7 +228,7 @@ function ReserveBanner({ reserves, activity }: { reserves: ReserveInfo[]; activi
   return (
     <div className="acard__reserve">
       <p className="acard__reserve-title">
-        <span aria-hidden>☂</span> {reserves.map(reserveLabel).join("・")} の予備日
+        <span aria-hidden>☂</span> {reserveTitle(reserves)}
       </p>
       <p className="acard__reserve-row">
         <span className="acard__if acard__if--rain">延期のとき</span>
@@ -232,15 +292,7 @@ export function ActivityCard({
         {reserves.length > 0 && <ReserveBanner reserves={reserves} activity={activity} />}
         {/* 予備日の日は、休み（練習なし など）の行は帯の「実施のとき」に出ているので重ねない */}
         {activity.groups.filter((g) => !(reserves.length && (isOffType(g.type) || activity.reserveStatus === "postponed"))).map((g) => (
-          <div key={g.division} className="acard__group">
-            <div className="acard__head">
-              {g.division !== "main" && <span className="acard__div">{divisionLabel(g.division)}</span>}
-              <span className={`acard__type${isOffType(g.type) ? " acard__type--off" : ""}`}>{typeLabel(g.type)}</span>
-              {tournamentTitle(g) && <span className="acard__tournament">{tournamentTitle(g)}</span>}
-            </div>
-            <Opponents g={g} />
-            <GroupDetails g={g} />
-          </div>
+          <GroupBlock key={g.division} g={g} />
         ))}
       </div>
       {activity.note && <p className="acard__note">※{activity.note}</p>}
