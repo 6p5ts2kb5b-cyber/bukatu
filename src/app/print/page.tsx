@@ -149,6 +149,11 @@ function printTitle(g: ActivityGroup): string {
   return typeLabel(g.type);
 }
 
+// 試合の番号：1試合目 → ①
+function circled(i: number): string {
+  return "①②③④⑤⑥⑦⑧⑨⑩"[i] ?? `(${i + 1})`;
+}
+
 // LINEに貼る文章（予定表と同じ中身を、スマホで読みやすい文にする）
 function groupText(g: ActivityGroup, prefix: string, withDiv: boolean): string[] {
   const out: string[] = [];
@@ -166,7 +171,7 @@ function groupText(g: ActivityGroup, prefix: string, withDiv: boolean): string[]
   if (g.meetTime || g.meetPlace) out.push(`　集合　${[clock(g.meetTime), g.meetPlace].filter(Boolean).join("　")}`);
   if (g.type === "部活あり" && g.returnToSchool) out.push(`　再登校　${clock(g.returnTime) || "時間未定"}`);
   if (time(g.startTime, g.endTime)) out.push(`　時間　${time(g.startTime, g.endTime)}`);
-  if (g.venue) out.push(`　会場　${g.venue}${g.venueStation ? `（${g.venueStation}）` : ""}`);
+  if (g.venue) out.push(`　会場　${g.venue}`);
   if (isMatchType(g.type)) {
     const pairs = g.games.map((x) => [x.others ? x.home ?? "" : "うち", x.opponent] as [string, string]);
     const team = (t: string) => describeRef(t, pairs) ?? t;
@@ -174,7 +179,7 @@ function groupText(g: ActivityGroup, prefix: string, withDiv: boolean): string[]
       .filter((x) => x.opponent || x.home || gameStart(x))
       .forEach((x, i) =>
         out.push(
-          `　第${i + 1}試合　${x.afterLunch ? gameStart(x) : clock(x.startTime) || "時間未定"}　${
+          `　${circled(i)}　${x.afterLunch ? gameStart(x) : clock(x.startTime) || "時間未定"}　${
             x.others
               ? `${team(x.home ?? "") || "未定"} 対 ${team(x.opponent) || "未定"}（観戦・補助役員）`
               : `vs ${team(x.opponent) || "未定"}`
@@ -267,10 +272,8 @@ function GroupLines({ g, showDivision, prefix }: { g: ActivityGroup; showDivisio
       rows.push({
         k: "会場",
         v: (
-          <>
-            {g.venue}
-            {g.venueStation && <small className="pl-sub">{g.venueStation}</small>}
-          </>
+          // 保護者向けなので、会場名だけ（住所・最寄駅は載せない）
+          <>{g.venue}</>
         ),
       });
     if (games.length)
@@ -281,6 +284,7 @@ function GroupLines({ g, showDivision, prefix }: { g: ActivityGroup; showDivisio
           <span className="pl-games">
             {games.map((x, i) => (
               <span key={i} className={x.others ? "pl-game pl-game--others" : "pl-game"}>
+                <span className="pl-game__no">{circled(i)}</span>
                 <b>{x.afterLunch ? gameStart(x) : clock(x.startTime) || "時間未定"}</b>
                 {x.others
                   ? `${team(x.home ?? "") || "未定"} 対 ${team(x.opponent) || "未定"}（観戦・補助役員）`

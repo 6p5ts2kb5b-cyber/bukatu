@@ -1944,6 +1944,10 @@ td.pl-mark {
   display: flex;
   flex-direction: column;
 }
+.pl-game__no {
+  margin-right: 3px;
+  font-weight: 800;
+}
 .pl-game b {
   display: inline-block;
   margin-right: 4px;
