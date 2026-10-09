@@ -19,6 +19,8 @@ import {
   isOffType,
   listRange,
   reserveTitle,
+  ourOpponents,
+  isRef,
   advanceView,
   reservesByDate,
   reserveView,
@@ -97,6 +99,15 @@ function Mark({ on }: { on: boolean }) {
 }
 
 // 1日の中の1区分ぶん。見出し（種類・大会名）と、項目名つきの一覧で見やすく
+// 見出し：練習試合は「対 八王子長房」のように相手の名前（決まっていないときは「練習試合」）
+function printTitle(g: ActivityGroup): string {
+  if (g.type === "練習試合") {
+    const names = ourOpponents(g.games).filter((t) => !isRef(t));
+    if (names.length) return `対 ${names.join("・")}`;
+  }
+  return typeLabel(g.type);
+}
+
 function GroupLines({ g, showDivision }: { g: ActivityGroup; showDivision: boolean }) {
   // 勝ち上がり次第の日で「敗退」と決まったら、その日の予定（練習・休養日）だけを出す
   const av = advanceView(g);
@@ -185,7 +196,7 @@ function GroupLines({ g, showDivision }: { g: ActivityGroup; showDivision: boole
     <div className={`pl-g${quiet ? " pl-g--quiet" : ""}`}>
       <p className="pl-title">
         {showDivision && <span className="pl-div">{divisionLabel(g.division)}</span>}
-        <b className={off ? "pl-rest" : undefined}>{typeLabel(g.type)}</b>
+        <b className={off ? "pl-rest" : undefined}>{printTitle(g)}</b>
         {tournamentTitle(g) && <span className="pl-tour">{tournamentTitle(g)}</span>}
       </p>
       {av.mode === "both" && (
