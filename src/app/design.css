@@ -2446,6 +2446,59 @@ td.pl-mark {
   color: #7a4a00;
 }
 
+/* 予定の一覧：まだ予定が入っていない日の行 */
+.blank-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  border: 2px dashed #f0c770;
+  background: #fffaf0;
+  color: #7a4a00;
+}
+.blank-card__date {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 3.4em;
+}
+.blank-card__date b {
+  font-family: var(--num);
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.blank-card__date span {
+  font-size: 13px;
+  font-weight: 800;
+}
+.blank-card__text {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 800;
+}
+.blank-card__add {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #7a4a00;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+.qk__date:has(.qk__blank) {
+  flex-wrap: wrap;
+}
+.qk__blank {
+  flex-basis: 100%;
+  text-align: center;
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #b06a00;
+}
+
 /* 予備日・勝ち上がり次第で決まった予定の理由（小さく） */
 .acard__why {
   margin: 4px 0 0;

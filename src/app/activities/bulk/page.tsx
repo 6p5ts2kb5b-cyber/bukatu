@@ -38,6 +38,13 @@ export default function BulkPage() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const clearToast = useCallback(() => setToast(null), []);
+  // 予定の一覧から「○月の空いている日をまとめて入力」で来たとき：その月・土日も表示
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const mo = q.get("month");
+    if (mo && /^\d{4}-\d{2}$/.test(mo)) setMonth(mo);
+    if (q.get("blank")) setWithWeekend(true);
+  }, []);
 
   const [y, m] = month.split("-").map(Number);
   const last = new Date(y, m, 0).getDate();
@@ -76,6 +83,17 @@ export default function BulkPage() {
   };
   const shown = (date: string): Mark => (date in marks ? marks[date] : current(date).mark);
   const changed = Object.keys(marks).filter((d) => marks[d] !== current(d).mark);
+
+  // まだ何も入っていない日（ほかの区分の予定もない日）
+  const isBlankDay = (date: string) => !acts?.some((x) => x.date === date && x.groups.length > 0);
+  const blankDays = days.filter((d) => isBlankDay(d) && !(d in marks));
+  const setBlanks = (mk: Mark) => {
+    const next: Record<string, Mark> = { ...marks };
+    blankDays.forEach((d) => {
+      next[d] = mk;
+    });
+    setMarks(next);
+  };
 
   const setAll = (mk: Mark) => {
     const next: Record<string, Mark> = { ...marks };
@@ -173,6 +191,20 @@ export default function BulkPage() {
           <input type="checkbox" checked={withWeekend} onChange={(e) => setWithWeekend(e.target.checked)} />
           土日も表示する
         </label>
+        {acts && blankDays.length > 0 && (
+          <div className="blank-warn">
+            <p className="blank-warn__title">まだ予定が入っていない日が {blankDays.length}日 あります</p>
+            <p className="blank-warn__body">下の一覧で「未入力」と出ている日です。まとめて入れるか、1日ずつ押してください。</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" className="btn btn--ghost btn--small" onClick={() => setBlanks("あり")}>
+                未入力→部活あり
+              </button>
+              <button type="button" className="btn btn--ghost btn--small" onClick={() => setBlanks("なし")}>
+                未入力→休養日
+              </button>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-3 gap-2">
           <button type="button" className="btn btn--ghost btn--small" onClick={() => setAll("あり")}>
             全部あり
@@ -205,6 +237,7 @@ export default function BulkPage() {
                   <span className="qk__date">
                     <b>{Number(d.slice(8))}</b>
                     <span className={wd === "土" ? "pl-sat" : wd === "日" ? "pl-sun" : undefined}>{wd}</span>
+                    {isBlankDay(d) && !(d in marks) && <span className="qk__blank">未入力</span>}
                   </span>
                   {cur.other ? (
                     <Link href={`/activities/${acts.find((x) => x.date === d)!.id}`} className="qk__other">
