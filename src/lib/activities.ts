@@ -290,7 +290,7 @@ export function advanceView(g: ActivityGroup): AdvanceView {
       mode: "lose",
       head: lose,
       rest,
-      reason: `${day}${g.tournamentName || "大会"}で敗退したため、${rest ? "この日の練習はありません" : "この日は練習です"}。`,
+      reason: `${g.decideDate ? day : ""}${g.tournamentName || "大会"}で敗退したため、${rest ? "この日の練習はありません" : "この日は練習です"}。`,
     };
   return { mode: "both", day, win: title, lose, loseRest: rest };
 }

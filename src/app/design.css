@@ -2384,6 +2384,15 @@ td.pl-mark {
   row-gap: 2px;
 }
 
+/* 予備日・勝ち上がり次第で決まった予定の理由（小さく） */
+.acard__why {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+
 /* 勝ち上がり次第の帯（金色） */
 .acard__reserve--adv {
   margin-top: 6px;

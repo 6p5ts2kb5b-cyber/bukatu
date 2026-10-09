@@ -486,12 +486,25 @@ export default function PrintPage() {
                     <span className={wd === "土" ? "pl-sat" : wd === "日" ? "pl-sun" : undefined}>{wd}</span>
                   </td>
                   <td className="pl-main">
-                    {reserves.get(a.date) && <PrintReserve reserves={reserves.get(a.date)!} a={a} />}
+                    {reserves.get(a.date) && a.reserveStatus !== "held" && a.reserveStatus !== "cancelled" && (
+                      <PrintReserve reserves={reserves.get(a.date)!} a={a} />
+                    )}
                     {a.groups
-                      .filter((g) => !(reserves.has(a.date) && (isOffType(g.type) || a.reserveStatus === "postponed")))
+                      .filter((g) => {
+                        if (!reserves.has(a.date)) return true;
+                        if (a.reserveStatus === "postponed") return false;
+                        // 決まったら休養日もふつうの行で。確認中は帯の「実施のとき」に出ているので重ねない
+                        return a.reserveStatus === "held" || a.reserveStatus === "cancelled" || !isOffType(g.type);
+                      })
                       .map((g) => (
                         <GroupLines key={g.division} g={g} showDivision={showDivision(a, g)} />
                       ))}
+                    {(() => {
+                      const rs = reserves.get(a.date);
+                      if (!rs) return null;
+                      const v = reserveView(a.reserveStatus, rs, a.groups);
+                      return v.mode === "plan" ? <p className="pl-note">※{v.reason}</p> : null;
+                    })()}
                     {a.note && <p className="pl-note">※{a.note}</p>}
                   </td>
                   <Mark on={needs(a, "お弁当")} />

@@ -173,15 +173,19 @@ function GroupBlock({ g }: { g: ActivityGroup }) {
   if (av.mode === "lose") {
     return (
       <div className="acard__group">
-        {g.division !== "main" && (
-          <div className="acard__head">
-            <span className="acard__div">{divisionLabel(g.division)}</span>
-          </div>
-        )}
-        <div className="acard__decided">
-          <p className={`acard__decided-head${av.rest ? " is-rest" : ""}`}>{av.head}</p>
-          <p className="acard__decided-why">{av.reason}</p>
+        <div className="acard__head">
+          {g.division !== "main" && <span className="acard__div">{divisionLabel(g.division)}</span>}
+          <span className={`acard__type${av.rest ? " acard__type--off" : ""}`}>{av.rest ? "休養日" : "練習"}</span>
         </div>
+        {!av.rest && (
+          <Rows
+            items={[
+              ["会場", g.loseVenue || null],
+              ["時間", timeRange(g.loseStart, g.loseEnd)],
+            ]}
+          />
+        )}
+        <p className="acard__why">※{av.reason}</p>
       </div>
     );
   }
@@ -216,12 +220,16 @@ function GroupBlock({ g }: { g: ActivityGroup }) {
 // 大会の予備日の帯：決まるまでは「延期のとき」と「実施のとき」を並べ、決まったら1つだけ大きく出す
 function ReserveBanner({ reserves, activity }: { reserves: ReserveInfo[]; activity: Activity }) {
   const view = reserveView(activity.reserveStatus, reserves, activity.groups);
-  if (view.mode !== "both") {
+  if (view.mode === "plan") return null; // 決まった予定は、ふつうの行で出す（下に理由）
+  if (view.mode === "tournament") {
     return (
-      <div className={`acard__decided${view.mode === "tournament" ? " acard__decided--game" : ""}`}>
-        <p className={`acard__decided-head${view.rest ? " is-rest" : ""}`}>{view.head}</p>
-        {view.venue && <p className="acard__decided-venue">{view.venue}</p>}
-        <p className="acard__decided-why">{view.reason}</p>
+      <div className="acard__group">
+        <div className="acard__head">
+          <span className="acard__type">大会</span>
+          <span className="acard__tournament">{view.head}</span>
+        </div>
+        {view.venue && <Rows items={[["会場", view.venue]]} />}
+        <p className="acard__why">※{view.reason}</p>
       </div>
     );
   }
@@ -291,9 +299,21 @@ export function ActivityCard({
       <div className="acard__body">
         {reserves.length > 0 && <ReserveBanner reserves={reserves} activity={activity} />}
         {/* 予備日の日は、休み（練習なし など）の行は帯の「実施のとき」に出ているので重ねない */}
-        {activity.groups.filter((g) => !(reserves.length && (isOffType(g.type) || activity.reserveStatus === "postponed"))).map((g) => (
-          <GroupBlock key={g.division} g={g} />
-        ))}
+        {activity.groups
+          .filter((g) => {
+            if (!reserves.length) return true;
+            if (activity.reserveStatus === "postponed") return false;
+            // 決まったら休養日もふつうに出す。確認中は帯の「実施のとき」に出ているので重ねない
+            return activity.reserveStatus === "held" || activity.reserveStatus === "cancelled" || !isOffType(g.type);
+          })
+          .map((g) => (
+            <GroupBlock key={g.division} g={g} />
+          ))}
+        {(() => {
+          if (!reserves.length) return null;
+          const v = reserveView(activity.reserveStatus, reserves, activity.groups);
+          return v.mode === "plan" ? <p className="acard__why">※{v.reason}</p> : null;
+        })()}
       </div>
       {activity.note && <p className="acard__note">※{activity.note}</p>}
     </Link>
