@@ -6,6 +6,7 @@
 // 審判・グラウンド候補・スタッフの内部メモなど、運営の情報は載せません。
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { PaperPreview } from "@/components/PaperPreview";
 import { Choices, ErrorText, Field, PageHead, Toast, ToggleButton } from "@/components/ui";
 import { elementToPdf, shareOrDownload } from "@/lib/sharePdf";
@@ -329,11 +330,21 @@ export default function PrintPage() {
       if (date >= from && date <= to && !list.some((a) => a.date === date))
         list.push({ id: `reserve-${date}`, date, note: "", groups: [] });
     });
-    return list
-      .filter((a) => half === "all" || (half === "first" ? day(a) <= 15 : day(a) >= 16))
-      .sort((x, y) => (x.date < y.date ? -1 : x.date > y.date ? 1 : 0));
+    const inPeriod = (d: number) => half === "all" || (half === "first" ? d <= 15 : d >= 16);
+    const out = list.filter((a) => inPeriod(day(a)));
+    // まだ何も入っていない日も「未定」の行にして、入れ忘れが分かるようにする（予定が1件もなければ出さない）
+    if (out.length > 0) {
+      const last = Number(to.slice(8, 10));
+      for (let d = 1; d <= last; d++) {
+        if (!inPeriod(d)) continue;
+        const date = `${month}-${String(d).padStart(2, "0")}`;
+        if (!out.some((a) => a.date === date)) out.push({ id: `blank-${date}`, date, note: "", groups: [] });
+      }
+    }
+    return out.sort((x, y) => (x.date < y.date ? -1 : x.date > y.date ? 1 : 0));
   }, [activities, divisions, half, reserves, month]);
 
+  const blanks = rows.filter((a) => a.id.startsWith("blank-"));
   const [y, m] = month.split("-").map(Number);
   const lastDay = new Date(y, m, 0).getDate();
   const period =
@@ -444,6 +455,21 @@ export default function PrintPage() {
           </Field>
         </section>
         {error && <ErrorText>{error}</ErrorText>}
+        {blanks.length > 0 && (
+          <div className="blank-warn">
+            <p className="blank-warn__title">
+              まだ予定が入っていない日が {blanks.length}日 あります
+            </p>
+            <p className="blank-warn__body">このまま印刷すると「未定」と載ります。押すと、その日の予定を入れられます。</p>
+            <div className="flex flex-wrap gap-2">
+              {blanks.map((a) => (
+                <Link key={a.id} href={`/activities/new?date=${a.date}`} className="blank-warn__day">
+                  {Number(a.date.slice(8))}日（{weekday(a.date)}）
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
         <p className="group-label">印刷の見本</p>
       </div>
 
@@ -483,12 +509,16 @@ export default function PrintPage() {
                 !a.note &&
                 !reserves.has(a.date);
               return (
-                <tr key={a.id} className={`pl-row${weekend ? " pl-row--we" : ""}${quiet ? " pl-row--quiet" : ""}`}>
+                <tr
+                  key={a.id}
+                  className={`pl-row${weekend ? " pl-row--we" : ""}${quiet ? " pl-row--quiet" : ""}${a.id.startsWith("blank-") ? " pl-row--blank" : ""}`}
+                >
                   <td className="pl-day">
                     <b>{d}</b>
                     <span className={wd === "土" ? "pl-sat" : wd === "日" ? "pl-sun" : undefined}>{wd}</span>
                   </td>
                   <td className="pl-main">
+                    {a.id.startsWith("blank-") && <span className="pl-blank">未定</span>}
                     {reserves.get(a.date) && a.reserveStatus !== "held" && a.reserveStatus !== "cancelled" && (
                       <PrintReserve reserves={reserves.get(a.date)!} a={a} />
                     )}

@@ -2409,6 +2409,43 @@ td.pl-mark {
   min-width: 10.5em;
 }
 
+/* 予定が入っていない日（「未定」と載せる。PDFにも同じく出る） */
+.pl-blank {
+  font-weight: 800;
+  color: #8a5a00;
+  letter-spacing: 0.1em;
+}
+.blank-warn {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #fff3d6;
+  border: 1px solid #f0c770;
+}
+.blank-warn__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: #7a4a00;
+}
+.blank-warn__body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.blank-warn__day {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid #f0c770;
+  font-size: 14px;
+  font-weight: 800;
+  color: #7a4a00;
+}
+
 /* 予備日・勝ち上がり次第で決まった予定の理由（小さく） */
 .acard__why {
   margin: 4px 0 0;
