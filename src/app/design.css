@@ -2446,6 +2446,108 @@ td.pl-mark {
   color: #7a4a00;
 }
 
+/* 予定の一覧：月の切りかえ */
+.mon-nav {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 -4px 10px;
+  padding: 8px 4px;
+  background: var(--paper, #e8ebe4);
+}
+.mon-nav__list {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+.mon-nav__btn {
+  position: relative;
+  padding: 8px 0;
+  border-radius: 12px;
+  border: 1.5px solid var(--rule);
+  background: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--ink-2);
+}
+.mon-nav__btn b {
+  font-family: var(--num);
+  font-size: 20px;
+  color: var(--ink);
+}
+.mon-nav__btn.is-now::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent, #c8303a);
+}
+.mon-nav__btn[aria-pressed="true"] {
+  background: var(--board);
+  border-color: var(--board);
+  color: #fff;
+}
+.mon-nav__btn[aria-pressed="true"] b {
+  color: #fff;
+}
+.mon-nav__arrow {
+  flex: none;
+  width: 34px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1.5px solid var(--rule);
+  background: #fff;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.mon-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 4px 2px 10px;
+}
+.mon-title h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+}
+.mon-title h2 b {
+  font-family: var(--num);
+  font-size: 30px;
+  margin: 0 2px;
+}
+.mon-title span {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+.mon-title em {
+  font-style: normal;
+  color: #b06a00;
+}
+.mon-title__today {
+  margin-left: auto;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--rule);
+  background: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+.mon-foot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 14px;
+}
+
 /* 予定の一覧：まだ予定が入っていない日の行 */
 .blank-card {
   display: flex;
