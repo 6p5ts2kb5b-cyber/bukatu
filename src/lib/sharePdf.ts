@@ -183,24 +183,26 @@ export async function elementToPdf(
       const [a, b] = slices[i];
       const pad = i === 0 ? 0 : MARGIN;
       const c = document.createElement("canvas");
-      c.width = full.width;
-      c.height = Math.round((full.width * PAGE_H) / PAGE_W);
+      c.width = Math.round(PAGE_W * scale);
+      c.height = Math.round(PAGE_H * scale);
       const ctx = c.getContext("2d")!;
       ctx.fillStyle = "#fff";
       ctx.fillRect(0, 0, c.width, c.height);
-      // 1枚に収めるとき、A4より長ければ縮める（横は中央に寄せる）
-      const fit = opts.onePage ? Math.min(1, c.height / ((b - a) * s)) : 1;
-      const dw = Math.round(full.width * fit);
+      const srcH = Math.round((b - a) * s);
+      // 横幅をA4いっぱいに合わせる。1枚に収めるときは、縦がはみ出すならそのぶん縮める（大きくもする）
+      let k = c.width / full.width;
+      if (opts.onePage && srcH * k > c.height) k = c.height / srcH;
+      const dw = Math.round(full.width * k);
       ctx.drawImage(
         full,
         0,
         Math.round(a * s),
         full.width,
-        Math.round((b - a) * s),
-        Math.round((full.width - dw) / 2),
-        Math.round(pad * s),
+        srcH,
+        Math.round((c.width - dw) / 2),
+        Math.round(pad * scale),
         dw,
-        Math.round((b - a) * s * fit),
+        Math.round(srcH * k),
       );
       pages.push(await toJpeg(c));
     }

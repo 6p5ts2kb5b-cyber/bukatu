@@ -391,7 +391,8 @@ export default function PrintPage() {
     for (let i = 0; i < 4; i++) {
       clone.style.width = `${W / f}px`;
       const h = clone.offsetHeight;
-      const next = Math.min(1, (H / h) * 0.98);
+      // 少ないときは大きく（最大1.8倍）、多いときは小さく（最小0.45倍）して、ちょうど1枚に
+      const next = Math.min(1.8, Math.max(0.45, (H / h) * 0.98));
       if (Math.abs(next - f) < 0.005) {
         f = next;
         break;
@@ -399,7 +400,7 @@ export default function PrintPage() {
       f = next;
     }
     host.remove();
-    setFit(Math.max(0.45, Math.round(f * 1000) / 1000));
+    setFit(Math.round(f * 1000) / 1000);
   }, [rows, message, heading, period, divisions]);
 
   // 内容が変わったら、作ったPDFは作り直す
@@ -502,7 +503,8 @@ export default function PrintPage() {
           </div>
           <label className="flex items-center gap-2 text-sm font-bold">
             <input type="checkbox" checked={fitOne} onChange={(e) => setFitOne(e.target.checked)} />
-            A4の1枚に収める{fitOne && fit < 1 ? `（${Math.round(fit * 100)}%に縮小）` : ""}
+            A4の1枚にちょうど収める
+            {fitOne && fit !== 1 ? `（${Math.round(fit * 100)}%に${fit > 1 ? "拡大" : "縮小"}）` : ""}
           </label>
           <label className="flex items-center gap-2 text-sm font-bold">
             <input type="checkbox" checked={hidePast} onChange={(e) => setHidePast(e.target.checked)} />
@@ -542,7 +544,7 @@ export default function PrintPage() {
         <div
           ref={fitBox}
           className="pl-fit"
-          style={cssVars(fitOne && fit < 1 ? { "--fit": fit, width: `${Math.floor(764 / fit)}px` } : { "--fit": 1 })}
+          style={cssVars(fitOne && fit !== 1 ? { "--fit": fit, width: `${Math.floor(764 / fit)}px` } : { "--fit": 1 })}
         >
         <header className="border-b-2 border-black pb-1">
           <h2 className="text-[17px] font-extrabold leading-tight">
