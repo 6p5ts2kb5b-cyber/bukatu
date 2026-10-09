@@ -190,12 +190,12 @@ function GroupLines({ g, showDivision }: { g: ActivityGroup; showDivision: boole
       </p>
       {av.mode === "both" && (
         <div className="pl-reserve pl-reserve--adv">
-          <p className="pl-reserve__title">🏆 勝ち上がり次第</p>
+          <p className="pl-reserve__title">🏆 この日は勝ち上がり次第</p>
           <p>
-            <b>勝ち上がりのとき</b>大会（{av.win}）
+            <b>{av.day}勝ち上がると</b>大会（{av.win}）
           </p>
           <p>
-            <b>敗退のとき</b>
+            <b>{av.day}敗退すると</b>
             <strong className={av.loseRest ? "pl-rest" : undefined}>{av.lose}</strong>
           </p>
         </div>

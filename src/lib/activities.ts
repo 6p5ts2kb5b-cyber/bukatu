@@ -267,9 +267,16 @@ export function losePlanText(g: ActivityGroup): string {
   return ["練習", g.loseVenue, time].filter(Boolean).join("　");
 }
 
+// 「10月24日（土）に」／日付が未入力なら「前の試合で」
+export function advanceDayText(g: Pick<ActivityGroup, "decideDate">): string {
+  if (!g.decideDate) return "前の試合で";
+  const d = parseDate(g.decideDate);
+  return `${d.getMonth() + 1}月${d.getDate()}日（${weekday(g.decideDate)}）に`;
+}
+
 export type AdvanceView =
   | { mode: "none" }
-  | { mode: "both"; win: string; lose: string; loseRest: boolean }
+  | { mode: "both"; day: string; win: string; lose: string; loseRest: boolean }
   | { mode: "lose"; head: string; rest: boolean; reason: string };
 
 export function advanceView(g: ActivityGroup): AdvanceView {
@@ -277,14 +284,15 @@ export function advanceView(g: ActivityGroup): AdvanceView {
   const title = tournamentTitle(g) || g.type;
   const lose = losePlanText(g);
   const rest = g.ifLose !== "練習";
+  const day = advanceDayText(g);
   if (g.advance === "lose")
     return {
       mode: "lose",
       head: lose,
       rest,
-      reason: `${g.tournamentName || "大会"}で敗退したため、${rest ? "この日の練習はありません" : "この日は練習です"}。`,
+      reason: `${day}${g.tournamentName || "大会"}で敗退したため、${rest ? "この日の練習はありません" : "この日は練習です"}。`,
     };
-  return { mode: "both", win: title, lose, loseRest: rest };
+  return { mode: "both", day, win: title, lose, loseRest: rest };
 }
 
 // 試合の開始の書き方（「9:00」または「昼食後40分後」）
@@ -330,6 +338,7 @@ export type ActivityGroup = {
   reserveVenue2: string; // 予備日の予備日の会場（ちがう場合）
   // 勝ち上がり次第の日（大会の2日目など）。ifLose が "" なら使わない
   ifLose: "" | "練習" | "休養日"; // 敗退したときの予定
+  decideDate: string; // どの日の試合の結果で決まるか（例：1日目の日付）
   loseVenue: string; // 敗退→練習のときの会場
   loseStart: string;
   loseEnd: string;
@@ -371,6 +380,7 @@ export function newGroup(division: DivisionKey, date = ""): ActivityGroup {
     reserveDate2: "",
     reserveVenue2: "",
     ifLose: "",
+    decideDate: "",
     loseVenue: "",
     loseStart: "",
     loseEnd: "",

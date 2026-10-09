@@ -195,14 +195,14 @@ function GroupBlock({ g }: { g: ActivityGroup }) {
       {av.mode === "both" && (
         <div className="acard__reserve acard__reserve--adv">
           <p className="acard__reserve-title">
-            <span aria-hidden>🏆</span> 勝ち上がり次第
+            <span aria-hidden>🏆</span> この日は勝ち上がり次第
           </p>
           <p className="acard__reserve-row">
-            <span className="acard__if acard__if--win">勝ち上がりのとき</span>
+            <span className="acard__if acard__if--win">{av.day}勝ち上がると</span>
             <span>大会（{av.win}）</span>
           </p>
           <p className="acard__reserve-row">
-            <span className="acard__if">敗退のとき</span>
+            <span className="acard__if">{av.day}敗退すると</span>
             <span className={av.loseRest ? "acard__rest" : undefined}>{av.lose}</span>
           </p>
         </div>

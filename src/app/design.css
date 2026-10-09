@@ -2317,6 +2317,73 @@ td.pl-mark {
   background: #1f4fa3;
 }
 
+/* 勝ち上がり次第の入力（番号つきの3ステップ） */
+.adv-edit {
+  background: #fbf6e6;
+  border-color: #ead9a0;
+}
+.adv-edit__hint {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.adv-step {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed #e2cf8c;
+}
+.adv-step__q {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+}
+.adv-step__no {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #7a5a00;
+  color: #fff;
+  font-size: 12px;
+  font-family: var(--num);
+}
+.adv-case {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid var(--rule);
+  font-size: 14px;
+  font-weight: 800;
+}
+.adv-case__if {
+  color: #7a5a00;
+}
+.adv-case--win .adv-case__then {
+  color: var(--board);
+}
+.rs-btn--wide {
+  align-items: flex-start;
+  text-align: left;
+  min-height: 0;
+  padding: 10px 12px;
+}
+.acard__reserve--adv .acard__reserve-row {
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+
 /* 勝ち上がり次第の帯（金色） */
 .acard__reserve--adv {
   margin-top: 6px;
@@ -2339,7 +2406,7 @@ td.pl-mark {
   background: #fbf6e6;
 }
 .pl-reserve--adv b {
-  min-width: 7.6em;
+  min-width: 13em;
   margin-right: 4px;
 }
 .pl-reserve--adv .pl-reserve__title {

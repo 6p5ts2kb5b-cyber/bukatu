@@ -29,6 +29,9 @@ import {
   listRange,
   reserveTitle,
   losePlanText,
+  advanceDayText,
+  formatDate,
+  tournamentTitle,
   reservesByDate,
   reserveView,
   type ReserveInfo,
@@ -44,6 +47,7 @@ type Options = {
   venues: string[];
   dir: DirEntry[]; // 名簿（会場の住所・最寄駅）
   reloadDir: () => void;
+  prevMatches: PrevMatch[]; // この日より前の試合の日（勝ち上がり次第の日に使う）
   meetPlaces: string[];
   opponents: string[];
   tournaments: string[];
@@ -671,7 +675,13 @@ function GroupEditor({
             )}
             {/* 勝ち上がり次第の日（2日目・決勝など） */}
             {(group.type === "公式戦" || group.type === "大会") && (
-              <AdvanceEditor group={group} set={set} venues={venueList(options.dir)} reload={options.reloadDir} />
+              <AdvanceEditor
+                group={group}
+                set={set}
+                venues={venueList(options.dir)}
+                reload={options.reloadDir}
+                prevMatches={options.prevMatches}
+              />
             )}
           </div>
         </Card>
@@ -767,86 +777,144 @@ function GroupEditor({
   );
 }
 
-// 勝ち上がり次第の日：「勝ち上がり → 大会」「敗退 → 練習」「敗退 → 休養日」
-const ADVANCE_CHOICES: { advance: ActivityGroup["advance"]; lose?: ActivityGroup["ifLose"]; title: string; sub: string }[] = [
-  { advance: "", title: "確認中", sub: "まだ分からない" },
-  { advance: "win", title: "勝ち上がり", sub: "→ 大会" },
-  { advance: "lose", lose: "練習", title: "敗退", sub: "→ 練習" },
-  { advance: "lose", lose: "休養日", title: "敗退", sub: "→ 休養日" },
-];
+// 勝ち上がり次第の日：「○月○日に勝ち上がると大会」「○月○日に敗退すると練習・休養日」
+export type PrevMatch = { date: string; title: string };
 
 function AdvanceEditor({
   group,
   set,
   venues,
   reload,
+  prevMatches,
 }: {
   group: ActivityGroup;
   set: (patch: Partial<ActivityGroup>) => void;
   venues: DirEntry[];
   reload: () => void;
+  prevMatches: PrevMatch[];
 }) {
   const on = group.ifLose !== "";
+  const day = advanceDayText(group); // 「10月24日（土）に」
+  const title = tournamentTitle(group) || "大会";
+  const turnOn = () =>
+    set({ ifLose: "休養日", advance: "", decideDate: group.decideDate || prevMatches[0]?.date || "" });
   return (
-    <div className="reserve-note">
-      <label className="flex items-center gap-2 text-sm font-bold">
+    <div className="reserve-note adv-edit">
+      <label className="flex items-start gap-2 text-sm font-bold leading-relaxed">
         <input
           type="checkbox"
+          className="mt-1"
           checked={on}
-          onChange={(e) => set(e.target.checked ? { ifLose: "休養日", advance: "" } : { ifLose: "", advance: "" })}
+          onChange={(e) => (e.target.checked ? turnOn() : set({ ifLose: "", advance: "" }))}
         />
-        勝ち上がり次第の日（前の試合の結果で、大会かどうか決まる）
+        <span>
+          この日は「勝ち上がり次第」
+          <small className="adv-edit__hint">
+            前の日の試合に勝てばこの日も大会、負ければ練習か休養日、という日にチェックします（2日目・決勝など）。
+          </small>
+        </span>
       </label>
+
       {on && (
         <>
-          <p className="reserve-note__q">敗退したときは</p>
-          <div className="rs-grid">
-            {(["練習", "休養日"] as const).map((x) => (
-              <button key={x} type="button" className="rs-btn" aria-pressed={group.ifLose === x} onClick={() => set({ ifLose: x })}>
-                <b>{x}</b>
-              </button>
-            ))}
-          </div>
-          {group.ifLose === "練習" && (
-            <>
-              <Field label="練習の会場">
-                <input
-                  className={inputClass}
-                  value={group.loseVenue}
-                  onChange={(e) => set({ loseVenue: e.target.value })}
-                  list="venue-options"
-                  autoComplete="off"
-                />
-              </Field>
-              <DirPicker kind="venue" entries={venues} isOn={(e) => e.name === group.loseVenue} onPick={(e) => set({ loseVenue: e.name })} onChanged={reload} />
-              <div className="grid grid-cols-2 gap-3">
-                <TimeSelect10 label="練習の開始" value={group.loseStart} onChange={(v) => set({ loseStart: v })} />
-                <TimeSelect10 label="練習の終了" value={group.loseEnd} onChange={(v) => set({ loseEnd: v })} />
+          <div className="adv-step">
+            <p className="adv-step__q">
+              <span className="adv-step__no">1</span>どの日の試合の結果で決まりますか？
+            </p>
+            {prevMatches.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {prevMatches.map((m) => (
+                  <button
+                    key={m.date}
+                    type="button"
+                    className="filter"
+                    aria-pressed={group.decideDate === m.date}
+                    onClick={() => set({ decideDate: m.date })}
+                  >
+                    {formatDate(m.date)} {m.title}
+                  </button>
+                ))}
               </div>
-            </>
-          )}
-          <p className="reserve-note__q">結果</p>
-          <div className="rs-grid">
-            {ADVANCE_CHOICES.map((c) => (
-              <button
-                key={`${c.advance}-${c.lose}`}
-                type="button"
-                className="rs-btn"
-                aria-pressed={group.advance === c.advance && (c.lose === undefined || c.lose === group.ifLose)}
-                onClick={() => set({ advance: c.advance, ...(c.lose ? { ifLose: c.lose } : {}) })}
-              >
-                <b>{c.title}</b>
-                <small>{c.sub}</small>
-              </button>
-            ))}
+            )}
+            <input
+              type="date"
+              className={inputClass}
+              value={group.decideDate}
+              onChange={(e) => set({ decideDate: e.target.value })}
+              aria-label="結果が決まる試合の日"
+            />
+            <p className="f-hint">例：1日目（10/24）の結果で2日目（この日）が決まるなら、10/24 を選びます。</p>
           </div>
-          <p className="reserve-note__body">
-            {group.advance === "win"
-              ? "勝ち上がりなので、この日は大会です。"
-              : group.advance === "lose"
-                ? `敗退なので、この日は「${losePlanText(group)}」です（予定表・印刷にもそう出ます）。`
-                : "決まるまでは、予定表・印刷に「勝ち上がりのとき／敗退のとき」を両方出します。"}
-          </p>
+
+          <div className="adv-step">
+            <p className="adv-step__q">
+              <span className="adv-step__no">2</span>それぞれの場合のこの日の予定
+            </p>
+            <div className="adv-case adv-case--win">
+              <span className="adv-case__if">{day}勝ち上がると</span>
+              <span className="adv-case__then">→ この日は 大会（{title}）</span>
+            </div>
+            <div className="adv-case">
+              <span className="adv-case__if">{day}敗退すると</span>
+              <span className="adv-case__then">→ この日は</span>
+            </div>
+            <div className="rs-grid">
+              {(["練習", "休養日"] as const).map((x) => (
+                <button key={x} type="button" className="rs-btn" aria-pressed={group.ifLose === x} onClick={() => set({ ifLose: x })}>
+                  <b>{x}</b>
+                  <small>{x === "練習" ? "会場と時間も入れます" : "部活はお休み"}</small>
+                </button>
+              ))}
+            </div>
+            {group.ifLose === "練習" && (
+              <>
+                <Field label="敗退したときの練習の会場">
+                  <input
+                    className={inputClass}
+                    value={group.loseVenue}
+                    onChange={(e) => set({ loseVenue: e.target.value })}
+                    list="venue-options"
+                    autoComplete="off"
+                  />
+                </Field>
+                <DirPicker
+                  kind="venue"
+                  entries={venues}
+                  isOn={(e) => e.name === group.loseVenue}
+                  onPick={(e) => set({ loseVenue: e.name })}
+                  onChanged={reload}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <TimeSelect10 label="練習の開始" value={group.loseStart} onChange={(v) => set({ loseStart: v })} />
+                  <TimeSelect10 label="練習の終了" value={group.loseEnd} onChange={(v) => set({ loseEnd: v })} />
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="adv-step">
+            <p className="adv-step__q">
+              <span className="adv-step__no">3</span>結果が出たら押してください
+            </p>
+            <div className="flex flex-col gap-2">
+              {[
+                { v: "" as const, b: "まだ分からない", s: "予定表には両方の場合を出します" },
+                { v: "win" as const, b: `${day}勝ち上がった`, s: "→ この日は大会" },
+                { v: "lose" as const, b: `${day}敗退した`, s: `→ この日は${losePlanText(group)}` },
+              ].map((c) => (
+                <button
+                  key={c.v}
+                  type="button"
+                  className="rs-btn rs-btn--wide"
+                  aria-pressed={group.advance === c.v}
+                  onClick={() => set({ advance: c.v })}
+                >
+                  <b>{c.b}</b>
+                  <small>{c.s}</small>
+                </button>
+              ))}
+            </div>
+          </div>
         </>
       )}
     </div>
@@ -927,13 +995,25 @@ export function ActivityEditor({
   const [dir, setDir] = useState<DirEntry[]>([]);
   // この日が、ほかの大会の「予備日」になっているか
   const [reserveOf, setReserveOf] = useState<ReserveInfo[]>([]);
+  const [prevMatches, setPrevMatches] = useState<PrevMatch[]>([]);
   useEffect(() => {
     if (!a.date) return;
     const d = new Date(`${a.date}T00:00:00`);
     d.setDate(d.getDate() - 60);
     const from = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     listRange(from, a.date)
-      .then((list) => setReserveOf(reservesByDate(list).get(a.date) ?? []))
+      .then((list) => {
+        setReserveOf(reservesByDate(list).get(a.date) ?? []);
+        // この日より前の試合の日（新しい順に3つ）
+        const prev: PrevMatch[] = [];
+        for (const x of [...list].reverse()) {
+          if (x.date >= a.date || prev.some((p) => p.date === x.date)) continue;
+          const g = x.groups.find((y) => y.type === "公式戦" || y.type === "大会");
+          if (g) prev.push({ date: x.date, title: tournamentTitle(g) || g.type });
+          if (prev.length >= 3) break;
+        }
+        setPrevMatches(prev);
+      })
       .catch(() => setReserveOf([]));
   }, [a.date]);
   const reloadDir = useCallback(() => {
@@ -1111,7 +1191,7 @@ export function ActivityEditor({
           key={current.division}
           group={current}
           onChange={updateGroup}
-          options={{ packingItems, onAddPacking, ...places, dir, reloadDir }}
+          options={{ packingItems, onAddPacking, ...places, dir, reloadDir, prevMatches }}
           tabs={tabs}
           extra={
             top && academy && tab === "academy" ? (
