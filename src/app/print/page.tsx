@@ -64,6 +64,40 @@ function monthRange(ym: string): { from: string; to: string } {
   return { from: `${ym}-01`, to: `${ym}-${String(last).padStart(2, "0")}` };
 }
 
+function ymdOf(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// 今週末（next=true なら来週末）の日：土・日と、つながっている祝日（3連休など）
+function weekendDates(today: string, next: boolean): string[] {
+  const t = new Date(`${today}T00:00:00`);
+  const monday = new Date(t);
+  monday.setDate(t.getDate() - ((t.getDay() + 6) % 7) + (next ? 7 : 0));
+  const sat = new Date(monday);
+  sat.setDate(monday.getDate() + 5);
+  const out = [ymdOf(sat)];
+  const sun = new Date(monday);
+  sun.setDate(monday.getDate() + 6);
+  out.push(ymdOf(sun));
+  // 前の金曜・後ろの月曜…が祝日なら足す
+  for (let d = new Date(sat); ; ) {
+    d.setDate(d.getDate() - 1);
+    if (!isHoliday(ymdOf(d))) break;
+    out.unshift(ymdOf(d));
+  }
+  for (let d = new Date(sun); ; ) {
+    d.setDate(d.getDate() + 1);
+    if (!isHoliday(ymdOf(d))) break;
+    out.push(ymdOf(d));
+  }
+  return out;
+}
+
+function mdLabel(date: string): string {
+  const h = holidayName(date);
+  return `${Number(date.slice(5, 7))}/${Number(date.slice(8))}（${weekday(date)}${h ? `・${h}` : ""}）`;
+}
+
 function thisMonth(offset = 0): string {
   const d = new Date();
   d.setDate(1);
@@ -113,6 +147,85 @@ function printTitle(g: ActivityGroup): string {
     if (names.length) return `対 ${names.join("・")}`;
   }
   return typeLabel(g.type);
+}
+
+// LINEに貼る文章（予定表と同じ中身を、スマホで読みやすい文にする）
+function groupText(g: ActivityGroup, prefix: string, withDiv: boolean): string[] {
+  const out: string[] = [];
+  const div = withDiv ? `［${divisionLabel(g.division)}］` : "";
+  const av = advanceView(g);
+  if (av.mode === "lose") return [`${div}${av.head}（${av.reason.replace(/。$/, "")}）`];
+  const title = [printTitle(g), tournamentTitle(g)].filter(Boolean).join("　");
+  out.push(`${div}${prefix ? `${prefix}　` : ""}${title}`);
+  if (av.mode === "both") {
+    out.push(`　${av.day}勝ち上がると：大会（${av.win}）`);
+    out.push(`　${av.day}敗退すると：${av.lose}`);
+  }
+  const off = isOffType(g.type);
+  if (off || (g.type === "部活あり" && !g.returnToSchool)) return out;
+  if (g.meetTime || g.meetPlace) out.push(`　集合　${[clock(g.meetTime), g.meetPlace].filter(Boolean).join("　")}`);
+  if (g.type === "部活あり" && g.returnToSchool) out.push(`　再登校　${clock(g.returnTime) || "時間未定"}`);
+  if (time(g.startTime, g.endTime)) out.push(`　時間　${time(g.startTime, g.endTime)}`);
+  if (g.venue) out.push(`　会場　${g.venue}${g.venueStation ? `（${g.venueStation}）` : ""}`);
+  if (isMatchType(g.type)) {
+    const pairs = g.games.map((x) => [x.others ? x.home ?? "" : "うち", x.opponent] as [string, string]);
+    const team = (t: string) => describeRef(t, pairs) ?? t;
+    g.games
+      .filter((x) => x.opponent || x.home || gameStart(x))
+      .forEach((x, i) =>
+        out.push(
+          `　第${i + 1}試合　${x.afterLunch ? gameStart(x) : clock(x.startTime) || "時間未定"}　${
+            x.others
+              ? `${team(x.home ?? "") || "未定"} 対 ${team(x.opponent) || "未定"}（観戦・補助役員）`
+              : `vs ${team(x.opponent) || "未定"}`
+          }`,
+        ),
+      );
+  }
+  if (g.type === "合同練習" && g.partners.length) out.push(`　合同　${g.partners.join("・")}`);
+  if (g.packing.length) out.push(`　持ち物　${g.packing.join("・")}`);
+  if (g.reserveDate) {
+    out.push(`　予備日　${mdLabel(g.reserveDate)}${g.reserveVenue ? `　${g.reserveVenue}` : ""}`);
+    if (g.reserveDate2) out.push(`　予備日の予備日　${mdLabel(g.reserveDate2)}${g.reserveVenue2 ? `　${g.reserveVenue2}` : ""}`);
+  }
+  if (g.note) out.push(`　※${g.note}`);
+  return out;
+}
+
+function buildLineText(rows: Activity[], reserves: Map<string, ReserveInfo[]>, head: string, message: string): string {
+  const blocks: string[] = [head];
+  for (const a of rows) {
+    if (a.id.startsWith("wk-")) {
+      const [f, t] = a.id.slice(3).split("|");
+      blocks.push(`${f === t ? mdLabel(f) : `${mdLabel(f)}〜${mdLabel(t)}`}　平日　合同練習なし（各校の部活）`);
+      continue;
+    }
+    const lines: string[] = [];
+    const rs = reserves.get(a.date);
+    const decided = a.reserveStatus === "held" || a.reserveStatus === "cancelled";
+    if (rs && !decided) {
+      const v = reserveView(a.reserveStatus, rs, a.groups);
+      lines.push(`☂ ${reserveTitle(rs)}`);
+      if (v.mode === "tournament") lines.push(`　${v.head}${v.venue ? `（${v.venue}）` : ""}`);
+      else {
+        lines.push(`　${reserveSubject(rs)}が延期された場合：${rs.map((x) => x.title).join("・")}`);
+        lines.push(`　${reserveSubject(rs)}が実施された場合：${heldPlanText(a.groups)}`);
+      }
+    }
+    const groups = a.groups.filter((g) => {
+      if (!rs) return true;
+      if (a.reserveStatus === "postponed") return false;
+      return decided || !isOffType(g.type);
+    });
+    groups.forEach((g) => lines.push(...groupText(g, rs && decided ? reservePrefix(a.reserveStatus, rs) : "", a.groups.length > 1)));
+    if (a.id.startsWith("blank-") || (!lines.length && !groups.length)) lines.push("未定");
+    if (a.note) lines.push(`　※${a.note}`);
+    // 1行目に日付をつける
+    lines[0] = `${mdLabel(a.date)} ${lines[0]}`;
+    blocks.push(lines.join("\n"));
+  }
+  if (message) blocks.push(message);
+  return blocks.join("\n\n");
 }
 
 function GroupLines({ g, showDivision, prefix }: { g: ActivityGroup; showDivision: boolean; prefix?: string }) {
@@ -269,9 +382,26 @@ export default function PrintPage() {
   const [divisions, setDivisions] = useState<DivisionKey[]>(TARGETS[0].divisions);
   const [month, setMonth] = useState(thisMonth());
   // 期間：1カ月 / 前半（1〜15日） / 後半（16日〜末日）
-  const [half, setHalf] = useState<"all" | "first" | "second">("all");
+  const [half, setHalf] = useState<"all" | "first" | "second" | "week" | "nextWeek">("all");
   const [hidePast, setHidePast] = useState(false); // 過ぎた日を載せない
   const today = todayString();
+  const isWeekendMode = half === "week" || half === "nextWeek";
+  // 載せる日の一覧（1カ月・前半・後半・今週末・来週末）
+  const dates = useMemo(() => {
+    if (isWeekendMode) return weekendDates(today, half === "nextWeek");
+    const { to } = monthRange(month);
+    const last = Number(to.slice(8, 10));
+    const out: string[] = [];
+    for (let d = 1; d <= last; d++) {
+      if (half === "first" && d > 15) continue;
+      if (half === "second" && d < 16) continue;
+      out.push(`${month}-${String(d).padStart(2, "0")}`);
+    }
+    return out;
+  }, [half, month, today, isWeekendMode]);
+  const shownDates = useMemo(() => dates.filter((d) => !(hidePast && d < today)), [dates, hidePast, today]);
+  const rangeFrom = dates[0];
+  const rangeTo = dates[dates.length - 1];
   const [activities, setActivities] = useState<Activity[] | null>(null);
   const [pool, setPool] = useState<Activity[]>([]); // 予備日を調べるため、前の月も含めた予定
   const [error, setError] = useState<string | null>(null);
@@ -291,7 +421,8 @@ export default function PrintPage() {
   useEffect(() => {
     setActivities(null);
     setError(null);
-    const { from, to } = monthRange(month);
+    const from = rangeFrom;
+    const to = rangeTo;
     // 前の月の大会の「予備日」がこの月に来ることがあるので、少し前から読む
     const d = new Date(`${from}T00:00:00`);
     d.setDate(d.getDate() - 40);
@@ -302,7 +433,7 @@ export default function PrintPage() {
         setActivities(list.filter((a) => a.date >= from));
       })
       .catch(() => setError("予定を読み込めませんでした。電波の良い場所で開き直してください。"));
-  }, [month]);
+  }, [rangeFrom, rangeTo]);
 
   const targetInfo = TARGETS.find((t) => t.key === target)!;
   // 送り先の決まった組み合わせから区分を付け外ししたら「区分を選んで作成」扱い
@@ -331,26 +462,18 @@ export default function PrintPage() {
 
   const rows = useMemo(() => {
     if (!activities) return [];
-    const day = (a: Activity) => Number(a.date.slice(8, 10));
-    const { from, to } = monthRange(month);
+    const inPeriod = (date: string) => shownDates.includes(date);
     const list = activities
       .map((a) => ({ ...a, groups: a.groups.filter((g) => divisions.includes(g.division)) }))
       .filter((a) => a.groups.length > 0 || reserves.has(a.date));
     // 予定がなく、予備日だけの日も1行にする
     reserves.forEach((_, date) => {
-      if (date >= from && date <= to && !list.some((a) => a.date === date))
-        list.push({ id: `reserve-${date}`, date, note: "", groups: [] });
+      if (inPeriod(date) && !list.some((a) => a.date === date)) list.push({ id: `reserve-${date}`, date, note: "", groups: [] });
     });
-    const inPeriod = (d: number) =>
-      (half === "all" || (half === "first" ? d <= 15 : d >= 16)) &&
-      !(hidePast && `${month}-${String(d).padStart(2, "0")}` < today);
-    const out = list.filter((a) => inPeriod(day(a)));
+    const out = list.filter((a) => inPeriod(a.date));
     // まだ何も入っていない日も「未定」の行にして、入れ忘れが分かるようにする（予定が1件もなければ出さない）
-    if (out.length > 0) {
-      const last = Number(to.slice(8, 10));
-      for (let d = 1; d <= last; d++) {
-        if (!inPeriod(d)) continue;
-        const date = `${month}-${String(d).padStart(2, "0")}`;
+    if (out.length > 0 || isWeekendMode) {
+      for (const date of shownDates) {
         if (!out.some((a) => a.date === date)) out.push({ id: `blank-${date}`, date, note: "", groups: [] });
       }
     }
@@ -370,25 +493,27 @@ export default function PrintPage() {
       return merged;
     }
     return out;
-  }, [activities, divisions, half, reserves, month, hidePast, today]);
+  }, [activities, divisions, reserves, shownDates, isWeekendMode]);
 
   const blanks = rows.filter((a) => a.id.startsWith("blank-"));
   const [y, m] = month.split("-").map(Number);
   const lastDay = new Date(y, m, 0).getDate();
-  // 過ぎた日を載せないときは、期間の始まりを今日にする（例：10月（9日〜31日））
-  const startDay = half === "second" ? 16 : 1;
   const endDay = half === "first" ? 15 : lastDay;
-  const fromDay =
-    hidePast && today.slice(0, 7) === month ? Math.max(startDay, Number(today.slice(8))) : startDay;
-  const period =
-    fromDay !== startDay
-      ? `${m}月（${fromDay}日〜${endDay}日）`
+  // 見出しの期間（過ぎた日を載せないときは、今日からに）
+  const sFrom = shownDates[0] ?? rangeFrom;
+  const sTo = shownDates[shownDates.length - 1] ?? rangeTo;
+  const md = (d: string) => `${Number(d.slice(5, 7))}月${Number(d.slice(8))}日（${weekday(d)}）`;
+  const period = isWeekendMode
+    ? `${md(sFrom)}〜${sFrom.slice(0, 7) === sTo.slice(0, 7) ? `${Number(sTo.slice(8))}日（${weekday(sTo)}）` : md(sTo)}`
+    : sFrom !== rangeFrom
+      ? `${m}月（${Number(sFrom.slice(8))}日〜${endDay}日）`
       : half === "first"
         ? `${m}月前半（1日〜15日）`
         : half === "second"
           ? `${m}月後半（16日〜${lastDay}日）`
           : `${m}月`;
-  const title = `${heading} ${y}年${period}の活動予定`;
+  const yearText = isWeekendMode ? `${half === "week" ? "今週末" : "来週末"}　` : `${y}年`;
+  const title = `${heading} ${yearText}${period}の活動予定`;
 
   useLayoutEffect(() => {
     const box = fitBox.current;
@@ -425,6 +550,28 @@ export default function PrintPage() {
     setPdf(null);
     setDownloaded(false);
   }, [divisions, month, half, message, activities, hidePast, fitOne, fit]);
+
+  // ---- LINEにそのまま貼る文章 ----
+  const lineText = useMemo(
+    () => buildLineText(rows, reserves, `【${isWeekendMode ? (half === "week" ? "今週末" : "来週末") : period}の予定】${heading}`, message),
+    [rows, reserves, isWeekendMode, half, period, heading, message],
+  );
+  const [copied, setCopied] = useState(false);
+  useEffect(() => setCopied(false), [lineText]);
+  const copyLine = async () => {
+    try {
+      await navigator.clipboard.writeText(lineText);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = lineText;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+    }
+    setCopied(true);
+    setToast("文章をコピーしました。LINEに貼り付けてください");
+  };
 
   const send = async (file: File) => {
     try {
@@ -500,9 +647,12 @@ export default function PrintPage() {
                 <ToggleButton
                   key={mo}
                   small
-                  on={month === mo}
+                  on={!isWeekendMode && month === mo}
                   label={`${Number(mo.slice(5))}月`}
-                  onClick={() => setMonth(mo)}
+                  onClick={() => {
+                    setMonth(mo);
+                    if (isWeekendMode) setHalf("all");
+                  }}
                 />
               ))}
             </Choices>
@@ -514,8 +664,15 @@ export default function PrintPage() {
               <ToggleButton small on={half === "first"} label="前半" onClick={() => setHalf("first")} />
               <ToggleButton small on={half === "second"} label="後半" onClick={() => setHalf("second")} />
             </Choices>
+            <div className="mt-2">
+              <Choices cols={2}>
+                <ToggleButton small on={half === "week"} label="今週末" onClick={() => setHalf("week")} />
+                <ToggleButton small on={half === "nextWeek"} label="来週末" onClick={() => setHalf("nextWeek")} />
+              </Choices>
+            </div>
             <span className="f-hint block">
-              {half === "first" ? `${m}月1日〜15日` : half === "second" ? `${m}月16日〜${lastDay}日` : `${m}月1日〜${lastDay}日`}を載せます。
+              {dates.map(mdLabel).length <= 4 ? dates.map(mdLabel).join("・") : `${mdLabel(rangeFrom)}〜${mdLabel(rangeTo)}`}
+              を載せます。{isWeekendMode && "土日と、つながっている祝日（3連休など）です。"}
             </span>
           </div>
           <label className="flex items-center gap-2 text-sm font-bold">
@@ -552,6 +709,13 @@ export default function PrintPage() {
             </div>
           </div>
         )}
+        <details className="line-text" open={isWeekendMode}>
+          <summary>LINEに貼る文章（PDFを開かなくても読める）</summary>
+          <pre>{lineText}</pre>
+          <button type="button" className="btn btn--line" onClick={copyLine}>
+            {copied ? "コピーしました（もう一度コピー）" : "文章をコピーする"}
+          </button>
+        </details>
         <p className="group-label">印刷の見本</p>
       </div>
 
@@ -565,7 +729,7 @@ export default function PrintPage() {
         >
         <header className="border-b-2 border-black pb-1">
           <h2 className="text-[17px] font-extrabold leading-tight">
-            {heading}　{y}年{period}の活動予定
+            {heading}　{yearText}{period}の活動予定
           </h2>
           {!heading.startsWith("桜・浅羽野・住吉") && <p className="text-[11px]">桜・浅羽野・住吉 連合チーム</p>}
         </header>
@@ -573,7 +737,7 @@ export default function PrintPage() {
         {!activities && !error && <p className="py-6 text-center">読み込み中…</p>}
         {activities && rows.length === 0 && (
           <p className="py-6 text-center">
-            {divisions.length === 0 ? "載せる活動を選んでください。" : hidePast && `${month}-${String(endDay).padStart(2, "0")}` < today ? "この期間はもう過ぎています。「過ぎた日は載せない」を外すと載ります。" : half === "all" ? "この月の予定はまだ登録されていません。" : "この期間の予定はまだ登録されていません。"}
+            {divisions.length === 0 ? "載せる活動を選んでください。" : hidePast && rangeTo < today ? "この期間はもう過ぎています。「過ぎた日は載せない」を外すと載ります。" : half === "all" ? "この月の予定はまだ登録されていません。" : "この期間の予定はまだ登録されていません。"}
           </p>
         )}
 

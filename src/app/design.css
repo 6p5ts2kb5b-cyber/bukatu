@@ -1855,6 +1855,33 @@ td.pl-mark {
   margin: 0;
   min-width: 0;
 }
+/* 印刷画面：LINEに貼る文章 */
+.line-text {
+  padding: 12px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid var(--rule);
+}
+.line-text summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 800;
+}
+.line-text pre {
+  max-height: 340px;
+  overflow: auto;
+  margin: 10px 0;
+  padding: 10px;
+  border-radius: 10px;
+  background: #f3f5f2;
+  font-family: var(--jp);
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.line-text .btn {
+  width: 100%;
+}
 /* 合同チーム：予定のない平日をまとめた行 */
 .pl-row--wk td.pl-day b {
   font-size: 12px;
