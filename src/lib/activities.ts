@@ -207,6 +207,41 @@ export function heldPlanText(groups: ActivityGroup[]): string {
     .join("／");
 }
 
+// ---- 大会しだいの予定（予備日の日に、大会がどうなったかを選ぶ） ----
+//   確認中       → 「延期のとき／実施のとき」を両方出す
+//   実施される   → この日の予定（休養日・練習）
+//   実施されない → この日の予定（休養日・練習）
+//   延期         → この日に大会
+export type ReserveStatus = "" | "held" | "cancelled" | "postponed";
+
+export function toReserveStatus(v: unknown): ReserveStatus {
+  return v === "held" || v === "cancelled" || v === "postponed" ? v : "";
+}
+
+export type ReserveView =
+  | { mode: "both" }
+  | { mode: "plan" | "tournament"; head: string; rest: boolean; reason: string; venue?: string };
+
+export function reserveView(status: ReserveStatus | undefined, reserves: ReserveInfo[], groups: ActivityGroup[]): ReserveView {
+  const titles = reserves.map((r) => r.title).join("・");
+  if (status === "postponed") {
+    const venue = reserves.map((r) => r.venue).filter(Boolean).join("・");
+    return { mode: "tournament", head: titles, rest: false, venue, reason: `${titles}が延期になったため、この日に大会を行います。` };
+  }
+  if (status === "held" || status === "cancelled") {
+    const plan = heldPlanText(groups);
+    const rest = plan === "休養日";
+    const why = status === "held" ? "実施される" : "実施されない";
+    return {
+      mode: "plan",
+      head: plan,
+      rest,
+      reason: `${titles}が${why}ため、${rest ? "この日の練習はありません" : "この日は練習です"}。`,
+    };
+  }
+  return { mode: "both" };
+}
+
 // 「10/12 JJBF大会 1日目」の短い書き方
 export function reserveLabel(r: ReserveInfo): string {
   return `${Number(r.date.slice(5, 7))}/${Number(r.date.slice(8))} ${r.title}`;
@@ -268,6 +303,8 @@ export type Activity = {
   date: string; // "YYYY-MM-DD"
   note: string;
   groups: ActivityGroup[];
+  // この日がほかの大会の予備日のとき、その大会がどうなったか（"" = 確認中）
+  reserveStatus?: ReserveStatus;
 };
 
 export function newGroup(division: DivisionKey, date = ""): ActivityGroup {
@@ -348,6 +385,7 @@ function toActivity(id: string, data: Record<string, unknown>): Activity {
     id,
     date: String(data.date ?? ""),
     note: String(data.note ?? ""),
+    reserveStatus: toReserveStatus(data.reserveStatus),
     groups: groups.map((g) => ({
       ...newGroup((g.division as DivisionKey) ?? "main"),
       ...g,

@@ -2240,6 +2240,104 @@ td.pl-mark {
   color: #fff;
 }
 
+/* 大会しだいの予定：選ぶボタン（2列） */
+.reserve-note__q {
+  margin: 2px 0 0;
+  font-size: 13px;
+  font-weight: 800;
+}
+.rs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.rs-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 56px;
+  padding: 8px 6px;
+  border-radius: 12px;
+  border: 1.5px solid var(--rule);
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+.rs-btn b {
+  font-size: 14px;
+  font-weight: 800;
+}
+.rs-btn small {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+.rs-btn:active {
+  transform: scale(0.98);
+}
+.rs-btn[aria-pressed="true"] {
+  background: var(--board);
+  border-color: var(--board);
+  color: #fff;
+}
+.rs-btn[aria-pressed="true"] small {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* 大会しだいの予定：決まったときの大きな表示（予定カード） */
+.acard__decided {
+  margin-bottom: 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--board);
+  color: #fff;
+}
+.acard__decided-head {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: 0.02em;
+}
+.acard__decided-venue {
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 800;
+}
+.acard__decided-why {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.82);
+}
+.acard__decided--game {
+  background: #1f4fa3;
+}
+
+/* 印刷：大会しだいの予定が決まったとき */
+.pl-decided {
+  margin-bottom: 3px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.pl-decided p {
+  margin: 0;
+}
+.pl-decided strong {
+  font-size: 12.5px;
+  font-weight: 900;
+}
+.pl-decided .pl-sub {
+  margin-left: 6px;
+}
+.pl-decided__why {
+  font-size: 9.5px;
+  color: #444;
+}
+
 /* 印刷のときは動き（ふわっと出る・数字がめくれる）を止めて、すぐ全部見えるように。
    画面で隠れていた部品（送付書の印刷用の絵など）が、透明のまま印刷されるのを防ぐ */
 @media print {

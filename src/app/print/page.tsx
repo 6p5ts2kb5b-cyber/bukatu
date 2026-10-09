@@ -20,6 +20,8 @@ import {
   listRange,
   reserveLabel,
   reservesByDate,
+  reserveView,
+  type ReserveInfo,
   heldPlanText,
   typeLabel,
   weekday,
@@ -167,6 +169,35 @@ function GroupLines({ g, showDivision }: { g: ActivityGroup; showDivision: boole
         </dl>
       )}
       {g.note && <p className="pl-note">※{g.note}</p>}
+    </div>
+  );
+}
+
+// 予備日の帯。大会がどうなったか決まっていれば1つだけ、未定なら両方
+function PrintReserve({ reserves, a }: { reserves: ReserveInfo[]; a: Activity }) {
+  const view = reserveView(a.reserveStatus, reserves, a.groups);
+  if (view.mode !== "both") {
+    return (
+      <div className="pl-decided">
+        <p>
+          <strong className={view.rest ? "pl-rest" : undefined}>{view.head}</strong>
+          {view.venue && <span className="pl-sub">{view.venue}</span>}
+        </p>
+        <p className="pl-decided__why">{view.reason}</p>
+      </div>
+    );
+  }
+  return (
+    <div className="pl-reserve">
+      <p className="pl-reserve__title">☂ {reserves.map(reserveLabel).join("・")} の予備日</p>
+      <p>
+        <b>延期のとき</b>
+        {reserves.map((x) => `${x.title}${x.venue ? `（${x.venue}）` : ""}`).join("・")}
+      </p>
+      <p>
+        <b>実施のとき</b>
+        <strong className="pl-rest">{heldPlanText(a.groups)}</strong>
+      </p>
     </div>
   );
 }
@@ -402,22 +433,12 @@ export default function PrintPage() {
                     <span className={wd === "土" ? "pl-sat" : wd === "日" ? "pl-sun" : undefined}>{wd}</span>
                   </td>
                   <td className="pl-main">
-                    {reserves.get(a.date) && (
-                      <div className="pl-reserve">
-                        <p className="pl-reserve__title">☂ {reserves.get(a.date)!.map(reserveLabel).join("・")} の予備日</p>
-                        <p>
-                          <b>延期のとき</b>
-                          {reserves.get(a.date)!.map((x) => `${x.title}${x.venue ? `（${x.venue}）` : ""}`).join("・")}
-                        </p>
-                        <p>
-                          <b>実施のとき</b>
-                          <strong className="pl-rest">{heldPlanText(a.groups)}</strong>
-                        </p>
-                      </div>
-                    )}
-                    {a.groups.filter((g) => !(reserves.has(a.date) && isOffType(g.type))).map((g) => (
-                      <GroupLines key={g.division} g={g} showDivision={showDivision(a, g)} />
-                    ))}
+                    {reserves.get(a.date) && <PrintReserve reserves={reserves.get(a.date)!} a={a} />}
+                    {a.groups
+                      .filter((g) => !(reserves.has(a.date) && (isOffType(g.type) || a.reserveStatus === "postponed")))
+                      .map((g) => (
+                        <GroupLines key={g.division} g={g} showDivision={showDivision(a, g)} />
+                      ))}
                     {a.note && <p className="pl-note">※{a.note}</p>}
                   </td>
                   <Mark on={needs(a, "お弁当")} />

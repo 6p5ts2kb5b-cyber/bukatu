@@ -29,7 +29,9 @@ import {
   listRange,
   reserveLabel,
   reservesByDate,
+  reserveView,
   type ReserveInfo,
+  type ReserveStatus,
 } from "@/lib/activities";
 import { DirPicker } from "@/components/DirPicker";
 import { Card, Choices, ErrorText, Field, inputClass, PanelTitle, PrimaryButton, ToggleButton } from "@/components/ui";
@@ -732,6 +734,63 @@ function GroupEditor({
   );
 }
 
+// 予備日の日：大会がどうなったかを選ぶと、この日の予定が1つに決まる
+const RESERVE_CHOICES: { status: ReserveStatus; rest?: boolean; title: string; sub: string }[] = [
+  { status: "", title: "確認中", sub: "まだ分からない" },
+  { status: "postponed", title: "延期", sub: "→ この日に大会" },
+  { status: "held", rest: true, title: "実施される", sub: "→ 休養日" },
+  { status: "held", rest: false, title: "実施される", sub: "→ 練習" },
+  { status: "cancelled", rest: true, title: "実施されない", sub: "→ 休養日" },
+  { status: "cancelled", rest: false, title: "実施されない", sub: "→ 練習" },
+];
+
+function ReserveChooser({
+  reserves,
+  status,
+  groups,
+  rest,
+  onChoose,
+}: {
+  reserves: ReserveInfo[];
+  status: ReserveStatus;
+  groups: ActivityGroup[];
+  rest: boolean;
+  onChoose: (status: ReserveStatus, rest?: boolean) => void;
+}) {
+  const view = reserveView(status, reserves, groups);
+  const titles = reserves.map((r) => r.title).join("・");
+  return (
+    <div className="reserve-note">
+      <p className="reserve-note__title">☂ この日は {reserves.map(reserveLabel).join("・")} の予備日です</p>
+      <p className="reserve-note__q">{titles} は</p>
+      <div className="rs-grid">
+        {RESERVE_CHOICES.map((c) => {
+          const on = c.status === status && (c.rest === undefined || c.rest === rest);
+          return (
+            <button
+              key={`${c.status}-${c.rest}`}
+              type="button"
+              className="rs-btn"
+              aria-pressed={on}
+              onClick={() => onChoose(c.status, c.rest)}
+            >
+              <b>{c.title}</b>
+              <small>{c.sub}</small>
+            </button>
+          );
+        })}
+      </div>
+      <p className="reserve-note__body">
+        {view.mode === "both"
+          ? "決まるまでは、予定表・印刷に「延期のとき／実施のとき」を両方出します。下には「実施のとき」の予定を入れてください。"
+          : view.mode === "tournament"
+            ? `延期なので、この日は「${view.head}」です（予定表・印刷にもそう出ます）。`
+            : `${view.reason.replace(/。$/, "")}（予定表・印刷には「${view.head}」と出ます）。`}
+      </p>
+    </div>
+  );
+}
+
 export function ActivityEditor({
   initial,
   isNew,
@@ -899,31 +958,23 @@ export function ActivityEditor({
             <p className="f-hint">平日は「住吉のみ」、土日は月に合わせて自動で選ばれます。</p>
           </div>
           {reserveOf.length > 0 && current && (
-            <div className="reserve-note">
-              <p className="reserve-note__title">☂ この日は {reserveOf.map(reserveLabel).join("・")} の予備日です</p>
-              <p className="reserve-note__body">
-                大会が延期になったら、この日が大会になります（予定表・印刷には自動でそう出ます）。
-                下には「大会が実施されたとき」のこの日の予定を入れてください。
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  className="btn btn--ghost btn--small"
-                  aria-pressed={isOffType(current.type)}
-                  onClick={() => updateGroup({ ...current, type: isWeekendDate(a.date) ? "練習なし" : "部活なし" })}
-                >
-                  実施なら休み
-                </button>
-                <button
-                  type="button"
-                  className="btn btn--ghost btn--small"
-                  aria-pressed={current.type === "練習"}
-                  onClick={() => updateGroup({ ...current, type: "練習" })}
-                >
-                  実施なら練習
-                </button>
-              </div>
-            </div>
+            <ReserveChooser
+              reserves={reserveOf}
+              status={a.reserveStatus ?? ""}
+              groups={a.groups}
+              rest={isOffType(current.type)}
+              onChoose={(status, rest) => {
+                const groups =
+                  rest === undefined
+                    ? a.groups
+                    : a.groups.map((g) =>
+                        g.division === current.division
+                          ? { ...g, type: rest ? (isWeekendDate(a.date) ? "練習なし" : "部活なし") : "練習" }
+                          : g,
+                      );
+                setA({ ...a, reserveStatus: status, groups });
+              }}
+            />
           )}
           <Field label="この日全体のメモ">
             <textarea

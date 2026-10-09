@@ -15,6 +15,7 @@ import {
   formatDate,
   tournamentTitle,
   reserveLabel,
+  reserveView,
   heldPlanText,
   typeLabel,
   type ReserveInfo,
@@ -152,8 +153,18 @@ function GroupDetails({ g }: { g: ActivityGroup }) {
   return <Rows items={items} />;
 }
 
-// 大会の予備日の帯：「延期のとき」と「実施のとき」を並べる
-function ReserveBanner({ reserves, groups }: { reserves: ReserveInfo[]; groups: ActivityGroup[] }) {
+// 大会の予備日の帯：決まるまでは「延期のとき」と「実施のとき」を並べ、決まったら1つだけ大きく出す
+function ReserveBanner({ reserves, activity }: { reserves: ReserveInfo[]; activity: Activity }) {
+  const view = reserveView(activity.reserveStatus, reserves, activity.groups);
+  if (view.mode !== "both") {
+    return (
+      <div className={`acard__decided${view.mode === "tournament" ? " acard__decided--game" : ""}`}>
+        <p className={`acard__decided-head${view.rest ? " is-rest" : ""}`}>{view.head}</p>
+        {view.venue && <p className="acard__decided-venue">{view.venue}</p>}
+        <p className="acard__decided-why">{view.reason}</p>
+      </div>
+    );
+  }
   return (
     <div className="acard__reserve">
       <p className="acard__reserve-title">
@@ -168,7 +179,7 @@ function ReserveBanner({ reserves, groups }: { reserves: ReserveInfo[]; groups: 
       </p>
       <p className="acard__reserve-row">
         <span className="acard__if">実施のとき</span>
-        <span>{heldPlanText(groups)}</span>
+        <span>{heldPlanText(activity.groups)}</span>
       </p>
     </div>
   );
@@ -183,8 +194,8 @@ export function ActivityCard({
   featured?: boolean;
   reserves?: ReserveInfo[];
 }) {
-  // 予備日だけの日（その日の予定が未登録）は、大会の予定へ
-  const href = activity.groups.length || !reserves.length ? `/activities/${activity.id}` : `/activities/${reserves[0].activityId}`;
+  // 予備日だけの日（その日の予定が未登録）は、その日の予定を新しく作る画面へ（大会しだいの予定を選べる）
+  const href = activity.groups.length || !reserves.length ? `/activities/${activity.id}` : `/activities/new?date=${activity.date}`;
   const when = whenLabel(activity.date);
   const month = Number(activity.date.slice(5, 7));
   const day = Number(activity.date.slice(8, 10));
@@ -218,9 +229,9 @@ export function ActivityCard({
         )}
       </div>
       <div className="acard__body">
-        {reserves.length > 0 && <ReserveBanner reserves={reserves} groups={activity.groups} />}
+        {reserves.length > 0 && <ReserveBanner reserves={reserves} activity={activity} />}
         {/* 予備日の日は、休み（練習なし など）の行は帯の「実施のとき」に出ているので重ねない */}
-        {activity.groups.filter((g) => !(reserves.length && isOffType(g.type))).map((g) => (
+        {activity.groups.filter((g) => !(reserves.length && (isOffType(g.type) || activity.reserveStatus === "postponed"))).map((g) => (
           <div key={g.division} className="acard__group">
             <div className="acard__head">
               {g.division !== "main" && <span className="acard__div">{divisionLabel(g.division)}</span>}
