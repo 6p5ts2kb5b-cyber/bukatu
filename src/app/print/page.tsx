@@ -19,6 +19,7 @@ import {
   isOffType,
   listRange,
   reserveTitle,
+  reservePrefix,
   ourOpponents,
   isRef,
   advanceView,
@@ -108,7 +109,7 @@ function printTitle(g: ActivityGroup): string {
   return typeLabel(g.type);
 }
 
-function GroupLines({ g, showDivision }: { g: ActivityGroup; showDivision: boolean }) {
+function GroupLines({ g, showDivision, prefix }: { g: ActivityGroup; showDivision: boolean; prefix?: string }) {
   // 勝ち上がり次第の日で「敗退」と決まったら、その日の予定（練習・休養日）だけを出す
   const av = advanceView(g);
   if (av.mode === "lose") {
@@ -196,6 +197,7 @@ function GroupLines({ g, showDivision }: { g: ActivityGroup; showDivision: boole
     <div className={`pl-g${quiet ? " pl-g--quiet" : ""}`}>
       <p className="pl-title">
         {showDivision && <span className="pl-div">{divisionLabel(g.division)}</span>}
+        {prefix && <span className="pl-prefix">{prefix}</span>}
         <b className={off ? "pl-rest" : undefined}>{printTitle(g)}</b>
         {tournamentTitle(g) && <span className="pl-tour">{tournamentTitle(g)}</span>}
       </p>
@@ -244,11 +246,11 @@ function PrintReserve({ reserves, a }: { reserves: ReserveInfo[]; a: Activity })
     <div className="pl-reserve">
       <p className="pl-reserve__title">☂ {reserveTitle(reserves)}</p>
       <p>
-        <b>延期のとき</b>
+        <b>大会が延期された場合</b>
         {reserves.map((x) => `${x.title}${x.venue ? `（${x.venue}）` : ""}`).join("・")}
       </p>
       <p>
-        <b>実施のとき</b>
+        <b>大会が実施された場合</b>
         <strong className="pl-rest">{heldPlanText(a.groups)}</strong>
       </p>
     </div>
@@ -497,14 +499,13 @@ export default function PrintPage() {
                         return a.reserveStatus === "held" || a.reserveStatus === "cancelled" || !isOffType(g.type);
                       })
                       .map((g) => (
-                        <GroupLines key={g.division} g={g} showDivision={showDivision(a, g)} />
+                        <GroupLines
+                          key={g.division}
+                          g={g}
+                          showDivision={showDivision(a, g)}
+                          prefix={reserves.has(a.date) ? reservePrefix(a.reserveStatus) : ""}
+                        />
                       ))}
-                    {(() => {
-                      const rs = reserves.get(a.date);
-                      if (!rs) return null;
-                      const v = reserveView(a.reserveStatus, rs, a.groups);
-                      return v.mode === "plan" ? <p className="pl-note">※{v.reason}</p> : null;
-                    })()}
                     {a.note && <p className="pl-note">※{a.note}</p>}
                   </td>
                   <Mark on={needs(a, "お弁当")} />

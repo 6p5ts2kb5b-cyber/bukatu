@@ -924,11 +924,11 @@ function AdvanceEditor({
 // 予備日の日：大会がどうなったかを選ぶと、この日の予定が1つに決まる
 const RESERVE_CHOICES: { status: ReserveStatus; rest?: boolean; title: string; sub: string }[] = [
   { status: "", title: "確認中", sub: "まだ分からない" },
-  { status: "postponed", title: "延期", sub: "→ この日に大会" },
-  { status: "held", rest: true, title: "実施される", sub: "→ 休養日" },
-  { status: "held", rest: false, title: "実施される", sub: "→ 練習" },
-  { status: "cancelled", rest: true, title: "実施されない", sub: "→ 休養日" },
-  { status: "cancelled", rest: false, title: "実施されない", sub: "→ 練習" },
+  { status: "postponed", title: "大会が延期された場合", sub: "→ この日に大会" },
+  { status: "held", rest: true, title: "大会が実施された場合", sub: "→ 休養日" },
+  { status: "held", rest: false, title: "大会が実施された場合", sub: "→ 練習" },
+  { status: "cancelled", rest: true, title: "大会が実施されなかった場合", sub: "→ 休養日" },
+  { status: "cancelled", rest: false, title: "大会が実施されなかった場合", sub: "→ 練習" },
 ];
 
 function ReserveChooser({

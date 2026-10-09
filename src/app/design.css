@@ -2384,6 +2384,31 @@ td.pl-mark {
   row-gap: 2px;
 }
 
+/* 「大会が実施された場合」のような前置き */
+.acard__typewrap {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 8px;
+}
+.acard__typewrap > * {
+  white-space: nowrap;
+}
+.acard__prefix {
+  font-family: var(--jp);
+  font-size: 14px;
+  font-weight: 800;
+  color: #1f4fa3;
+}
+.pl-prefix {
+  margin-right: 6px;
+  font-weight: 800;
+  color: #1f4fa3;
+}
+.pl-reserve b {
+  min-width: 10.5em;
+}
+
 /* 予備日・勝ち上がり次第で決まった予定の理由（小さく） */
 .acard__why {
   margin: 4px 0 0;

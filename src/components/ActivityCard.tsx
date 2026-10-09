@@ -15,6 +15,7 @@ import {
   formatDate,
   tournamentTitle,
   reserveTitle,
+  reservePrefix,
   advanceView,
   reserveView,
   heldPlanText,
@@ -168,7 +169,7 @@ function GroupDetails({ g }: { g: ActivityGroup }) {
 }
 
 // 区分ごとの1かたまり。勝ち上がり次第の日は、結果に合わせて出し方を変える
-function GroupBlock({ g }: { g: ActivityGroup }) {
+function GroupBlock({ g, prefix }: { g: ActivityGroup; prefix?: string }) {
   const av = advanceView(g);
   if (av.mode === "lose") {
     return (
@@ -193,7 +194,10 @@ function GroupBlock({ g }: { g: ActivityGroup }) {
     <div className="acard__group">
       <div className="acard__head">
         {g.division !== "main" && <span className="acard__div">{divisionLabel(g.division)}</span>}
-        <span className={`acard__type${isOffType(g.type) ? " acard__type--off" : ""}`}>{typeLabel(g.type)}</span>
+        <span className="acard__typewrap">
+          {prefix && <span className="acard__prefix">{prefix}</span>}
+          <span className={`acard__type${isOffType(g.type) ? " acard__type--off" : ""}`}>{typeLabel(g.type)}</span>
+        </span>
         {tournamentTitle(g) && <span className="acard__tournament">{tournamentTitle(g)}</span>}
       </div>
       {av.mode === "both" && (
@@ -239,14 +243,14 @@ function ReserveBanner({ reserves, activity }: { reserves: ReserveInfo[]; activi
         <span aria-hidden>☂</span> {reserveTitle(reserves)}
       </p>
       <p className="acard__reserve-row">
-        <span className="acard__if acard__if--rain">延期のとき</span>
+        <span className="acard__if acard__if--rain">大会が延期された場合</span>
         <span>
           {reserves.map((r) => r.title).join("・")}
           {reserves[0].venue && <small>（{reserves.map((r) => r.venue).filter(Boolean).join("・")}）</small>}
         </span>
       </p>
       <p className="acard__reserve-row">
-        <span className="acard__if">実施のとき</span>
+        <span className="acard__if">大会が実施された場合</span>
         <span>{heldPlanText(activity.groups)}</span>
       </p>
     </div>
@@ -307,13 +311,8 @@ export function ActivityCard({
             return activity.reserveStatus === "held" || activity.reserveStatus === "cancelled" || !isOffType(g.type);
           })
           .map((g) => (
-            <GroupBlock key={g.division} g={g} />
+            <GroupBlock key={g.division} g={g} prefix={reserves.length ? reservePrefix(activity.reserveStatus) : ""} />
           ))}
-        {(() => {
-          if (!reserves.length) return null;
-          const v = reserveView(activity.reserveStatus, reserves, activity.groups);
-          return v.mode === "plan" ? <p className="acard__why">※{v.reason}</p> : null;
-        })()}
       </div>
       {activity.note && <p className="acard__note">※{activity.note}</p>}
     </Link>

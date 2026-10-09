@@ -227,6 +227,11 @@ export type ReserveView =
   | { mode: "both" }
   | { mode: "plan" | "tournament"; head: string; rest: boolean; reason: string; venue?: string };
 
+// 決まった予定の前に付ける言葉（「大会が実施された場合」など）
+export function reservePrefix(status: ReserveStatus | undefined): string {
+  return status === "held" ? "大会が実施された場合" : status === "cancelled" ? "大会が実施されなかった場合" : "";
+}
+
 export function reserveView(status: ReserveStatus | undefined, reserves: ReserveInfo[], groups: ActivityGroup[]): ReserveView {
   const titles = reserves.map((r) => r.title).join("・");
   if (status === "postponed") {
