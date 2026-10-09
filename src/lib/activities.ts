@@ -6,6 +6,7 @@
 //   groups = その日の区分ごとの予定（連合チーム、または トップ／アカデミー）
 //            会場・試合・集合・移動・指導者・審判・持ち物は、後のSTEPでこの中に追加していきます。
 
+import { isHoliday } from "./holidays";
 import {
   addDoc,
   collection,
@@ -531,10 +532,10 @@ export async function listRange(from: string, to: string): Promise<Activity[]> {
   return snap.docs.map((d) => toActivity(d.id, d.data()));
 }
 
-// 土曜・日曜かどうか
+// 土曜・日曜・祝日かどうか（祝日も土日と同じく「練習」「練習なし」が基本）
 export function isWeekend(date: string): boolean {
   const w = parseDate(date).getDay();
-  return w === 0 || w === 6;
+  return w === 0 || w === 6 || isHoliday(date);
 }
 
 // 過去の活動（新しい順）

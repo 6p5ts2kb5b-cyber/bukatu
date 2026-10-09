@@ -3,6 +3,7 @@
 // 活動予定の一覧画面です。上の月のボタンで、1か月ずつ表示します。
 
 import Link from "next/link";
+import { holidayName } from "@/lib/holidays";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityCard } from "@/components/ActivityCard";
 import { ErrorText, Loading, PageHead } from "@/components/ui";
@@ -23,7 +24,8 @@ function BlankCard({ date }: { date: string }) {
     <Link href={`/activities/new?date=${date}`} className="blank-card">
       <span className="blank-card__date">
         <b>{Number(date.slice(8))}</b>
-        <span className={wd === "土" ? "pl-sat" : wd === "日" ? "pl-sun" : undefined}>{wd}</span>
+        <span className={wd === "日" || holidayName(date) ? "pl-sun" : wd === "土" ? "pl-sat" : undefined}>{wd}</span>
+        {holidayName(date) && <small className="blank-card__holiday">{holidayName(date)}</small>}
       </span>
       <span className="blank-card__text">まだ予定が入っていません</span>
       <span className="blank-card__add">＋ 入れる</span>

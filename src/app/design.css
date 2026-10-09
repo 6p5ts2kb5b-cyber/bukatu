@@ -1706,14 +1706,18 @@ textarea.f-input {
 }
 
 /* ───────── 保護者配布用の月間予定表（A4） ───────── */
+/* A4の1枚に収める：測った倍率（--fit）で全体を縮める。横幅はそのぶん広げて組む（幅は画面側で指定） */
+.pl-fit {
+  zoom: var(--fit, 1);
+}
 .pl {
   width: 100%;
-  margin-top: 10px;
+  margin-top: 4px;
   border-collapse: collapse;
   table-layout: fixed;
 }
 .pl th {
-  padding: 3px 6px;
+  padding: 2px 6px;
   border-bottom: 2px solid #000;
   font-size: 11px;
   font-weight: 800;
@@ -1726,11 +1730,11 @@ textarea.f-input {
 }
 .pl td {
   vertical-align: top;
-  padding: 5px 6px;
+  padding: 3px 6px;
   border-bottom: 1px solid #bdbdbd;
 }
 .pl-day {
-  width: 42px;
+  width: 40px;
 }
 td.pl-day {
   text-align: center;
@@ -1739,7 +1743,7 @@ td.pl-day {
 td.pl-day b {
   display: block;
   font-family: var(--num);
-  font-size: 19px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1;
 }
@@ -1756,14 +1760,14 @@ td.pl-day span {
   color: #c42b3b;
 }
 .pl-mark {
-  width: 50px;
+  width: 40px;
   white-space: nowrap;
   text-align: center;
   border-left: 1px solid #bdbdbd;
 }
 td.pl-mark {
   vertical-align: middle;
-  font-size: 17px;
+  font-size: 14px;
   font-weight: 800;
 }
 .pl td.pl-main {
@@ -1775,20 +1779,21 @@ td.pl-mark {
 }
 /* 部活なし・練習なしだけの日は低く、薄く */
 .pl-row--quiet td {
-  padding-top: 2px;
-  padding-bottom: 2px;
+  padding-top: 0;
+  padding-bottom: 0;
+  line-height: 1.25;
 }
 .pl-row--quiet td.pl-day b {
   display: inline;
-  font-size: 15px;
+  font-size: 13px;
 }
 .pl-row--quiet td.pl-day span {
   display: inline;
   margin-left: 3px;
 }
 .pl-g + .pl-g {
-  margin-top: 4px;
-  padding-top: 4px;
+  margin-top: 2px;
+  padding-top: 2px;
   border-top: 1px dashed #c8c8c8;
 }
 .pl-title {
@@ -1814,7 +1819,7 @@ td.pl-mark {
   font-weight: 800;
 }
 .pl-g--quiet .pl-title {
-  font-size: 11px;
+  font-size: 10.5px;
   color: #6b6b6b;
 }
 /* 休養日は太字で黒く、分かりやすく */
@@ -1845,6 +1850,44 @@ td.pl-mark {
   margin: 0;
   min-width: 0;
 }
+/* 項目を横に詰めて並べる（集合　時間　会場 …）。試合だけは1行を使う */
+.pl-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+  margin: 1px 0 0;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.pl-it {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
+.pl-it > i {
+  flex: none;
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 800;
+  color: #555;
+}
+.pl-it--full {
+  flex-basis: 100%;
+}
+.pl-it--full .pl-games {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0 12px;
+}
+.pl-holiday {
+  display: block;
+  font-size: 7.5px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #c42b3b;
+  word-break: break-all;
+}
 .pl-strong {
   font-weight: 800;
   font-size: 11.5px;
@@ -1861,8 +1904,7 @@ td.pl-mark {
 }
 .pl-game b {
   display: inline-block;
-  min-width: 3.2em;
-  margin-right: 5px;
+  margin-right: 4px;
   font-family: var(--num);
   font-size: 12px;
 }
@@ -2191,13 +2233,13 @@ td.pl-mark {
 
 /* 印刷：大会の予備日 */
 .pl-reserve {
-  margin-bottom: 4px;
-  padding: 3px 6px;
+  margin-bottom: 2px;
+  padding: 1px 5px;
   border: 1px solid #9db8e6;
   border-radius: 4px;
   background: #eef3fb;
-  font-size: 10.5px;
-  line-height: 1.4;
+  font-size: 10px;
+  line-height: 1.3;
 }
 .pl-reserve p {
   margin: 0;
@@ -2407,6 +2449,7 @@ td.pl-mark {
 }
 .pl-reserve b {
   min-width: 10.5em;
+  margin-right: 6px;
 }
 
 /* 予定が入っていない日（「未定」と載せる。PDFにも同じく出る） */
@@ -2444,6 +2487,30 @@ td.pl-mark {
   font-size: 14px;
   font-weight: 800;
   color: #7a4a00;
+}
+
+/* 祝日の名前 */
+.acard__holiday {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #c42b3b;
+  text-align: center;
+  line-height: 1.2;
+}
+.blank-card__holiday,
+.qk__holiday {
+  font-size: 10px;
+  font-weight: 800;
+  color: #c42b3b;
+}
+.qk__date:has(.qk__holiday) {
+  flex-wrap: wrap;
+}
+.qk__holiday {
+  flex-basis: 100%;
+  text-align: center;
 }
 
 /* 予定の一覧：月の切りかえ */

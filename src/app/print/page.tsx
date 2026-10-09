@@ -5,10 +5,11 @@
 // 区分は1つずつ付け外しもできます。
 // 審判・グラウンド候補・スタッフの内部メモなど、運営の情報は載せません。
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { holidayName, isHoliday } from "@/lib/holidays";
 import { PaperPreview } from "@/components/PaperPreview";
-import { Choices, ErrorText, Field, PageHead, Toast, ToggleButton } from "@/components/ui";
+import { Choices, cssVars, ErrorText, Field, PageHead, Toast, ToggleButton } from "@/components/ui";
 import { elementToPdf, shareOrDownload } from "@/lib/sharePdf";
 import {
   DIVISIONS,
@@ -140,7 +141,7 @@ function GroupLines({ g, showDivision, prefix }: { g: ActivityGroup; showDivisio
     ? g.games.filter((x) => x.opponent || x.home || gameStart(x))
     : [];
 
-  const rows: { k: string; v: ReactNode; strong?: boolean }[] = [];
+  const rows: { k: string; v: ReactNode; strong?: boolean; full?: boolean }[] = [];
   if (!quiet) {
     if (g.meetTime || g.meetPlace)
       rows.push({ k: "集合", v: [clock(g.meetTime), g.meetPlace].filter(Boolean).join("　"), strong: true });
@@ -160,6 +161,7 @@ function GroupLines({ g, showDivision, prefix }: { g: ActivityGroup; showDivisio
     if (games.length)
       rows.push({
         k: "試合",
+        full: true,
         v: (
           <span className="pl-games">
             {games.map((x, i) => (
@@ -185,8 +187,7 @@ function GroupLines({ g, showDivision, prefix }: { g: ActivityGroup; showDivisio
             {g.reserveVenue && `　${g.reserveVenue}`}
             {g.reserveDate2 && (
               <>
-                <br />
-                予備日の予備日 {md(g.reserveDate2)}
+                {"　／　"}予備日の予備日 {md(g.reserveDate2)}
                 {g.reserveVenue2 && `　${g.reserveVenue2}`}
               </>
             )}
@@ -216,15 +217,16 @@ function GroupLines({ g, showDivision, prefix }: { g: ActivityGroup; showDivisio
           </p>
         </div>
       )}
+      {/* 項目は横に詰めて並べる（1枚に収めるため）。試合だけは1行を使う */}
       {rows.length > 0 && (
-        <dl className="pl-dl">
+        <div className="pl-items">
           {rows.map((r) => (
-            <Fragment key={r.k}>
-              <dt>{r.k}</dt>
-              <dd className={r.strong ? "pl-strong" : undefined}>{r.v}</dd>
-            </Fragment>
+            <span key={r.k} className={`pl-it${r.full ? " pl-it--full" : ""}${r.strong ? " pl-strong" : ""}`}>
+              <i>{r.k}</i>
+              <span>{r.v}</span>
+            </span>
           ))}
-        </dl>
+        </div>
       )}
       {g.note && <p className="pl-note">※{g.note}</p>}
     </div>
@@ -273,6 +275,10 @@ export default function PrintPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const sheet = useRef<HTMLElement>(null);
+  // A4の1枚に収める：中身の高さを測って、はみ出す分だけ全体を縮める
+  const fitBox = useRef<HTMLDivElement>(null);
+  const [fitOne, setFitOne] = useState(true);
+  const [fit, setFit] = useState(1);
   // PDF：作る → 送る（スマホは「共有」からLINE・メールを選ぶ）
   const [pdf, setPdf] = useState<File | null>(null);
   const [making, setMaking] = useState(false);
@@ -367,11 +373,40 @@ export default function PrintPage() {
           : `${m}月`;
   const title = `${heading} ${y}年${period}の活動予定`;
 
+  useLayoutEffect(() => {
+    const box = fitBox.current;
+    if (!box) return;
+    // 印刷できる範囲：A4（794×1123px）から上下左右4mm（約15px）を引いた大きさ
+    const W = 764;
+    const H = 1090;
+    const host = document.createElement("div");
+    host.style.cssText = "position:fixed;left:-30000px;top:0;visibility:hidden;";
+    const clone = box.cloneNode(true) as HTMLElement;
+    clone.style.setProperty("--fit", "1");
+    clone.className = `${box.className} ${box.parentElement?.className ?? ""}`;
+    clone.style.padding = "0";
+    host.appendChild(clone);
+    document.body.appendChild(host);
+    let f = 1;
+    for (let i = 0; i < 4; i++) {
+      clone.style.width = `${W / f}px`;
+      const h = clone.offsetHeight;
+      const next = Math.min(1, (H / h) * 0.98);
+      if (Math.abs(next - f) < 0.005) {
+        f = next;
+        break;
+      }
+      f = next;
+    }
+    host.remove();
+    setFit(Math.max(0.45, Math.round(f * 1000) / 1000));
+  }, [rows, message, heading, period, divisions]);
+
   // 内容が変わったら、作ったPDFは作り直す
   useEffect(() => {
     setPdf(null);
     setDownloaded(false);
-  }, [divisions, month, half, message, activities, hidePast]);
+  }, [divisions, month, half, message, activities, hidePast, fitOne, fit]);
 
   const send = async (file: File) => {
     try {
@@ -390,7 +425,11 @@ export default function PrintPage() {
     if (pdf) return send(pdf);
     setMaking(true);
     try {
-      const file = await elementToPdf(sheet.current, `${title.replace(/\s+/g, "_")}.pdf`);
+      const file = await elementToPdf(
+        sheet.current,
+        `${title.replace(/\s+/g, "_")}.pdf`,
+        fitOne ? { onePage: true, width: Math.round(794 / fit) } : {},
+      );
       setPdf(file);
       await send(file);
     } catch {
@@ -462,6 +501,10 @@ export default function PrintPage() {
             </span>
           </div>
           <label className="flex items-center gap-2 text-sm font-bold">
+            <input type="checkbox" checked={fitOne} onChange={(e) => setFitOne(e.target.checked)} />
+            A4の1枚に収める{fitOne && fit < 1 ? `（${Math.round(fit * 100)}%に縮小）` : ""}
+          </label>
+          <label className="flex items-center gap-2 text-sm font-bold">
             <input type="checkbox" checked={hidePast} onChange={(e) => setHidePast(e.target.checked)} />
             過ぎた日は載せない（今日{`${Number(today.slice(5, 7))}/${Number(today.slice(8))}`}から）
           </label>
@@ -495,12 +538,17 @@ export default function PrintPage() {
 
       {/* ---- 印刷される部分 ---- */}
       <PaperPreview>
-      <article ref={sheet} className="px-[14px] py-[14px] text-[12px] leading-snug text-black print:p-0 print:text-[10.5pt]">
-        <header className="border-b-2 border-black pb-2">
-          <h2 className="text-[19px] font-extrabold print:text-[15pt]">
+      <article ref={sheet} className="px-[14px] py-[14px] text-[12px] leading-snug text-black print:p-0">
+        <div
+          ref={fitBox}
+          className="pl-fit"
+          style={cssVars(fitOne && fit < 1 ? { "--fit": fit, width: `${Math.floor(764 / fit)}px` } : { "--fit": 1 })}
+        >
+        <header className="border-b-2 border-black pb-1">
+          <h2 className="text-[17px] font-extrabold leading-tight">
             {heading}　{y}年{period}の活動予定
           </h2>
-          {!heading.startsWith("桜・浅羽野・住吉") && <p className="text-[12px] print:text-[9pt]">桜・浅羽野・住吉 連合チーム</p>}
+          {!heading.startsWith("桜・浅羽野・住吉") && <p className="text-[11px]">桜・浅羽野・住吉 連合チーム</p>}
         </header>
 
         {!activities && !error && <p className="py-6 text-center">読み込み中…</p>}
@@ -523,7 +571,7 @@ export default function PrintPage() {
             {rows.map((a) => {
               const d = Number(a.date.slice(8));
               const wd = weekday(a.date);
-              const weekend = wd === "土" || wd === "日";
+              const weekend = wd === "土" || wd === "日" || isHoliday(a.date);
               const quiet =
                 a.groups.every((g) => isOffType(g.type) || (g.type === "部活あり" && !g.returnToSchool)) &&
                 !a.note &&
@@ -535,7 +583,8 @@ export default function PrintPage() {
                 >
                   <td className="pl-day">
                     <b>{d}</b>
-                    <span className={wd === "土" ? "pl-sat" : wd === "日" ? "pl-sun" : undefined}>{wd}</span>
+                    <span className={wd === "日" || holidayName(a.date) ? "pl-sun" : wd === "土" ? "pl-sat" : undefined}>{wd}</span>
+                    {holidayName(a.date) && <small className="pl-holiday">{holidayName(a.date)}</small>}
                   </td>
                   <td className="pl-main">
                     {a.id.startsWith("blank-") && <span className="pl-blank">未定</span>}
@@ -567,7 +616,8 @@ export default function PrintPage() {
           </tbody>
         </table>
 
-        {message && <p className="mt-4 whitespace-pre-wrap border-t border-black/30 pt-2">{message}</p>}
+        {message && <p className="mt-2 whitespace-pre-wrap border-t border-black/30 pt-1">{message}</p>}
+        </div>
       </article>
       </PaperPreview>
 

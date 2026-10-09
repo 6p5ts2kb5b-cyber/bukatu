@@ -5,6 +5,7 @@
 // 練習試合などが入っている日は、そのまま残します（ここでは変えません）。
 
 import Link from "next/link";
+import { holidayName } from "@/lib/holidays";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Choices, ErrorText, Loading, PageHead, Toast, ToggleButton } from "@/components/ui";
 import {
@@ -233,10 +234,11 @@ export default function BulkPage() {
               const wd = weekday(d);
               const edited = d in marks && marks[d] !== cur.mark;
               return (
-                <li key={d} className={`qk__row${wd === "土" || wd === "日" ? " qk__row--we" : ""}${edited ? " qk__row--edited" : ""}`}>
+                <li key={d} className={`qk__row${wd === "土" || wd === "日" || holidayName(d) ? " qk__row--we" : ""}${edited ? " qk__row--edited" : ""}`}>
                   <span className="qk__date">
                     <b>{Number(d.slice(8))}</b>
-                    <span className={wd === "土" ? "pl-sat" : wd === "日" ? "pl-sun" : undefined}>{wd}</span>
+                    <span className={wd === "日" || holidayName(d) ? "pl-sun" : wd === "土" ? "pl-sat" : undefined}>{wd}</span>
+                    {holidayName(d) && <span className="qk__holiday">{holidayName(d)}</span>}
                     {isBlankDay(d) && !(d in marks) && <span className="qk__blank">未入力</span>}
                   </span>
                   {cur.other ? (

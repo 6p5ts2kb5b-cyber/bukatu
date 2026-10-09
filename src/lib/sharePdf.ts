@@ -131,12 +131,19 @@ export function toJpeg(c: HTMLCanvasElement): Promise<JpegPage> {
 export async function elementToPdf(
   source: HTMLElement,
   filename: string,
-  opts: { onePage?: boolean } = {},
+  opts: { onePage?: boolean; width?: number } = {},
 ): Promise<File> {
   const html2canvas = await loadHtml2Canvas();
+  // width：横幅を広げて組んでから縮める（1枚に収めるとき、文字の折り返しを印刷と同じにする）
+  const W = opts.onePage && opts.width ? opts.width : PAGE_W;
   const host = document.createElement("div");
-  host.style.cssText = `position:fixed;left:-20000px;top:0;width:${PAGE_W}px;background:#fff;`;
+  host.style.cssText = `position:fixed;left:-20000px;top:0;width:${W}px;background:#fff;`;
   const clone = source.cloneNode(true) as HTMLElement;
+  // 画面用の縮小（zoom）は使わず、組んだ絵をあとで縮める
+  clone.querySelectorAll<HTMLElement>(".pl-fit").forEach((el) => {
+    el.style.setProperty("--fit", "1");
+    el.style.removeProperty("width");
+  });
   // PDFは余白なし：画面の見本の外側の余白を詰める
   clone.style.padding = "6px";
   host.appendChild(clone);
@@ -169,20 +176,20 @@ export async function elementToPdf(
     }
 
     const scale = 2;
-    const full = await html2canvas(clone, { scale, backgroundColor: "#ffffff", logging: false, windowWidth: PAGE_W });
-    const s = full.width / PAGE_W;
+    const full = await html2canvas(clone, { scale, backgroundColor: "#ffffff", logging: false, windowWidth: W });
+    const s = full.width / W;
     const pages: JpegPage[] = [];
     for (let i = 0; i < slices.length; i++) {
       const [a, b] = slices[i];
       const pad = i === 0 ? 0 : MARGIN;
       const c = document.createElement("canvas");
       c.width = full.width;
-      c.height = Math.round(PAGE_H * s);
+      c.height = Math.round((full.width * PAGE_H) / PAGE_W);
       const ctx = c.getContext("2d")!;
       ctx.fillStyle = "#fff";
       ctx.fillRect(0, 0, c.width, c.height);
       // 1枚に収めるとき、A4より長ければ縮める（横は中央に寄せる）
-      const fit = opts.onePage && b - a > PAGE_H ? PAGE_H / (b - a) : 1;
+      const fit = opts.onePage ? Math.min(1, c.height / ((b - a) * s)) : 1;
       const dw = Math.round(full.width * fit);
       ctx.drawImage(
         full,

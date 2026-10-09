@@ -6,6 +6,7 @@
 // 見た目は design.css の .acard で決めています。
 
 import Link from "next/link";
+import { holidayName } from "@/lib/holidays";
 import type { ReactNode } from "react";
 import {
   divisionLabel,
@@ -273,7 +274,8 @@ export function ActivityCard({
   const month = Number(activity.date.slice(5, 7));
   const day = Number(activity.date.slice(8, 10));
   const wd = weekday(activity.date);
-  const wdClass = wd === "土" ? "acard__wd--sat" : wd === "日" ? "acard__wd--sun" : "";
+  const holiday = holidayName(activity.date);
+  const wdClass = wd === "日" || holiday ? "acard__wd--sun" : wd === "土" ? "acard__wd--sat" : "";
 
   return (
     <Link
@@ -289,6 +291,7 @@ export function ActivityCard({
             <span className="acard__slash">/</span>
             <span className="tile acard__day">{day}</span>
             <span className={`acard__wd ${wdClass}`}>（{wd}）</span>
+            {holiday && <span className="acard__holiday">{holiday}</span>}
           </>
         ) : (
           <>
@@ -298,6 +301,7 @@ export function ActivityCard({
             </span>
             <span className="tile acard__day">{day}</span>
             <span className={`acard__wd ${wdClass}`}>{wd}</span>
+            {holiday && <span className="acard__holiday">{holiday}</span>}
           </>
         )}
       </div>
