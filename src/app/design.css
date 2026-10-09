@@ -1855,6 +1855,16 @@ td.pl-mark {
   margin: 0;
   min-width: 0;
 }
+/* 合同チーム：予定のない平日をまとめた行 */
+.pl-row--wk td.pl-day b {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.pl-wk {
+  font-size: 10px;
+  font-weight: 700;
+  color: #777;
+}
 /* 項目を横に詰めて並べる（集合　時間　会場 …）。試合だけは1行を使う */
 .pl-items {
   display: flex;

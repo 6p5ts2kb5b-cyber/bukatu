@@ -43,6 +43,12 @@ export const DIVISIONS: { key: DivisionKey; label: string }[] = [
   { key: "asabano_sumiyoshi", label: "浅羽野・住吉" },
 ];
 
+// 平日に練習がある区分（それ以外の合同チームなどは、平日は基本なし。たまに合同練習）
+export const WEEKDAY_DIVISIONS: DivisionKey[] = ["sumiyoshi"];
+export function hasWeekdayPractice(key: DivisionKey): boolean {
+  return WEEKDAY_DIVISIONS.includes(key);
+}
+
 export function divisionLabel(key: DivisionKey): string {
   return DIVISIONS.find((d) => d.key === key)?.label ?? key;
 }

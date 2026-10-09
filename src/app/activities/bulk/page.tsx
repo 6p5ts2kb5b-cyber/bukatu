@@ -13,6 +13,8 @@ import {
   deleteActivity,
   DIVISIONS,
   listRange,
+  hasWeekdayPractice,
+  isWeekend,
   newGroup,
   saveActivity,
   weekday,
@@ -45,17 +47,19 @@ export default function BulkPage() {
     const mo = q.get("month");
     if (mo && /^\d{4}-\d{2}$/.test(mo)) setMonth(mo);
     if (q.get("blank")) setWithWeekend(true);
+    const dv = q.get("division");
+    if (dv && DIVISIONS.some((d) => d.key === dv)) setDivision(dv as DivisionKey);
   }, []);
 
   const [y, m] = month.split("-").map(Number);
   const last = new Date(y, m, 0).getDate();
   const days = useMemo(
     () =>
-      Array.from({ length: last }, (_, i) => `${month}-${String(i + 1).padStart(2, "0")}`).filter((d) => {
-        const w = weekday(d);
-        return withWeekend || (w !== "土" && w !== "日");
-      }),
-    [month, last, withWeekend],
+      Array.from({ length: last }, (_, i) => `${month}-${String(i + 1).padStart(2, "0")}`).filter((d) =>
+        // 平日に練習がある区分（住吉のみ）は平日を、合同チームなどは土日・祝日を並べる。チェックでもう一方も出す
+        hasWeekdayPractice(division) ? withWeekend || !isWeekend(d) : withWeekend || isWeekend(d),
+      ),
+    [month, last, withWeekend, division],
   );
 
   const load = () => {
@@ -75,11 +79,11 @@ export default function BulkPage() {
     const g = a?.groups.find((x) => x.division === division);
     if (!g) {
       // ほかの区分で練習試合などが入っている日は、ここでは触らない
-      const busy = a?.groups.find((x) => x.type !== "部活あり" && x.type !== "部活なし");
+      const busy = a?.groups.find((x) => x.type !== "部活あり" && x.type !== "部活なし" && x.type !== "練習なし");
       return busy ? { mark: "", other: busy.type } : { mark: "" };
     }
     if (g.type === "部活あり") return { mark: "あり" };
-    if (g.type === "部活なし") return { mark: "なし" };
+    if (g.type === "部活なし" || g.type === "練習なし") return { mark: "なし" };
     return { mark: "", other: g.type }; // 練習試合など → ここでは変えない
   };
   const shown = (date: string): Mark => (date in marks ? marks[date] : current(date).mark);
@@ -112,7 +116,8 @@ export default function BulkPage() {
       for (const date of changed) {
         const mk = marks[date];
         const a = acts.find((x) => x.date === date);
-        const type = mk === "あり" ? "部活あり" : "部活なし";
+        // 土日・祝日は「練習」「練習なし」、平日は「部活あり」「部活なし」
+        const type = isWeekend(date) ? (mk === "あり" ? "練習" : "練習なし") : mk === "あり" ? "部活あり" : "部活なし";
         if (!a) {
           if (mk) await createActivity({ date, note: "", groups: [{ ...newGroup(division, date), type }] });
           continue;
@@ -181,6 +186,7 @@ export default function BulkPage() {
                   if (changed.length && !confirm("保存していない入力があります。区分を変えますか？")) return;
                   setMarks({});
                   setDivision(d.key);
+                  setWithWeekend(false);
                 }}
               >
                 {d.label}
@@ -190,7 +196,7 @@ export default function BulkPage() {
         </div>
         <label className="flex items-center gap-2 text-sm font-bold">
           <input type="checkbox" checked={withWeekend} onChange={(e) => setWithWeekend(e.target.checked)} />
-          土日も表示する
+          {hasWeekdayPractice(division) ? "土日・祝日も表示する" : "平日も表示する（たまの平日合同練習など）"}
         </label>
         {acts && blankDays.length > 0 && (
           <div className="blank-warn">

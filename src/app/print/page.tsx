@@ -21,6 +21,8 @@ import {
   isOffType,
   listRange,
   reserveTitle,
+  hasWeekdayPractice,
+  isWeekend,
   todayString,
   reservePrefix,
   reserveSubject,
@@ -352,7 +354,22 @@ export default function PrintPage() {
         if (!out.some((a) => a.date === date)) out.push({ id: `blank-${date}`, date, note: "", groups: [] });
       }
     }
-    return out.sort((x, y) => (x.date < y.date ? -1 : x.date > y.date ? 1 : 0));
+    out.sort((x, y) => (x.date < y.date ? -1 : x.date > y.date ? 1 : 0));
+    // 平日に練習がない区分だけのとき（合同チームなど）：予定のない平日は「未定」にせず、続く日を1行にまとめる
+    if (!divisions.some(hasWeekdayPractice)) {
+      const merged: Activity[] = [];
+      for (const a of out) {
+        const quietWeekday = a.id.startsWith("blank-") && !isWeekend(a.date);
+        const prev = merged[merged.length - 1];
+        if (quietWeekday && prev?.id.startsWith("wk-")) {
+          prev.id = `wk-${prev.id.split("|")[0].slice(3)}|${a.date}`;
+          continue;
+        }
+        merged.push(quietWeekday ? { ...a, id: `wk-${a.date}|${a.date}` } : a);
+      }
+      return merged;
+    }
+    return out;
   }, [activities, divisions, half, reserves, month, hidePast, today]);
 
   const blanks = rows.filter((a) => a.id.startsWith("blank-"));
@@ -574,6 +591,25 @@ export default function PrintPage() {
           </thead>
           <tbody>
             {rows.map((a) => {
+              if (a.id.startsWith("wk-")) {
+                const [f, t] = a.id.slice(3).split("|");
+                const fd = Number(f.slice(8));
+                const td = Number(t.slice(8));
+                return (
+                  <tr key={a.id} className="pl-row pl-row--quiet pl-row--wk">
+                    <td className="pl-day">
+                      <b>{fd === td ? fd : `${fd}〜${td}`}</b>
+                      {fd === td && <span>{weekday(f)}</span>}
+                    </td>
+                    <td className="pl-main">
+                      <span className="pl-wk">{fd === td ? "" : "平日　"}合同練習なし（各校の部活）</span>
+                    </td>
+                    {HIGHLIGHT.map((h) => (
+                      <Mark key={h} on={false} />
+                    ))}
+                  </tr>
+                );
+              }
               const d = Number(a.date.slice(8));
               const wd = weekday(a.date);
               const weekend = wd === "土" || wd === "日" || isHoliday(a.date);
@@ -592,7 +628,10 @@ export default function PrintPage() {
                     {holidayName(a.date) && <small className="pl-holiday">{holidayName(a.date)}</small>}
                   </td>
                   <td className="pl-main">
-                    {a.id.startsWith("blank-") && <span className="pl-blank">未定</span>}
+                    {(a.id.startsWith("blank-") ||
+                      (a.groups.length === 0 && (a.reserveStatus === "held" || a.reserveStatus === "cancelled"))) && (
+                      <span className="pl-blank">未定</span>
+                    )}
                     {reserves.get(a.date) && a.reserveStatus !== "held" && a.reserveStatus !== "cancelled" && (
                       <PrintReserve reserves={reserves.get(a.date)!} a={a} />
                     )}
