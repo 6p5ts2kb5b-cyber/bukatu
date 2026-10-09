@@ -967,7 +967,7 @@ export function ActivityEditor({
                 const groups =
                   rest === undefined
                     ? a.groups
-                    : a.groups.map((g) =>
+                    : a.groups.map((g): ActivityGroup =>
                         g.division === current.division
                           ? { ...g, type: rest ? (isWeekendDate(a.date) ? "練習なし" : "部活なし") : "練習" }
                           : g,
