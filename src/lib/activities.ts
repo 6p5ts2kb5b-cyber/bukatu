@@ -156,7 +156,21 @@ export function tournamentTitle(g: Pick<ActivityGroup, "tournamentName" | "stage
 //   ・大会が延期になったら → 大会（予備日）
 //   ・大会が実施されたら   → その日の予定（休み・練習など）
 // になる。予備日の日に、どちらになるかを分かるように出す。
-export type ReserveInfo = { activityId: string; date: string; title: string; venue: string; second?: boolean };
+export type ReserveInfo = {
+  activityId: string;
+  date: string;
+  title: string; // 「JJBF 準決・決勝」
+  name: string; // 「JJBF大会」（大会名。「大会」「杯」などで終わらなければ「大会」を付ける）
+  venue: string;
+  second?: boolean; // 予備日の予備日
+};
+
+// 「JJBF」→「JJBF大会」、「STORM杯」「秋季新人大会」はそのまま
+export function tournamentName(g: Pick<ActivityGroup, "tournamentName" | "type">): string {
+  const n = g.tournamentName.trim();
+  if (!n) return g.type === "公式戦" ? "公式戦" : "大会";
+  return /(大会|杯|戦|リーグ|カップ|選手権|予選|本戦)$/.test(n) ? n : `${n}大会`;
+}
 
 export function reservesByDate(list: Activity[]): Map<string, ReserveInfo[]> {
   const map = new Map<string, ReserveInfo[]>();
@@ -167,6 +181,7 @@ export function reservesByDate(list: Activity[]): Map<string, ReserveInfo[]> {
         activityId: a.id,
         date: a.date,
         title: tournamentTitle(g) || g.type,
+        name: tournamentName(g),
         venue: g.reserveVenue || g.venue,
       };
       map.set(g.reserveDate, [...(map.get(g.reserveDate) ?? []), info]);
@@ -227,16 +242,30 @@ export type ReserveView =
   | { mode: "both" }
   | { mode: "plan" | "tournament"; head: string; rest: boolean; reason: string; venue?: string };
 
-// 決まった予定の前に付ける言葉（「大会が実施された場合」など）
-export function reservePrefix(status: ReserveStatus | undefined): string {
-  return status === "held" ? "大会が実施された場合" : status === "cancelled" ? "大会が実施されなかった場合" : "";
+// 予備日のもとの大会の名前（「JJBF大会」など）。予定に入っている大会名から読み取る
+export function reserveSubject(rs: ReserveInfo[]): string {
+  const names = [...new Set(rs.map((r) => r.name || "大会"))];
+  return names.join("・") || "大会";
+}
+
+// 決まった予定の前に付ける言葉（「JJBF大会が実施された場合」など）
+export function reservePrefix(status: ReserveStatus | undefined, rs: ReserveInfo[]): string {
+  const who = reserveSubject(rs);
+  return status === "held" ? `${who}が実施された場合` : status === "cancelled" ? `${who}が実施されなかった場合` : "";
 }
 
 export function reserveView(status: ReserveStatus | undefined, reserves: ReserveInfo[], groups: ActivityGroup[]): ReserveView {
   const titles = reserves.map((r) => r.title).join("・");
   if (status === "postponed") {
     const venue = reserves.map((r) => r.venue).filter(Boolean).join("・");
-    return { mode: "tournament", head: titles, rest: false, venue, reason: `${titles}が延期になったため、この日に大会を行います。` };
+    const kind = reserves.some((r) => r.second) ? "予備日の予備日" : "予備日";
+    return {
+      mode: "tournament",
+      head: `${titles}（${kind}）`,
+      rest: false,
+      venue,
+      reason: `${reserveSubject(reserves)}が延期になったため、この日に行います。`,
+    };
   }
   if (status === "held" || status === "cancelled") {
     const plan = heldPlanText(groups);

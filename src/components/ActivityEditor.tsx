@@ -28,6 +28,7 @@ import {
   isWeekend as isWeekendDate,
   listRange,
   reserveTitle,
+  reserveSubject,
   losePlanText,
   advanceDayText,
   formatDate,
@@ -924,11 +925,11 @@ function AdvanceEditor({
 // 予備日の日：大会がどうなったかを選ぶと、この日の予定が1つに決まる
 const RESERVE_CHOICES: { status: ReserveStatus; rest?: boolean; title: string; sub: string }[] = [
   { status: "", title: "確認中", sub: "まだ分からない" },
-  { status: "postponed", title: "大会が延期された場合", sub: "→ この日に大会" },
-  { status: "held", rest: true, title: "大会が実施された場合", sub: "→ 休養日" },
-  { status: "held", rest: false, title: "大会が実施された場合", sub: "→ 練習" },
-  { status: "cancelled", rest: true, title: "大会が実施されなかった場合", sub: "→ 休養日" },
-  { status: "cancelled", rest: false, title: "大会が実施されなかった場合", sub: "→ 練習" },
+  { status: "postponed", title: "{who}が延期された場合", sub: "→ この日に{what}" },
+  { status: "held", rest: true, title: "{who}が実施された場合", sub: "→ 休養日" },
+  { status: "held", rest: false, title: "{who}が実施された場合", sub: "→ 練習" },
+  { status: "cancelled", rest: true, title: "{who}が実施されなかった場合", sub: "→ 休養日" },
+  { status: "cancelled", rest: false, title: "{who}が実施されなかった場合", sub: "→ 練習" },
 ];
 
 function ReserveChooser({
@@ -946,6 +947,10 @@ function ReserveChooser({
 }) {
   const view = reserveView(status, reserves, groups);
   const titles = reserves.map((r) => r.title).join("・");
+  // ボタンの「{who}」を、予定から読み取った大会名にする
+  const who = reserveSubject(reserves);
+  const what = `${who}（${reserves.some((r) => r.second) ? "予備日の予備日" : "予備日"}）`;
+  const fill = (t: string) => t.replace("{who}", who).replace("{what}", what);
   return (
     <div className="reserve-note">
       <p className="reserve-note__title">☂ この日は {reserveTitle(reserves)} です</p>
@@ -961,8 +966,8 @@ function ReserveChooser({
               aria-pressed={on}
               onClick={() => onChoose(c.status, c.rest)}
             >
-              <b>{c.title}</b>
-              <small>{c.sub}</small>
+              <b>{fill(c.title)}</b>
+              <small>{fill(c.sub)}</small>
             </button>
           );
         })}

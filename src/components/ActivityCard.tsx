@@ -16,6 +16,7 @@ import {
   tournamentTitle,
   reserveTitle,
   reservePrefix,
+  reserveSubject,
   advanceView,
   reserveView,
   heldPlanText,
@@ -243,14 +244,14 @@ function ReserveBanner({ reserves, activity }: { reserves: ReserveInfo[]; activi
         <span aria-hidden>☂</span> {reserveTitle(reserves)}
       </p>
       <p className="acard__reserve-row">
-        <span className="acard__if acard__if--rain">大会が延期された場合</span>
+        <span className="acard__if acard__if--rain">{reserveSubject(reserves)}が延期された場合</span>
         <span>
           {reserves.map((r) => r.title).join("・")}
           {reserves[0].venue && <small>（{reserves.map((r) => r.venue).filter(Boolean).join("・")}）</small>}
         </span>
       </p>
       <p className="acard__reserve-row">
-        <span className="acard__if">大会が実施された場合</span>
+        <span className="acard__if">{reserveSubject(reserves)}が実施された場合</span>
         <span>{heldPlanText(activity.groups)}</span>
       </p>
     </div>
@@ -311,7 +312,7 @@ export function ActivityCard({
             return activity.reserveStatus === "held" || activity.reserveStatus === "cancelled" || !isOffType(g.type);
           })
           .map((g) => (
-            <GroupBlock key={g.division} g={g} prefix={reserves.length ? reservePrefix(activity.reserveStatus) : ""} />
+            <GroupBlock key={g.division} g={g} prefix={reserves.length ? reservePrefix(activity.reserveStatus, reserves) : ""} />
           ))}
       </div>
       {activity.note && <p className="acard__note">※{activity.note}</p>}

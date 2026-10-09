@@ -20,6 +20,7 @@ import {
   listRange,
   reserveTitle,
   reservePrefix,
+  reserveSubject,
   ourOpponents,
   isRef,
   advanceView,
@@ -246,11 +247,11 @@ function PrintReserve({ reserves, a }: { reserves: ReserveInfo[]; a: Activity })
     <div className="pl-reserve">
       <p className="pl-reserve__title">☂ {reserveTitle(reserves)}</p>
       <p>
-        <b>大会が延期された場合</b>
+        <b>{reserveSubject(reserves)}が延期された場合</b>
         {reserves.map((x) => `${x.title}${x.venue ? `（${x.venue}）` : ""}`).join("・")}
       </p>
       <p>
-        <b>大会が実施された場合</b>
+        <b>{reserveSubject(reserves)}が実施された場合</b>
         <strong className="pl-rest">{heldPlanText(a.groups)}</strong>
       </p>
     </div>
@@ -503,7 +504,7 @@ export default function PrintPage() {
                           key={g.division}
                           g={g}
                           showDivision={showDivision(a, g)}
-                          prefix={reserves.has(a.date) ? reservePrefix(a.reserveStatus) : ""}
+                          prefix={reserves.has(a.date) ? reservePrefix(a.reserveStatus, reserves.get(a.date) ?? []) : ""}
                         />
                       ))}
                     {a.note && <p className="pl-note">※{a.note}</p>}
