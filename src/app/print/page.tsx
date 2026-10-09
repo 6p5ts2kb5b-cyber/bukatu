@@ -121,8 +121,11 @@ function time(start: string, end: string): string {
 const HIGHLIGHT = ["お弁当", "軽食", "着替え", "筆記用具"];
 
 // 右の欄に◯で出すものは、持ち物の行には重ねて書かない
+// 予定表に書かない持ち物（いつも持ってくる物）
+const OMIT = ["水筒"];
+
 function packingText(items: string[]): string {
-  return items.filter((i) => !HIGHLIGHT.includes(i)).join("・");
+  return items.filter((i) => !HIGHLIGHT.includes(i) && !OMIT.includes(i)).join("・");
 }
 
 // その日にお弁当・軽食が必要か（活動がある区分のどれかで選ばれていれば◯）
@@ -188,7 +191,8 @@ function groupText(g: ActivityGroup, prefix: string, withDiv: boolean): string[]
       );
   }
   if (g.type === "合同練習" && g.partners.length) out.push(`　合同　${g.partners.join("・")}`);
-  if (g.packing.length) out.push(`　持ち物　${g.packing.join("・")}`);
+  const pk = g.packing.filter((i) => !OMIT.includes(i));
+  if (pk.length) out.push(`　持ち物　${pk.join("・")}`);
   if (g.reserveDate) {
     out.push(`　予備日　${mdLabel(g.reserveDate)}${g.reserveVenue ? `　${g.reserveVenue}` : ""}`);
     if (g.reserveDate2) out.push(`　予備日の予備日　${mdLabel(g.reserveDate2)}${g.reserveVenue2 ? `　${g.reserveVenue2}` : ""}`);
