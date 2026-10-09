@@ -20,6 +20,7 @@ import {
   isOffType,
   listRange,
   reserveTitle,
+  todayString,
   reservePrefix,
   reserveSubject,
   ourOpponents,
@@ -265,6 +266,8 @@ export default function PrintPage() {
   const [month, setMonth] = useState(thisMonth());
   // 期間：1カ月 / 前半（1〜15日） / 後半（16日〜末日）
   const [half, setHalf] = useState<"all" | "first" | "second">("all");
+  const [hidePast, setHidePast] = useState(false); // 過ぎた日を載せない
+  const today = todayString();
   const [activities, setActivities] = useState<Activity[] | null>(null);
   const [pool, setPool] = useState<Activity[]>([]); // 予備日を調べるため、前の月も含めた予定
   const [error, setError] = useState<string | null>(null);
@@ -330,7 +333,9 @@ export default function PrintPage() {
       if (date >= from && date <= to && !list.some((a) => a.date === date))
         list.push({ id: `reserve-${date}`, date, note: "", groups: [] });
     });
-    const inPeriod = (d: number) => half === "all" || (half === "first" ? d <= 15 : d >= 16);
+    const inPeriod = (d: number) =>
+      (half === "all" || (half === "first" ? d <= 15 : d >= 16)) &&
+      !(hidePast && `${month}-${String(d).padStart(2, "0")}` < today);
     const out = list.filter((a) => inPeriod(day(a)));
     // まだ何も入っていない日も「未定」の行にして、入れ忘れが分かるようにする（予定が1件もなければ出さない）
     if (out.length > 0) {
@@ -342,20 +347,31 @@ export default function PrintPage() {
       }
     }
     return out.sort((x, y) => (x.date < y.date ? -1 : x.date > y.date ? 1 : 0));
-  }, [activities, divisions, half, reserves, month]);
+  }, [activities, divisions, half, reserves, month, hidePast, today]);
 
   const blanks = rows.filter((a) => a.id.startsWith("blank-"));
   const [y, m] = month.split("-").map(Number);
   const lastDay = new Date(y, m, 0).getDate();
+  // 過ぎた日を載せないときは、期間の始まりを今日にする（例：10月（9日〜31日））
+  const startDay = half === "second" ? 16 : 1;
+  const endDay = half === "first" ? 15 : lastDay;
+  const fromDay =
+    hidePast && today.slice(0, 7) === month ? Math.max(startDay, Number(today.slice(8))) : startDay;
   const period =
-    half === "first" ? `${m}月前半（1日〜15日）` : half === "second" ? `${m}月後半（16日〜${lastDay}日）` : `${m}月`;
+    fromDay !== startDay
+      ? `${m}月（${fromDay}日〜${endDay}日）`
+      : half === "first"
+        ? `${m}月前半（1日〜15日）`
+        : half === "second"
+          ? `${m}月後半（16日〜${lastDay}日）`
+          : `${m}月`;
   const title = `${heading} ${y}年${period}の活動予定`;
 
   // 内容が変わったら、作ったPDFは作り直す
   useEffect(() => {
     setPdf(null);
     setDownloaded(false);
-  }, [divisions, month, half, message, activities]);
+  }, [divisions, month, half, message, activities, hidePast]);
 
   const send = async (file: File) => {
     try {
@@ -445,6 +461,10 @@ export default function PrintPage() {
               {half === "first" ? `${m}月1日〜15日` : half === "second" ? `${m}月16日〜${lastDay}日` : `${m}月1日〜${lastDay}日`}を載せます。
             </span>
           </div>
+          <label className="flex items-center gap-2 text-sm font-bold">
+            <input type="checkbox" checked={hidePast} onChange={(e) => setHidePast(e.target.checked)} />
+            過ぎた日は載せない（今日{`${Number(today.slice(5, 7))}/${Number(today.slice(8))}`}から）
+          </label>
           <Field label="保護者へのひとこと（任意）" hint="印刷の一番下に載ります。">
             <textarea
               className="f-input"
@@ -486,7 +506,7 @@ export default function PrintPage() {
         {!activities && !error && <p className="py-6 text-center">読み込み中…</p>}
         {activities && rows.length === 0 && (
           <p className="py-6 text-center">
-            {divisions.length === 0 ? "載せる活動を選んでください。" : half === "all" ? "この月の予定はまだ登録されていません。" : "この期間の予定はまだ登録されていません。"}
+            {divisions.length === 0 ? "載せる活動を選んでください。" : hidePast && `${month}-${String(endDay).padStart(2, "0")}` < today ? "この期間はもう過ぎています。「過ぎた日は載せない」を外すと載ります。" : half === "all" ? "この月の予定はまだ登録されていません。" : "この期間の予定はまだ登録されていません。"}
           </p>
         )}
 
