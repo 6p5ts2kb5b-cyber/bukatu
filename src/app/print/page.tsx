@@ -81,10 +81,10 @@ function time(start: string, end: string): string {
   return `${clock(start)}〜${clock(end)}`;
 }
 
-// 持ち物（お弁当・軽食は目立たせて先頭に）
-const HIGHLIGHT = ["お弁当", "軽食"];
+// 右の欄に◯で出す持ち物（ここに並べた順に欄ができる）
+const HIGHLIGHT = ["お弁当", "軽食", "着替え", "筆記用具"];
 
-// お弁当・軽食は右の欄に◯で表示するので、ここにはそれ以外の持ち物だけ載せる
+// 右の欄に◯で出すものは、持ち物の行には重ねて書かない
 function packingText(items: string[]): string {
   return items.filter((i) => !HIGHLIGHT.includes(i)).join("・");
 }
@@ -563,8 +563,11 @@ export default function PrintPage() {
             <tr>
               <th className="pl-day">日</th>
               <th className="pl-main">予定</th>
-              <th className="pl-mark">お弁当</th>
-              <th className="pl-mark">軽食</th>
+              {HIGHLIGHT.map((h) => (
+                <th key={h} className="pl-mark">
+                  {h}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -608,8 +611,9 @@ export default function PrintPage() {
                       ))}
                     {a.note && <p className="pl-note">※{a.note}</p>}
                   </td>
-                  <Mark on={needs(a, "お弁当")} />
-                  <Mark on={needs(a, "軽食")} />
+                  {HIGHLIGHT.map((h) => (
+                    <Mark key={h} on={needs(a, h)} />
+                  ))}
                 </tr>
               );
             })}

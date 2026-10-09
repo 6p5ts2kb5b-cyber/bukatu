@@ -1727,6 +1727,11 @@ textarea.f-input {
 .pl th.pl-mark {
   text-align: center;
   letter-spacing: 0;
+  padding: 2px 0;
+  font-size: 9.5px;
+  line-height: 1.1;
+  white-space: normal;
+  vertical-align: bottom;
 }
 .pl td {
   vertical-align: top;
@@ -1760,7 +1765,7 @@ td.pl-day span {
   color: #c42b3b;
 }
 .pl-mark {
-  width: 40px;
+  width: 34px;
   white-space: nowrap;
   text-align: center;
   border-left: 1px solid #bdbdbd;
