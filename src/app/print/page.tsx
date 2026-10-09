@@ -541,8 +541,8 @@ export default function PrintPage() {
     for (let i = 0; i < 4; i++) {
       clone.style.width = `${W / f}px`;
       const h = clone.offsetHeight;
-      // 少ないときは大きく（最大1.8倍）、多いときは小さく（最小0.45倍）して、ちょうど1枚に
-      const next = Math.min(1.8, Math.max(0.45, (H / h) * 0.98));
+      // 少ないときは大きく（最大2.2倍）、多いときは小さく（最小0.45倍）して、ちょうど1枚に
+      const next = Math.min(2.2, Math.max(0.45, (H / h) * 0.98));
       if (Math.abs(next - f) < 0.005) {
         f = next;
         break;
