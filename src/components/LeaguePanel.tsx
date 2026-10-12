@@ -3,20 +3,19 @@
 // 3チームのリーグ戦：順位表と「次の試合で2日目に進むには」を出す小さな部品です。
 // スコアが1試合も入っていなければ何も出しません。
 
-import { LEAGUE_RULES, leagueView, OUR, type LeagueRule } from "@/lib/league";
+import { isJJBF, leagueView, OUR } from "@/lib/league";
 import type { ActivityGroup } from "@/lib/activities";
 
+// JJBF大会（大会名に「JJBF」）だけで出す。順位の決め方はJJBF埼玉の要項どおり
 export function LeaguePanel({
   group,
-  onRule,
   compact = false,
 }: {
   group: ActivityGroup;
-  onRule?: (r: LeagueRule) => void; // 入力画面だけ：決まりを選べる
   compact?: boolean; // 一覧・ホーム用（順位表は省く）
 }) {
-  const rule = (group.leagueRule || "jjbf") as LeagueRule;
-  const v = leagueView(group.games, rule);
+  if (!isJJBF(group)) return null;
+  const v = leagueView(group.games, "jjbf");
   if (!v) return null;
   return (
     <div className={`lg${compact ? " lg--compact" : ""}`}>
@@ -66,20 +65,7 @@ export function LeaguePanel({
         </div>
       )}
       {v.waiting && <p className="lg__wait">{v.waiting}</p>}
-      {onRule ? (
-        <label className="lg__rule">
-          順位の決め方
-          <select value={rule} onChange={(e) => onRule(e.target.value as LeagueRule)}>
-            {LEAGUE_RULES.map((r) => (
-              <option key={r.key} value={r.key}>
-                {r.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : (
-        !compact && <p className="lg__rulenote">{v.ruleLabel}</p>
-      )}
+      {!compact && <p className="lg__rulenote">順位の決め方：{v.ruleLabel.replace(/^JJBF埼玉（|）$/g, "")}（JJBF埼玉の要項）</p>}
     </div>
   );
 }

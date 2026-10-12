@@ -7,6 +7,11 @@ import { parseRef, type Game } from "./activities";
 
 export const OUR = "うち";
 
+// JJBF の大会か（大会名に「JJBF」が入っていれば）。リーグ戦の計算はJJBF大会だけで使う
+export function isJJBF(g: { tournamentName: string; type: string }): boolean {
+  return (g.type === "公式戦" || g.type === "大会") && /jjbf/i.test(g.tournamentName.normalize("NFKC"));
+}
+
 export type LeagueRule = "jjbf" | "diff";
 type Key = "points" | "allowed" | "diff" | "onBase" | "lots";
 

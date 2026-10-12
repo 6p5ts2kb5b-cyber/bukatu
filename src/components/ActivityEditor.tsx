@@ -40,6 +40,7 @@ import {
 } from "@/lib/activities";
 import { DirPicker } from "@/components/DirPicker";
 import { LeaguePanel } from "@/components/LeaguePanel";
+import { isJJBF } from "@/lib/league";
 import { Card, Choices, ErrorText, Field, inputClass, PanelTitle, PrimaryButton, ToggleButton } from "@/components/ui";
 
 export type ActivityDraft = Omit<Activity, "id"> & { id?: string };
@@ -273,11 +274,13 @@ function GamesEditor({
   games,
   opponents,
   onChange,
+  scores = false,
 }: {
   no: number;
   games: Game[];
   opponents: string[];
   onChange: (g: Game[]) => void;
+  scores?: boolean; // JJBF大会：結果（点数）を入れる欄を出す
 }) {
   const update = (i: number, patch: Partial<Game>) =>
     onChange(games.map((g, j) => (j === i ? { ...g, ...patch } : g)));
@@ -428,8 +431,8 @@ function GamesEditor({
                     </div>
                   )}
                 </div>
-                {/* 結果（リーグ戦の計算に使う。試合が終わったら入れる） */}
-                <ScoreRow
+                {/* 結果（JJBF大会のリーグ戦の計算に使う。試合が終わったら入れる） */}
+                {scores && <ScoreRow
                   left={others ? teamLabel(g.home ?? "", pairs) || "チーム1" : "うち"}
                   right={teamLabel(g.opponent, pairs) || (others ? "チーム2" : "相手")}
                   sl={g.sh ?? null}
@@ -438,12 +441,12 @@ function GamesEditor({
                   or={g.oa ?? null}
                   showOnBase={showOnBase}
                   onChange={(p) => update(i, p)}
-                />
+                />}
               </div>
             </div>
           );
         })}
-        {games.length >= 2 && (
+        {scores && games.length >= 2 && (
           <label className="flex items-center gap-2 text-sm font-bold">
             <input type="checkbox" checked={showOnBase} onChange={(e) => setShowOnBase(e.target.checked)} />
             出塁数も入れる（勝ち点・失点・得失点差が並んだとき用）
@@ -634,9 +637,15 @@ function GroupEditor({
       </Card>
 
       {isMatchType(group.type) && (
-        <GamesEditor no={++no} games={group.games} opponents={options.opponents} onChange={(games) => set({ games })} />
+        <GamesEditor
+          no={++no}
+          games={group.games}
+          opponents={options.opponents}
+          onChange={(games) => set({ games })}
+          scores={isJJBF(group)}
+        />
       )}
-      {isMatchType(group.type) && <LeaguePanel group={group} onRule={(r) => set({ leagueRule: r })} />}
+      {isMatchType(group.type) && <LeaguePanel group={group} />}
       {group.type === "合同練習" && (
         <PartnersEditor
           no={++no}
