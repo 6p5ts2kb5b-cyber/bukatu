@@ -37,6 +37,16 @@ export function leagueRuleOf(g: { tournamentName: string; type: string }): Leagu
   return null;
 }
 
+// 結果（点数）を入れて保護者に送れる大会：リーグ戦（JJBF・STORM杯）と、トーナメント（新人戦・学総など）
+export type ResultKind = LeagueRule | "tournament";
+export function resultKindOf(g: { tournamentName: string; type: string }): ResultKind | null {
+  const lr = leagueRuleOf(g);
+  if (lr) return lr;
+  if (g.type !== "公式戦" && g.type !== "大会") return null;
+  const n = g.tournamentName.normalize("NFKC");
+  return /新人|学総|学校総合|総体|中体連/.test(n) ? "tournament" : null;
+}
+
 const KEY_WORD: Record<Key, string> = {
   points: "勝ち点",
   allowed: "失点",

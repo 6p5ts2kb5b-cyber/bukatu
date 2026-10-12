@@ -40,7 +40,8 @@ import {
 } from "@/lib/activities";
 import { DirPicker } from "@/components/DirPicker";
 import { LeaguePanel } from "@/components/LeaguePanel";
-import { leagueRuleOf, OUR as LEAGUE_OUR, resolveGames, type LeagueRule } from "@/lib/league";
+import { OUR as LEAGUE_OUR, resolveGames, resultKindOf, type ResultKind } from "@/lib/league";
+import { ResultSend } from "@/components/ResultSend";
 import { Card, Choices, ErrorText, Field, inputClass, PanelTitle, PrimaryButton, ToggleButton } from "@/components/ui";
 
 export type ActivityDraft = Omit<Activity, "id"> & { id?: string };
@@ -417,7 +418,7 @@ function GamesEditor({
   games: Game[];
   opponents: string[];
   onChange: (g: Game[]) => void;
-  scores?: LeagueRule | null; // JJBF大会・STORM杯：結果（点数）を入れる欄を出す
+  scores?: ResultKind | null; // JJBF大会・STORM杯・新人戦・学総など：結果（点数）を入れる欄を出す
 }) {
   const update = (i: number, patch: Partial<Game>) =>
     onChange(games.map((g, j) => (j === i ? { ...g, ...patch } : g)));
@@ -599,7 +600,7 @@ function GamesEditor({
             </div>
           );
         })}
-        {scores && games.length >= 2 && (
+        {scores && scores !== "tournament" && games.length >= 2 && (
           <label className="flex items-center gap-2 text-sm font-bold">
             <input type="checkbox" checked={showOnBase} onChange={(e) => setShowOnBase(e.target.checked)} />
             出塁数も入れる（勝ち点・失点・得失点差が並んだとき用）
@@ -795,10 +796,20 @@ function GroupEditor({
           games={group.games}
           opponents={options.opponents}
           onChange={(games) => set({ games })}
-          scores={leagueRuleOf(group)}
+          scores={resultKindOf(group)}
         />
       )}
       {isMatchType(group.type) && <LeaguePanel group={group} date={options.date} />}
+      {/* トーナメント（新人戦・学総など）：順位表はなく、結果を保護者に送るだけ */}
+      {resultKindOf(group) === "tournament" && (
+        <div className="lg">
+          <p className="lg__title">試合の結果を保護者に送る</p>
+          <ResultSend group={group} date={options.date} />
+          {!group.games.some((g) => g.sh != null && g.sa != null) && (
+            <p className="lg__wait">試合の「結果」に点数を入れると、送れるようになります。</p>
+          )}
+        </div>
+      )}
       {group.type === "合同練習" && (
         <PartnersEditor
           no={++no}

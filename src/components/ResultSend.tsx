@@ -1,12 +1,13 @@
 "use client";
 
 // JJBF大会・STORM杯：リーグ戦の結果（各試合のスコアと順位表）を、保護者に送る画像・PDF・文章にします。
+// 新人戦・学総など（トーナメント）：各試合のスコアだけ（順位表なし）。
 // 「2日目に進むための条件」はスタッフ用なので、ここには入れません。
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { formatDateLong, tournamentTitle, type ActivityGroup, type Game } from "@/lib/activities";
-import { leagueRuleOf, leagueView, OUR, resolveGames } from "@/lib/league";
+import { leagueRuleOf, leagueView, OUR, resolveGames, resultKindOf } from "@/lib/league";
 import { elementToPdf, elementToPng, shareOrDownload } from "@/lib/sharePdf";
 
 const CIRCLED = "①②③④⑤⑥⑦⑧⑨⑩";
@@ -64,9 +65,11 @@ function LineTable({ line }: { line: Line[] }) {
 
 export function ResultSend({ group, date }: { group: ActivityGroup; date: string }) {
   const [open, setOpen] = useState(false);
+  const kind = resultKindOf(group);
   const rule = leagueRuleOf(group);
   const view = rule ? leagueView(group.games, rule) : null;
-  if (!rule || !view) return null;
+  const anyScore = group.games.some((g) => g.sh != null && g.sa != null);
+  if (!kind || (rule ? !view : !anyScore)) return null;
   return (
     <>
       <button type="button" className="btn btn--line lg__send" onClick={() => setOpen(true)}>
@@ -79,15 +82,28 @@ export function ResultSend({ group, date }: { group: ActivityGroup; date: string
 }
 
 function ResultSheet({ group, date, onClose }: { group: ActivityGroup; date: string; onClose: () => void }) {
-  const rule = leagueRuleOf(group)!;
-  const view = leagueView(group.games, rule)!;
+  const rule = leagueRuleOf(group); // null ならトーナメント
+  const view = rule ? leagueView(group.games, rule) : null;
   const games = resolveGames(group.games);
   const title = tournamentTitle(group) || group.type;
   const storm = rule === "storm";
-  const done = !!view.final;
-  const advanced = view.final?.ok === true;
+  // トーナメント：うちの最後の試合の勝ち負け
+  const ourLast = [...games].reverse().find((g) => (g.a === OUR || g.b === OUR) && g.sa != null && g.sb != null);
+  const ourWin = ourLast ? (ourLast.a === OUR ? ourLast.sa! > ourLast.sb! : ourLast.sb! > ourLast.sa!) : null;
+  const done = view ? !!view.final : ourLast != null && !games.some((g) => (g.a === OUR || g.b === OUR) && (g.sa == null || g.sb == null));
+  const advanced = view ? view.final?.ok === true : ourWin === true;
   const [message, setMessage] = useState(
-    !done ? "途中経過です。" : advanced ? "1位で次のステージに進出しました！応援ありがとうございました。" : "応援ありがとうございました。",
+    view
+      ? !done
+        ? "途中経過です。"
+        : advanced
+          ? "1位で次のステージに進出しました！応援ありがとうございました。"
+          : "応援ありがとうございました。"
+      : ourWin === true
+        ? "勝ち進みました！次の試合も応援よろしくお願いします。"
+        : ourWin === false
+          ? "応援ありがとうございました。"
+          : "途中経過です。",
   );
   const card = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState<"" | "png" | "pdf">("");
@@ -132,8 +148,8 @@ function ResultSheet({ group, date, onClose }: { group: ActivityGroup; date: str
           out.push(`　${k === 0 ? "先" : "後"}　${r.name}　${r.cells.map((c) => c || "-").join(" ")}　計${r.total ?? ""}`),
         );
     });
-    out.push("", "■順位");
-    view.rows.forEach((r, i) => {
+    if (view) out.push("", "■順位");
+    (view?.rows ?? []).forEach((r, i) => {
       out.push(`${i + 1}位　${r.team}`);
       out.push(
         `　勝ち点${r.points}・${storm ? `失点率${r.rate.toFixed(2)}` : `失点${r.allowed}`}・得失点差${r.diff > 0 ? "+" : ""}${r.diff}`,
@@ -141,7 +157,7 @@ function ResultSheet({ group, date, onClose }: { group: ActivityGroup; date: str
     });
     if (message.trim()) out.push("", message.trim());
     return out.join("\n");
-  }, [title, date, games, view.rows, storm, message, group.games]);
+  }, [title, date, games, view, storm, message, group.games]);
 
   const [copied, setCopied] = useState(false);
   const copy = async () => {
@@ -210,6 +226,8 @@ function ResultSheet({ group, date, onClose }: { group: ActivityGroup; date: str
               );
             })}
           </ul>
+          {view && (
+            <>
           <p className="rc__label">順位</p>
           <table className="rc__table">
             <thead>
@@ -233,12 +251,14 @@ function ResultSheet({ group, date, onClose }: { group: ActivityGroup; date: str
               ))}
             </tbody>
           </table>
+            </>
+          )}
           {message.trim() && <p className={`rc__msg${advanced ? " is-win" : ""}`}>{message.trim()}</p>}
-          <p className="rc__rule">
+          {view && <p className="rc__rule">
             {storm
               ? "勝ち点：勝ち3・引き分け1（コールド勝ち・完封勝ちは＋1）／並んだら 失点率→得失点差→出塁数→抽選"
               : "勝ち点：勝ち3・引き分け1／並んだら 失点の少なさ→得失点差→出塁数→抽選"}
-          </p>
+          </p>}
         </div>
 
         <label className="rs-sheet__field">
