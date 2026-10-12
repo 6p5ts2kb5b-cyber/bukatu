@@ -423,7 +423,7 @@ function GamesEditor({
   games: Game[];
   opponents: string[];
   onChange: (g: Game[]) => void;
-  scores?: ResultKind | null; // JJBF大会・STORM杯・新人戦・学総など：結果（点数）を入れる欄を出す
+  scores?: ResultKind | null; // JJBF大会・STORM杯・新人戦・学総・練習試合など：結果（点数）を入れる欄を出す
 }) {
   const update = (i: number, patch: Partial<Game>) =>
     onChange(games.map((g, j) => (j === i ? { ...g, ...patch } : g)));
@@ -605,7 +605,7 @@ function GamesEditor({
             </div>
           );
         })}
-        {scores && scores !== "tournament" && games.length >= 2 && (
+        {(scores === "jjbf" || scores === "storm") && games.length >= 2 && (
           <label className="flex items-center gap-2 text-sm font-bold">
             <input type="checkbox" checked={showOnBase} onChange={(e) => setShowOnBase(e.target.checked)} />
             出塁数も入れる（勝ち点・失点・得失点差が並んだとき用）
@@ -805,8 +805,8 @@ function GroupEditor({
         />
       )}
       {isMatchType(group.type) && <LeaguePanel group={group} date={options.date} />}
-      {/* トーナメント（新人戦・学総など）：順位表はなく、結果を保護者に送るだけ */}
-      {resultKindOf(group) === "tournament" && (
+      {/* トーナメント（新人戦・学総など）・練習試合：順位表はなく、結果を保護者に送るだけ */}
+      {(resultKindOf(group) === "tournament" || resultKindOf(group) === "practice") && (
         <div className="lg">
           <p className="lg__title">試合の結果を保護者に送る</p>
           <ResultSend group={group} date={options.date} />

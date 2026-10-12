@@ -1,7 +1,7 @@
 "use client";
 
 // JJBF大会・STORM杯：リーグ戦の結果（各試合のスコアと順位表）を、保護者に送る画像・PDF・文章にします。
-// 新人戦・学総など（トーナメント）：各試合のスコアだけ（順位表なし）。
+// 新人戦・学総など（トーナメント）・練習試合：各試合のスコアだけ（順位表なし）。
 // 「2日目に進むための条件」はスタッフ用なので、ここには入れません。
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -97,15 +97,20 @@ function ResultSheet({ group, date, onClose }: { group: ActivityGroup; date: str
   const rule = leagueRuleOf(group); // null ならトーナメント
   const view = rule ? leagueView(group.games, rule) : null;
   const games = resolveGames(group.games);
-  const title = tournamentTitle(group) || group.type;
+  const practice = resultKindOf(group) === "practice";
+  const title = practice ? "練習試合" : tournamentTitle(group) || group.type;
   const storm = rule === "storm";
   // トーナメント：うちの最後の試合の勝ち負け
   const ourLast = [...games].reverse().find((g) => (g.a === OUR || g.b === OUR) && g.sa != null && g.sb != null);
   const ourWin = ourLast ? (ourLast.a === OUR ? ourLast.sa! > ourLast.sb! : ourLast.sb! > ourLast.sa!) : null;
   const done = view ? !!view.final : ourLast != null && !games.some((g) => (g.a === OUR || g.b === OUR) && (g.sa == null || g.sb == null));
-  const advanced = view ? view.final?.ok === true : ourWin === true;
+  const advanced = practice ? false : view ? view.final?.ok === true : ourWin === true;
   const [message, setMessage] = useState(
-    view
+    practice
+      ? done
+        ? "応援ありがとうございました。"
+        : "途中経過です。"
+      : view
       ? !done
         ? "途中経過です。"
         : advanced
