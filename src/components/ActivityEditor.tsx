@@ -336,33 +336,27 @@ function BoxEditor({
     );
   const side = (s: "l" | "r", name: string) => {
     const k = (x: string) => `${s}${x}` as keyof Box;
-    const field = (key: string, label: string, ph: string) => (
-      <label className="box-ed__f">
+    const field = (key: string, label: string, add: string, ph: string, sep: "→" | "") => (
+      <div className="box-ed__f">
         <span>{label}</span>
-        <input
-          className={inputClass}
-          list="player-names"
-          value={box[k(key)]}
-          placeholder={ph}
-          onChange={(e) => set(k(key), e.target.value)}
-        />
-      </label>
+        <MultiName value={box[k(key)]} onChange={(v) => set(k(key), v)} add={add} placeholder={ph} sep={sep} />
+      </div>
     );
+    const bat = batteryText(box[k("p")], box[k("c")]);
+    const xbh = xbhText(box[k("2")], box[k("3")], box[k("hr")]);
     return (
       <div className="box-ed__side">
         <p className="box-ed__team">{name}</p>
-        <div className="box-ed__grid">
-          {field("p", "投手", s === "l" ? "例：石野、高橋" : "例：山田")}
-          {field("c", "捕手", s === "l" ? "例：知久" : "例：佐藤")}
-          {field("2", "二塁打", s === "l" ? "例：石野、知久" : "")}
-          {field("3", "三塁打", "")}
-          {field("hr", "本塁打", s === "l" ? "例：高橋" : "")}
-        </div>
-        {(batteryText(box[k("p")], box[k("c")]) || xbhText(box[k("2")], box[k("3")], box[k("hr")])) && (
+        {field("p", "投手（投げた順）", "＋ 継投（次の投手）", s === "l" ? "例：石野" : "例：山田", "→")}
+        {field("c", "捕手（守った順）", "＋ 捕手交代", s === "l" ? "例：知久" : "例：佐藤", "→")}
+        {field("2", "二塁打", "＋ もう1本", "", "")}
+        {field("3", "三塁打", "＋ もう1本", "", "")}
+        {field("hr", "本塁打", "＋ もう1本", "", "")}
+        {(bat || xbh) && (
           <p className="box-ed__prev">
-            {batteryText(box[k("p")], box[k("c")])}
-            {batteryText(box[k("p")], box[k("c")]) && xbhText(box[k("2")], box[k("3")], box[k("hr")]) ? "　" : ""}
-            {xbhText(box[k("2")], box[k("3")], box[k("hr")])}
+            {bat}
+            {bat && xbh ? "　" : ""}
+            {xbh}
           </p>
         )}
       </div>
@@ -371,10 +365,53 @@ function BoxEditor({
   return (
     <div className="box-ed">
       <p className="box-ed__hint">
-        2人以上は「、」で区切ります（投げた順に：石野、高橋）。同じ人が2本打ったら2回書くと「（石野2）」になります。相手チームは分かる所だけでOK。
+        1つの枠に1人ずつ入れます。ピッチャーが代わったら「＋ 継投」、キャッチャーが代わったら「＋ 捕手交代」。同じ人が2本打ったら2回入れると「（石野2）」になります。相手チームは分かる所だけでOK。
       </p>
       {side("l", left)}
       {side("r", right)}
+    </div>
+  );
+}
+
+// 名前を1人ずつ入れる枠（「＋」で増やす）。保存は「石野、高橋」の形
+function MultiName({
+  value,
+  onChange,
+  add,
+  placeholder,
+  sep,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  add: string;
+  placeholder: string;
+  sep: "→" | "";
+}) {
+  // 昔の「石野、高橋」「石野 高橋」も1人ずつに分ける（入力途中の空の枠は残す）
+  const list = value ? value.split(/[、,，]/).map((x) => x.replace(/^[\s　]+|[\s　]+$/g, "")) : [""];
+  const save = (next: string[]) => onChange(next.length === 1 && !next[0] ? "" : next.join("、"));
+  return (
+    <div className="mname">
+      {list.map((v, i) => (
+        <span key={i} className="mname__item">
+          {i > 0 && sep && <i className="mname__sep">{sep}</i>}
+          <input
+            className={inputClass}
+            list="player-names"
+            value={v}
+            placeholder={i === 0 ? placeholder : ""}
+            onChange={(e) => save(list.map((x, j) => (j === i ? e.target.value.replace(/[、,，]/g, "") : x)))}
+          />
+          {list.length > 1 && (
+            <button type="button" className="mname__x" aria-label="消す" onClick={() => save(list.filter((_, j) => j !== i))}>
+              ×
+            </button>
+          )}
+        </span>
+      ))}
+      <button type="button" className="mname__add" onClick={() => save([...list, ""])}>
+        {add}
+      </button>
     </div>
   );
 }

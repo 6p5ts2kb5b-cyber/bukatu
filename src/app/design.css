@@ -3462,3 +3462,47 @@ td.pl-mark {
   font-weight: 700;
   color: #444;
 }
+
+/* 名前を1人ずつ入れる枠 */
+.mname {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.mname__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.mname__item .f-input {
+  width: 6.2em;
+  min-height: 40px;
+  padding: 6px 10px;
+  font-size: 15px;
+}
+.mname__sep {
+  font-style: normal;
+  font-weight: 900;
+  color: var(--ink-3);
+}
+.mname__x {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid var(--rule);
+  background: #fff;
+  color: var(--ink-3);
+  font-size: 14px;
+  line-height: 1;
+}
+.mname__add {
+  min-height: 36px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px dashed var(--board);
+  background: #fff;
+  color: var(--board);
+  font-size: 13px;
+  font-weight: 800;
+}
