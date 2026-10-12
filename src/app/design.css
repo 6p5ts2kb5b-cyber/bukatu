@@ -2250,13 +2250,25 @@ td.pl-mark {
   font-weight: 800;
   color: #1f4fa3;
 }
+/* 「〜の場合」の札を上、中身を下に積む（細い画面でも右にはみ出さない） */
 .acard__reserve-row {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  margin: 0 0 4px;
   font-size: 13px;
   font-weight: 700;
+  min-width: 0;
+}
+.acard__reserve-row:last-child {
+  margin-bottom: 0;
+}
+.acard__reserve-row > span:not(.acard__if) {
+  padding-left: 4px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 .acard__reserve-row small {
   font-weight: 600;
@@ -2271,6 +2283,8 @@ td.pl-mark {
   font-size: 11px;
   font-weight: 800;
   color: var(--ink-2);
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 .acard__if--rain {
   border-color: #9db8e6;
