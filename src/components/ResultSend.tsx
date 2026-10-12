@@ -36,6 +36,18 @@ function lineOf(g: Game, a: string, b: string): Line[] | null {
   ];
 }
 
+// コールドで勝ったか（チェック、または「7回より前に終わって7点差以上」）。うちが勝ったときだけ「5回コールド勝ち」
+function calledWin(g: Game, a: string | null, b: string | null): string {
+  if (g.sh == null || g.sa == null) return "";
+  const usWin = (a === OUR && g.sh > g.sa) || (b === OUR && g.sa > g.sh);
+  if (!usWin) return "";
+  const played = Math.max((g.lh ?? []).length, (g.la ?? []).length);
+  const auto = played > 0 && played < 7 && Math.abs(g.sh - g.sa) >= 7;
+  if (!g.called && !auto) return "";
+  const inn = g.inn ?? (played > 0 && played < 7 ? played : 5);
+  return `${inn}回コールド勝ち`;
+}
+
 function LineTable({ line }: { line: Line[] }) {
   return (
     <table className="rc__line">
@@ -141,12 +153,18 @@ function ResultSheet({ group, date, onClose }: { group: ActivityGroup; date: str
     const out: string[] = [`【${title}　結果】${OUR}`, formatDateLong(date), "", "■試合結果"];
     games.forEach((g, i) => {
       const done = g.sa != null && g.sb != null;
-      out.push(`${CIRCLED[i]}　${g.a ?? "未定"}　${done ? `${g.sa} − ${g.sb}` : "対"}　${g.b ?? "未定"}${done ? "" : "（これから）"}`);
+      const cw = calledWin(group.games[i], g.a, g.b);
+      out.push(
+        `${CIRCLED[i]}　${g.a ?? "未定"}　${done ? `${g.sa} − ${g.sb}` : "対"}　${g.b ?? "未定"}${done ? "" : "（これから）"}${cw ? `（${cw}）` : ""}`,
+      );
       const line = lineOf(group.games[i], g.a ?? "未定", g.b ?? "未定");
-      if (line)
+      if (line) {
+        // やった回まで（コールドなら後ろの空いた回は書かない）
+        const n = Math.max(...line.map((r) => r.cells.reduce((m, c, j) => (c ? j + 1 : m), 0)));
         line.forEach((r, k) =>
-          out.push(`　${k === 0 ? "先" : "後"}　${r.name}　${r.cells.map((c) => c || "-").join(" ")}　計${r.total ?? ""}`),
+          out.push(`　${k === 0 ? "先" : "後"}　${r.name}　${r.cells.slice(0, n).map((c) => c || "-").join(" ")}　計${r.total ?? ""}`),
         );
+      }
     });
     if (view) out.push("", "■順位");
     (view?.rows ?? []).forEach((r, i) => {
@@ -214,6 +232,9 @@ function ResultSheet({ group, date, onClose }: { group: ActivityGroup; date: str
                     )}
                   </span>
                   <span className={`rc__team rc__team--b${bw ? " is-win" : ""}${g.b === OUR ? " is-us" : ""}`}>{g.b ?? "未定"}</span>
+                  {calledWin(group.games[i], g.a, g.b) && (
+                    <span className="rc__called">{calledWin(group.games[i], g.a, g.b)}</span>
+                  )}
                   {(() => {
                     const line = lineOf(group.games[i], g.a ?? "未定", g.b ?? "未定");
                     return line ? (

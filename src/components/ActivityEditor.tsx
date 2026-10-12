@@ -273,11 +273,12 @@ function ScoreRow({
           </>
         )}
       </div>
-      {storm && (
+      {/* コールド・回数：どの大会でも（結果の書き方に使う。STORM杯は勝ち点にも） */}
+      {(
         <div className="score-row__storm">
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={called} onChange={(e) => onChange({ called: e.target.checked })} />
-            コールドゲーム（勝ち点＋1）
+            {storm ? "コールドゲーム（勝ち点＋1）" : "コールドゲーム"}
           </label>
           <label className="flex items-center gap-2 whitespace-nowrap">
             回数
@@ -292,7 +293,7 @@ function ScoreRow({
               onChange={(e) => onChange({ inn: e.target.value === "" ? null : Math.max(1, Math.min(7, Number(e.target.value))) })}
               aria-label="試合の回数"
             />
-            回まで（7回なら空のまま）
+            回まで（7回なら空のまま。コールドなら5など）
           </label>
         </div>
       )}

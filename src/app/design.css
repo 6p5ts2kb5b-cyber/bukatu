@@ -3258,6 +3258,19 @@ td.pl-mark {
   font-weight: 800;
 }
 
+/* 結果カード：コールド勝ち */
+.rc__called {
+  grid-column: 1 / -1;
+  justify-self: center;
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: #c42b3b;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+}
+
 /* 結果カードのランニングスコア */
 .rc__line-wrap {
   grid-column: 1 / -1;
