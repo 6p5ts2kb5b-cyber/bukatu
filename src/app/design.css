@@ -3339,3 +3339,43 @@ td.pl-mark {
     transform: none !important;
   }
 }
+
+/* 結果を印刷：結果の紙（.rc）だけを A4 に出す */
+@media print {
+  body.rs-printing > *:not(.rs-sheet) {
+    display: none !important;
+  }
+  html:has(body.rs-printing),
+  body.rs-printing {
+    min-height: 0 !important;
+    height: auto !important;
+  }
+  body.rs-printing .rs-sheet {
+    position: static;
+    inset: auto;
+    overflow: visible;
+    background: none;
+    padding: 0;
+  }
+  body.rs-printing .rs-sheet__inner {
+    max-width: none;
+    display: block;
+    background: none;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+  }
+  body.rs-printing .rs-sheet__inner > *:not(.rc) {
+    display: none !important;
+  }
+  body.rs-printing .rc {
+    max-width: 180mm;
+    margin: 4mm auto 0;
+    border: 1px solid #c9d1c6;
+  }
+  body.rs-printing .rc__game,
+  body.rs-printing .rc__table,
+  body.rs-printing .rc__msg {
+    break-inside: avoid;
+  }
+}

@@ -182,6 +182,19 @@ function ResultSheet({ group, date, onClose }: { group: ActivityGroup; date: str
     return out.join("\n");
   }, [title, date, games, view, storm, message, group.games]);
 
+  // 印刷：この結果の紙だけを出す（ほかの画面は隠す）
+  const print = () => {
+    document.body.classList.add("rs-printing");
+    const done = () => {
+      document.body.classList.remove("rs-printing");
+      window.removeEventListener("afterprint", done);
+    };
+    window.addEventListener("afterprint", done);
+    window.print();
+    // afterprint が来ないブラウザ用
+    setTimeout(done, 60_000);
+  };
+
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     try {
@@ -298,6 +311,9 @@ function ResultSheet({ group, date, onClose }: { group: ActivityGroup; date: str
           </button>
           <button type="button" className="btn btn--accent" disabled={!!busy} onClick={() => send("pdf")}>
             {busy === "pdf" ? "PDFを作っています…" : made.pdf ? "PDFを送る" : "PDFで送る"}
+          </button>
+          <button type="button" className="btn btn--ghost" onClick={print}>
+            印刷する
           </button>
           <button type="button" className="btn btn--ghost" onClick={copy}>
             {copied ? "文章をコピーしました" : "文章をコピー（LINEに貼る）"}
