@@ -10,7 +10,7 @@ import Link from "next/link";
 import { holidayName, isHoliday } from "@/lib/holidays";
 import { PaperPreview } from "@/components/PaperPreview";
 import { Choices, cssVars, ErrorText, Field, PageHead, Toast, ToggleButton } from "@/components/ui";
-import { elementToPdf, shareOrDownload } from "@/lib/sharePdf";
+import { elementToPdf, elementToPng, shareOrDownload } from "@/lib/sharePdf";
 import {
   DIVISIONS,
   divisionLabel,
@@ -422,6 +422,9 @@ export default function PrintPage() {
   // PDF：作る → 送る（スマホは「共有」からLINE・メールを選ぶ）
   const [pdf, setPdf] = useState<File | null>(null);
   const [making, setMaking] = useState(false);
+  // 画像（LINEのトークでそのまま見られる）
+  const [png, setPng] = useState<File | null>(null);
+  const [makingPng, setMakingPng] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [downloaded, setDownloaded] = useState(false);
   const clearToast = useCallback(() => setToast(null), []);
@@ -556,6 +559,7 @@ export default function PrintPage() {
   // 内容が変わったら、作ったPDFは作り直す
   useEffect(() => {
     setPdf(null);
+    setPng(null);
     setDownloaded(false);
   }, [divisions, month, half, message, activities, hidePast, fitOne, fit]);
 
@@ -609,6 +613,22 @@ export default function PrintPage() {
       setError("PDFを作れませんでした。電波の良い場所でもう一度お試しください。");
     } finally {
       setMaking(false);
+    }
+  };
+
+  const makePng = async () => {
+    if (!sheet.current || makingPng) return;
+    if (png) return send(png);
+    setMakingPng(true);
+    try {
+      // 日数が少ないときは幅をせまくして、スマホで文字が大きく見えるように
+      const file = await elementToPng(sheet.current, `${title.replace(/\s+/g, "_")}.png`, isWeekendMode ? 480 : 720);
+      setPng(file);
+      await send(file);
+    } catch {
+      setError("画像を作れませんでした。もう一度お試しください。");
+    } finally {
+      setMakingPng(false);
     }
   };
 
@@ -843,7 +863,7 @@ export default function PrintPage() {
         <div className="flex flex-col gap-2">
           {downloaded && (
             <p className="m-0 rounded-xl border border-rule bg-white p-3 text-sm font-bold leading-relaxed">
-              PDFを保存しました。LINEやメールに添付して送ってください。
+              保存しました。LINEやメールに添付して送ってください。
               <a
                 className="ml-1 font-extrabold underline"
                 href={`mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(`${title}を送ります。PDFをご確認ください。`)}`}
@@ -852,9 +872,12 @@ export default function PrintPage() {
               </a>
             </p>
           )}
-          <div className="grid grid-cols-[1fr_auto] gap-2">
+          <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
+            <button type="button" onClick={makePng} disabled={!activities || makingPng} className="btn btn--line">
+              {makingPng ? "作っています…" : png ? "画像を送る" : "画像で送る"}
+            </button>
             <button type="button" onClick={makePdf} disabled={!activities || making} className="btn btn--accent">
-              {making ? "PDFを作っています…" : pdf ? "PDFを送る" : "PDFでLINE・メールに送る"}
+              {making ? "作っています…" : pdf ? "PDFを送る" : "PDFで送る"}
             </button>
             <button type="button" onClick={() => window.print()} className="btn btn--ghost px-5">
               印刷

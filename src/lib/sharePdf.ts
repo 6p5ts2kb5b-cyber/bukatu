@@ -309,6 +309,11 @@ export async function elementToPng(source: HTMLElement, filename: string, width 
   const host = document.createElement("div");
   host.style.cssText = `position:fixed;left:-20000px;top:0;width:${width}px;background:#fff;`;
   const clone = source.cloneNode(true) as HTMLElement;
+  // 印刷用の縮小（A4の1枚に収める zoom）は画像では使わない
+  clone.querySelectorAll<HTMLElement>(".pl-fit").forEach((el) => {
+    el.style.setProperty("--fit", "1");
+    el.style.removeProperty("width");
+  });
   host.appendChild(clone);
   document.body.appendChild(host);
   try {
