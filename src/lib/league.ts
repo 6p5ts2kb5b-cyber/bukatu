@@ -1,28 +1,45 @@
 // 3チームのリーグ戦：スコアから順位を出し、残りの試合の結果しだいで「2日目に進めるか」を文にします。
-// 決まり（JJBF埼玉県 第47回 選抜大会 要項 10⑨）：
-//   勝ち点（勝ち3・引き分け1）→ 失点の少ない方 → 得失点差の多い方 → 出塁数の多い方 → 抽選
-// 1位だけが2ndステージ（2日目）に進む。
+// 決まり：
+//   JJBF埼玉（第47回 選抜大会 要項 10⑨）：勝ち点（勝ち3・引き分け1）→ 失点の少なさ → 得失点差 → 出塁数 → 抽選
+//   STORM杯（第13回 要項 12(1)④）：勝ち点（勝ち3・引き分け1・コールド勝ち＋1・完封勝ち＋1）
+//                                    → 失点率（失点÷守った回数）→ 得失点差 → 出塁数 → 抽選（じゃんけん）
+// どちらも各リーグの1位だけが2日目に進む。
 
 import { parseRef, type Game } from "./activities";
 
 export const OUR = "うち";
 
-// JJBF の大会か（大会名に「JJBF」が入っていれば）。リーグ戦の計算はJJBF大会だけで使う
-export function isJJBF(g: { tournamentName: string; type: string }): boolean {
-  return (g.type === "公式戦" || g.type === "大会") && /jjbf/i.test(g.tournamentName.normalize("NFKC"));
-}
+export type LeagueRule = "jjbf" | "storm";
+type Key = "points" | "allowed" | "rate" | "diff" | "onBase" | "lots";
 
-export type LeagueRule = "jjbf" | "diff";
-type Key = "points" | "allowed" | "diff" | "onBase" | "lots";
-
-export const LEAGUE_RULES: { key: LeagueRule; label: string; order: Key[] }[] = [
-  { key: "jjbf", label: "JJBF埼玉（勝ち点→失点の少なさ→得失点差→出塁数→抽選）", order: ["points", "allowed", "diff", "onBase", "lots"] },
-  { key: "diff", label: "一般（勝ち点→得失点差→失点の少なさ→抽選）", order: ["points", "diff", "allowed", "lots"] },
+export const LEAGUE_RULES: { key: LeagueRule; label: string; order: Key[]; bonus: boolean }[] = [
+  {
+    key: "jjbf",
+    label: "勝ち点→失点の少なさ→得失点差→出塁数→抽選（JJBF埼玉の要項）",
+    order: ["points", "allowed", "diff", "onBase", "lots"],
+    bonus: false,
+  },
+  {
+    key: "storm",
+    label: "勝ち点（コールド勝ち・完封勝ちは＋1）→失点率→得失点差→出塁数→抽選（STORM杯の要項）",
+    order: ["points", "rate", "diff", "onBase", "lots"],
+    bonus: true,
+  },
 ];
+
+// この大会のリーグ戦の決まり（JJBF大会・STORM杯だけ。ほかは null＝計算しない）
+export function leagueRuleOf(g: { tournamentName: string; type: string }): LeagueRule | null {
+  if (g.type !== "公式戦" && g.type !== "大会") return null;
+  const n = g.tournamentName.normalize("NFKC");
+  if (/jjbf/i.test(n)) return "jjbf";
+  if (/storm\s*杯|ストーム杯|山下杯/i.test(n)) return "storm";
+  return null;
+}
 
 const KEY_WORD: Record<Key, string> = {
   points: "勝ち点",
   allowed: "失点",
+  rate: "失点率",
   diff: "得失点差",
   onBase: "出塁数",
   lots: "抽選",
@@ -36,6 +53,8 @@ export type LGame = {
   sb: number | null;
   oa: number | null; // a の出塁数
   ob: number | null;
+  called: boolean; // コールドゲーム
+  inn: number; // 試合の回数（ふつう7）
 };
 
 const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
@@ -59,17 +78,37 @@ export function resolveGames(games: Game[]): LGame[] {
       sb: num(g.sa),
       oa: num(g.oh),
       ob: num(g.oa),
+      called: g.called === true,
+      inn: num(g.inn) ?? 7,
     });
   });
   return out;
 }
 
-export type Row = { team: string; played: number; win: number; draw: number; lose: number; points: number; runs: number; allowed: number; diff: number; onBase: number | null };
+export type Row = {
+  team: string;
+  played: number;
+  win: number;
+  draw: number;
+  lose: number;
+  points: number;
+  runs: number;
+  allowed: number;
+  diff: number;
+  inn: number; // 守った回数
+  rate: number; // 失点率（失点÷守った回数）
+  onBase: number | null;
+};
 
-export function standings(teams: string[], games: LGame[]): Row[] {
+export function standings(teams: string[], games: LGame[], bonus = false): Row[] {
   const rows = new Map<string, Row>(
-    teams.map((t) => [t, { team: t, played: 0, win: 0, draw: 0, lose: 0, points: 0, runs: 0, allowed: 0, diff: 0, onBase: 0 }]),
+    teams.map((t) => [
+      t,
+      { team: t, played: 0, win: 0, draw: 0, lose: 0, points: 0, runs: 0, allowed: 0, diff: 0, inn: 0, rate: 0, onBase: 0 },
+    ]),
   );
+  // 勝ったチームのおまけ（STORM杯：コールド勝ち＋1、完封勝ち＋1）
+  const extra = (g: LGame, loserRuns: number) => (bonus ? (g.called ? 1 : 0) + (loserRuns === 0 ? 1 : 0) : 0);
   for (const g of games) {
     if (g.a == null || g.b == null || g.sa == null || g.sb == null) continue;
     const A = rows.get(g.a);
@@ -81,13 +120,15 @@ export function standings(teams: string[], games: LGame[]): Row[] {
     A.allowed += g.sb;
     B.runs += g.sb;
     B.allowed += g.sa;
+    A.inn += g.inn;
+    B.inn += g.inn;
     if (g.sa > g.sb) {
       A.win++;
-      A.points += 3;
+      A.points += 3 + extra(g, g.sb);
       B.lose++;
     } else if (g.sa < g.sb) {
       B.win++;
-      B.points += 3;
+      B.points += 3 + extra(g, g.sa);
       A.lose++;
     } else {
       A.draw++;
@@ -98,8 +139,19 @@ export function standings(teams: string[], games: LGame[]): Row[] {
     A.onBase = A.onBase == null || g.oa == null ? null : A.onBase + g.oa;
     B.onBase = B.onBase == null || g.ob == null ? null : B.onBase + g.ob;
   }
-  for (const r of rows.values()) r.diff = r.runs - r.allowed;
+  for (const r of rows.values()) {
+    r.diff = r.runs - r.allowed;
+    r.rate = r.inn ? r.allowed / r.inn : 0;
+  }
   return [...rows.values()];
+}
+
+// 比べる値（大きい方が上）
+function valueOf(r: Row, k: Key): number {
+  if (k === "points") return r.points;
+  if (k === "allowed") return -r.allowed;
+  if (k === "rate") return -Math.round(r.rate * 1e6);
+  return r.diff;
 }
 
 // 1位はだれか。決まらなければ「出塁数で決まる」「抽選」を返す
@@ -116,7 +168,7 @@ export function topOf(rows: Row[], order: Key[]): Top {
       cand = cand.filter((r) => r.onBase === best);
       continue;
     }
-    const val = (r: Row) => (k === "points" ? r.points : k === "allowed" ? -r.allowed : r.diff);
+    const val = (r: Row) => valueOf(r, k);
     const best = Math.max(...cand.map(val));
     cand = cand.filter((r) => val(r) === best);
   }
@@ -129,7 +181,7 @@ function decidedBy(rows: Row[], order: Key[], winner: string): string {
   let cand = rows;
   for (const k of order) {
     if (k === "lots" || k === "onBase") return KEY_WORD[k];
-    const val = (r: Row) => (k === "points" ? r.points : k === "allowed" ? -r.allowed : r.diff);
+    const val = (r: Row) => valueOf(r, k);
     const best = Math.max(...cand.map(val));
     const next = cand.filter((r) => val(r) === best);
     if (next.length === 1 && next[0].team === winner) return KEY_WORD[k];
@@ -139,7 +191,7 @@ function decidedBy(rows: Row[], order: Key[], winner: string): string {
 }
 
 type Res = "yes" | "no" | "onBase" | "lots";
-type Case = { x: number; y: number; r: Res; leader?: string; by?: string };
+type Case = { x: number; y: number; r: Res; leader?: string; by?: string; called?: boolean };
 
 export type Scenario = { mark: "◎" | "×" | "△"; text: string };
 export type LeagueView = {
@@ -193,7 +245,15 @@ function summarize(
       kind = "cond";
       let m = 1;
       for (; m <= MAX; m++) if (cs.every((c) => (c.r === "yes") === (marginOf(c) >= m))) break;
-      text = m <= MAX ? `${m}点差以上の${win}なら進出` : cs.some((c) => c.r !== "no" && c.r !== "yes") ? `並べば${tieWord}` : "点数しだい";
+      // 同じ点数でも、コールドかどうかで変わる
+      const byCalled = cs.some((c) => cs.some((d) => d.x === c.x && d.y === c.y && d.called !== c.called && d.r !== c.r));
+      text = byCalled
+        ? "コールド勝ちなら進出（7回まで戦うと敗退）"
+        : m <= MAX
+          ? `${m}点差以上の${win}なら進出`
+          : cs.some((c) => c.r !== "no" && c.r !== "yes")
+            ? `並べば${tieWord}`
+            : "点数しだい";
     }
     const last = segs[segs.length - 1];
     if (last && last.kind === kind && last.text === text && last.to === y - 1) last.to = y;
@@ -226,7 +286,14 @@ export function leagueView(games: Game[], rule: LeagueRule = "jjbf"): LeagueView
   const scored = lg.filter((g) => g.sa != null && g.sb != null).length;
   if (scored === 0) return null;
   const teams = [...names];
-  const rows = standings(teams, lg).sort((x, y) => y.points - x.points || x.allowed - y.allowed || y.diff - x.diff);
+  const rows = standings(teams, lg, R.bonus).sort((x, y) => {
+    for (const k of R.order) {
+      if (k === "onBase" || k === "lots") break;
+      const d = valueOf(y, k) - valueOf(x, k);
+      if (d) return d;
+    }
+    return 0;
+  });
   const view: LeagueView = { teams, rows, ruleLabel: R.label };
 
   if (teams.length !== 3 || lg.some((g) => g.a == null || g.b == null)) {
@@ -263,18 +330,22 @@ export function leagueView(games: Game[], rule: LeagueRule = "jjbf"): LeagueView
   const cases: Case[] = [];
   for (let x = 0; x <= MAX; x++) {
     for (let y = 0; y <= MAX; y++) {
-      const sim = lg.map((h, j) => (j === i ? { ...h, sa: x, sb: y, oa: null, ob: null } : h));
-      const rs = standings(teams, sim);
-      const top = topOf(rs, R.order);
-      let r: Res;
-      let leader: string | undefined;
-      let by: string | undefined;
-      if ("team" in top) {
-        r = top.team === OUR ? "yes" : "no";
-        leader = top.team;
-        by = decidedBy(rs, R.order, top.team);
-      } else r = top.teams.includes(OUR) ? (top.tie === "onBase" ? "onBase" : "lots") : "no";
-      cases.push({ x, y, r, leader, by });
+      // STORM杯：7点差以上はコールドの場合（5回まで）と、7回まで戦った場合の両方を調べる
+      const variants = R.bonus && Math.abs(x - y) >= 7 ? [false, true] : [false];
+      for (const called of variants) {
+        const sim = lg.map((h, j) => (j === i ? { ...h, sa: x, sb: y, oa: null, ob: null, called, inn: called ? 5 : 7 } : h));
+        const rs = standings(teams, sim, R.bonus);
+        const top = topOf(rs, R.order);
+        let r: Res;
+        let leader: string | undefined;
+        let by: string | undefined;
+        if ("team" in top) {
+          r = top.team === OUR ? "yes" : "no";
+          leader = top.team;
+          by = decidedBy(rs, R.order, top.team);
+        } else r = top.teams.includes(OUR) ? (top.tie === "onBase" ? "onBase" : "lots") : "no";
+        cases.push({ x, y, r, leader, by, called });
+      }
     }
   }
   const ours = A === OUR || B === OUR;

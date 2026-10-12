@@ -2821,6 +2821,20 @@ td.pl-mark {
 .score-row__dash {
   font-weight: 800;
 }
+.score-row__storm {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-2);
+}
+.score-box--inn {
+  width: 3.2em;
+  height: 38px;
+  font-size: 18px;
+}
 
 /* リーグ戦の状況 */
 .lg {

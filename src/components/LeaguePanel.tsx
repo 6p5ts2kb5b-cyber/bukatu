@@ -3,10 +3,10 @@
 // 3チームのリーグ戦：順位表と「次の試合で2日目に進むには」を出す小さな部品です。
 // スコアが1試合も入っていなければ何も出しません。
 
-import { isJJBF, leagueView, OUR } from "@/lib/league";
+import { leagueRuleOf, leagueView, OUR } from "@/lib/league";
 import type { ActivityGroup } from "@/lib/activities";
 
-// JJBF大会（大会名に「JJBF」）だけで出す。順位の決め方はJJBF埼玉の要項どおり
+// JJBF大会・STORM杯（大会名で判断）だけで出す。順位の決め方はそれぞれの要項どおり
 export function LeaguePanel({
   group,
   compact = false,
@@ -14,8 +14,9 @@ export function LeaguePanel({
   group: ActivityGroup;
   compact?: boolean; // 一覧・ホーム用（順位表は省く）
 }) {
-  if (!isJJBF(group)) return null;
-  const v = leagueView(group.games, "jjbf");
+  const rule = leagueRuleOf(group);
+  if (!rule) return null;
+  const v = leagueView(group.games, rule);
   if (!v) return null;
   return (
     <div className={`lg${compact ? " lg--compact" : ""}`}>
@@ -27,7 +28,7 @@ export function LeaguePanel({
               <th>順</th>
               <th>チーム</th>
               <th>勝点</th>
-              <th>失点</th>
+              <th>{rule === "storm" ? "失点率" : "失点"}</th>
               <th>得失</th>
               <th>成績</th>
             </tr>
@@ -38,7 +39,7 @@ export function LeaguePanel({
                 <td>{i + 1}</td>
                 <td>{r.team}</td>
                 <td>{r.points}</td>
-                <td>{r.allowed}</td>
+                <td>{rule === "storm" ? r.rate.toFixed(2) : r.allowed}</td>
                 <td>{r.diff > 0 ? `+${r.diff}` : r.diff}</td>
                 <td className="lg__rec">
                   {r.win}勝{r.lose}敗{r.draw ? `${r.draw}分` : ""}
@@ -65,7 +66,7 @@ export function LeaguePanel({
         </div>
       )}
       {v.waiting && <p className="lg__wait">{v.waiting}</p>}
-      {!compact && <p className="lg__rulenote">順位の決め方：{v.ruleLabel.replace(/^JJBF埼玉（|）$/g, "")}（JJBF埼玉の要項）</p>}
+      {!compact && <p className="lg__rulenote">順位の決め方：{v.ruleLabel}</p>}
     </div>
   );
 }

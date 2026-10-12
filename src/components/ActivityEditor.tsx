@@ -40,7 +40,7 @@ import {
 } from "@/lib/activities";
 import { DirPicker } from "@/components/DirPicker";
 import { LeaguePanel } from "@/components/LeaguePanel";
-import { isJJBF } from "@/lib/league";
+import { leagueRuleOf, type LeagueRule } from "@/lib/league";
 import { Card, Choices, ErrorText, Field, inputClass, PanelTitle, PrimaryButton, ToggleButton } from "@/components/ui";
 
 export type ActivityDraft = Omit<Activity, "id"> & { id?: string };
@@ -220,8 +220,14 @@ function ScoreRow({
   ol,
   or,
   showOnBase,
+  storm,
+  called,
+  inn,
   onChange,
 }: {
+  storm: boolean; // STORM杯：コールド・回数も入れる
+  called: boolean;
+  inn: number | null;
   left: string;
   right: string;
   sl: number | null;
@@ -265,6 +271,29 @@ function ScoreRow({
           </>
         )}
       </div>
+      {storm && (
+        <div className="score-row__storm">
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={called} onChange={(e) => onChange({ called: e.target.checked })} />
+            コールドゲーム（勝ち点＋1）
+          </label>
+          <label className="flex items-center gap-2 whitespace-nowrap">
+            回数
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={7}
+              className="score-box score-box--inn"
+              value={inn ?? ""}
+              placeholder="7"
+              onChange={(e) => onChange({ inn: e.target.value === "" ? null : Math.max(1, Math.min(7, Number(e.target.value))) })}
+              aria-label="試合の回数"
+            />
+            回まで（7回なら空のまま）
+          </label>
+        </div>
+      )}
     </div>
   );
 }
@@ -274,13 +303,13 @@ function GamesEditor({
   games,
   opponents,
   onChange,
-  scores = false,
+  scores = null,
 }: {
   no: number;
   games: Game[];
   opponents: string[];
   onChange: (g: Game[]) => void;
-  scores?: boolean; // JJBF大会：結果（点数）を入れる欄を出す
+  scores?: LeagueRule | null; // JJBF大会・STORM杯：結果（点数）を入れる欄を出す
 }) {
   const update = (i: number, patch: Partial<Game>) =>
     onChange(games.map((g, j) => (j === i ? { ...g, ...patch } : g)));
@@ -440,6 +469,9 @@ function GamesEditor({
                   ol={g.oh ?? null}
                   or={g.oa ?? null}
                   showOnBase={showOnBase}
+                  storm={scores === "storm"}
+                  called={g.called === true}
+                  inn={g.inn ?? null}
                   onChange={(p) => update(i, p)}
                 />}
               </div>
@@ -642,7 +674,7 @@ function GroupEditor({
           games={group.games}
           opponents={options.opponents}
           onChange={(games) => set({ games })}
-          scores={isJJBF(group)}
+          scores={leagueRuleOf(group)}
         />
       )}
       {isMatchType(group.type) && <LeaguePanel group={group} />}

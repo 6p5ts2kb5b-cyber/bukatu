@@ -105,6 +105,9 @@ export type Game = {
   // 出塁数（同点が並んだとき用・任意）
   oh?: number | null;
   oa?: number | null;
+  // STORM杯：コールドゲームか・試合の回数（失点率の計算用。空ならふつうの7回）
+  called?: boolean;
+  inn?: number | null;
 };
 
 // ---- 「第1試合の勝者」のような、まだ決まっていない相手 ----
@@ -523,6 +526,8 @@ function toActivity(id: string, data: Record<string, unknown>): Activity {
               sa: scoreOf(x.sa),
               oh: scoreOf(x.oh),
               oa: scoreOf(x.oa),
+              called: x.called === true,
+              inn: scoreOf(x.inn),
             }),
           )
         : [],
