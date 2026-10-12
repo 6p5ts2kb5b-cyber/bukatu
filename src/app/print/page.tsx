@@ -93,6 +93,18 @@ function weekendDates(today: string, next: boolean): string[] {
   return out;
 }
 
+// 今週（next=true なら来週）の月曜〜日曜
+function fullWeekDates(today: string, next: boolean): string[] {
+  const t = new Date(`${today}T00:00:00`);
+  const monday = new Date(t);
+  monday.setDate(t.getDate() - ((t.getDay() + 6) % 7) + (next ? 7 : 0));
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return ymdOf(d);
+  });
+}
+
 function mdLabel(date: string): string {
   const h = holidayName(date);
   return `${Number(date.slice(5, 7))}/${Number(date.slice(8))}（${weekday(date)}${h ? `・${h}` : ""}）`;
@@ -390,12 +402,16 @@ export default function PrintPage() {
   const [divisions, setDivisions] = useState<DivisionKey[]>(TARGETS[0].divisions);
   const [month, setMonth] = useState(thisMonth());
   // 期間：1カ月 / 前半（1〜15日） / 後半（16日〜末日）
-  const [half, setHalf] = useState<"all" | "first" | "second" | "week" | "nextWeek">("all");
+  const [half, setHalf] = useState<"all" | "first" | "second" | "week" | "nextWeek" | "w7" | "nextW7">("all");
   const [hidePast, setHidePast] = useState(false); // 過ぎた日を載せない
   const today = todayString();
-  const isWeekendMode = half === "week" || half === "nextWeek";
+  // 週の表示：今週末・来週末（土日＋祝日）と、今週・来週（月〜日の1週間）
+  const isWeekendMode = half === "week" || half === "nextWeek" || half === "w7" || half === "nextW7";
+  const isFullWeek = half === "w7" || half === "nextW7";
+  const weekWord = { week: "今週末", nextWeek: "来週末", w7: "今週", nextW7: "来週" }[half as "week"] ?? "";
   // 載せる日の一覧（1カ月・前半・後半・今週末・来週末）
   const dates = useMemo(() => {
+    if (isFullWeek) return fullWeekDates(today, half === "nextW7");
     if (isWeekendMode) return weekendDates(today, half === "nextWeek");
     const { to } = monthRange(month);
     const last = Number(to.slice(8, 10));
@@ -406,7 +422,7 @@ export default function PrintPage() {
       out.push(`${month}-${String(d).padStart(2, "0")}`);
     }
     return out;
-  }, [half, month, today, isWeekendMode]);
+  }, [half, month, today, isWeekendMode, isFullWeek]);
   const shownDates = useMemo(() => dates.filter((d) => !(hidePast && d < today)), [dates, hidePast, today]);
   const rangeFrom = dates[0];
   const rangeTo = dates[dates.length - 1];
@@ -523,7 +539,7 @@ export default function PrintPage() {
         : half === "second"
           ? `${m}月後半（16日〜${lastDay}日）`
           : `${m}月`;
-  const yearText = isWeekendMode ? `${half === "week" ? "今週末" : "来週末"}　` : `${y}年`;
+  const yearText = isWeekendMode ? `${weekWord}　` : `${y}年`;
   const title = `${heading} ${yearText}${period}の活動予定`;
 
   useLayoutEffect(() => {
@@ -565,8 +581,8 @@ export default function PrintPage() {
 
   // ---- LINEにそのまま貼る文章 ----
   const lineText = useMemo(
-    () => buildLineText(rows, reserves, `【${isWeekendMode ? (half === "week" ? "今週末" : "来週末") : period}の予定】${heading}`, message),
-    [rows, reserves, isWeekendMode, half, period, heading, message],
+    () => buildLineText(rows, reserves, `【${isWeekendMode ? weekWord : period}の予定】${heading}`, message),
+    [rows, reserves, isWeekendMode, weekWord, period, heading, message],
   );
   const [copied, setCopied] = useState(false);
   useEffect(() => setCopied(false), [lineText]);
@@ -694,13 +710,15 @@ export default function PrintPage() {
             </Choices>
             <div className="mt-2">
               <Choices cols={2}>
+                <ToggleButton small on={half === "w7"} label="今週（月〜日）" onClick={() => setHalf("w7")} />
+                <ToggleButton small on={half === "nextW7"} label="来週（月〜日）" onClick={() => setHalf("nextW7")} />
                 <ToggleButton small on={half === "week"} label="今週末" onClick={() => setHalf("week")} />
                 <ToggleButton small on={half === "nextWeek"} label="来週末" onClick={() => setHalf("nextWeek")} />
               </Choices>
             </div>
             <span className="f-hint block">
               {dates.map(mdLabel).length <= 4 ? dates.map(mdLabel).join("・") : `${mdLabel(rangeFrom)}〜${mdLabel(rangeTo)}`}
-              を載せます。{isWeekendMode && "土日と、つながっている祝日（3連休など）です。"}
+              を載せます。{isWeekendMode && !isFullWeek && "土日と、つながっている祝日（3連休など）です。"}
             </span>
           </div>
           <label className="flex items-center gap-2 text-sm font-bold">
