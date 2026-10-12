@@ -40,7 +40,7 @@ import {
 } from "@/lib/activities";
 import { DirPicker } from "@/components/DirPicker";
 import { LeaguePanel } from "@/components/LeaguePanel";
-import { leagueRuleOf, type LeagueRule } from "@/lib/league";
+import { leagueRuleOf, OUR as LEAGUE_OUR, type LeagueRule } from "@/lib/league";
 import { Card, Choices, ErrorText, Field, inputClass, PanelTitle, PrimaryButton, ToggleButton } from "@/components/ui";
 
 export type ActivityDraft = Omit<Activity, "id"> & { id?: string };
@@ -462,7 +462,7 @@ function GamesEditor({
                 </div>
                 {/* 結果（JJBF大会のリーグ戦の計算に使う。試合が終わったら入れる） */}
                 {scores && <ScoreRow
-                  left={others ? teamLabel(g.home ?? "", pairs) || "チーム1" : "うち"}
+                  left={others ? teamLabel(g.home ?? "", pairs) || "チーム1" : LEAGUE_OUR}
                   right={teamLabel(g.opponent, pairs) || (others ? "チーム2" : "相手")}
                   sl={g.sh ?? null}
                   sr={g.sa ?? null}

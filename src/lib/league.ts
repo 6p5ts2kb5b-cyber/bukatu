@@ -7,7 +7,8 @@
 
 import { parseRef, type Game } from "./activities";
 
-export const OUR = "うち";
+// 自分たちのチーム名（表や文に出す名前）
+export const OUR = "桜・浅羽野・住吉連合";
 
 export type LeagueRule = "jjbf" | "storm";
 type Key = "points" | "allowed" | "rate" | "diff" | "onBase" | "lots";
@@ -308,7 +309,7 @@ export function leagueView(games: Game[], rule: LeagueRule = "jjbf"): LeagueView
       const by = decidedBy(rows, R.order, top.team);
       view.final = {
         ok: top.team === OUR,
-        text: `${top.team === OUR ? "1位　2日目に進出" : `${top.team}が1位（うちは敗退）`}${by && by !== "勝ち点" ? `　※${by}の差` : ""}`,
+        text: `${top.team === OUR ? "1位　2日目に進出" : `${top.team}が1位（${OUR}は敗退）`}${by && by !== "勝ち点" ? `　※${by}の差` : ""}`,
       };
     } else {
       view.final = {
@@ -362,14 +363,14 @@ export function leagueView(games: Game[], rule: LeagueRule = "jjbf"): LeagueView
     lines.push(summarize(win, "勝てば　", allowed, margin, "失点", "勝ち"));
     lines.push(summarize(draw, "引き分けは　", allowed, margin, "失点", "引き分け"));
     lines.push(summarize(lose, "負けたら　", allowed, (c) => me(c).t - me(c).u, "失点", "負け"));
-    view.next = { title: `第${i + 1}試合（うち 対 ${opp}）で2日目に進むには`, lines };
+    view.next = { title: `第${i + 1}試合（${OUR} 対 ${opp}）で2日目に進むには`, lines };
   } else {
     const aWin = cases.filter((c) => c.x > c.y);
     const draw = cases.filter((c) => c.x === c.y);
     const bWin = cases.filter((c) => c.x < c.y);
-    lines.push(summarize(aWin, `${A}が勝てば、うちは　`, (c) => c.y, (c) => c.x - c.y, `${B}の得点`, `${A}の勝ち`));
-    lines.push(summarize(draw, "引き分けなら、うちは　", (c) => c.y, () => 0, "", "引き分け"));
-    lines.push(summarize(bWin, `${B}が勝てば、うちは　`, (c) => c.x, (c) => c.y - c.x, `${A}の得点`, `${B}の勝ち`));
+    lines.push(summarize(aWin, `${A}が勝てば、${OUR}は　`, (c) => c.y, (c) => c.x - c.y, `${B}の得点`, `${A}の勝ち`));
+    lines.push(summarize(draw, `引き分けなら、${OUR}は　`, (c) => c.y, () => 0, "", "引き分け"));
+    lines.push(summarize(bWin, `${B}が勝てば、${OUR}は　`, (c) => c.x, (c) => c.y - c.x, `${A}の得点`, `${B}の勝ち`));
     view.next = { title: `第${i + 1}試合（${A} 対 ${B}）の結果で決まります`, lines };
   }
   return view;
