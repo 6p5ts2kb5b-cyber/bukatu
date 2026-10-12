@@ -99,6 +99,12 @@ export type Game = {
   bench?: "1塁" | "3塁";
   afterLunch?: boolean; // 開始を「昼食後○分後」にする
   lunchMin?: number;
+  // 結果（リーグ戦の計算用）。sh＝先に書いたチーム（うち／チーム1）の得点、sa＝相手の得点。未入力は null
+  sh?: number | null;
+  sa?: number | null;
+  // 出塁数（同点が並んだとき用・任意）
+  oh?: number | null;
+  oa?: number | null;
 };
 
 // ---- 「第1試合の勝者」のような、まだ決まっていない相手 ----
@@ -378,6 +384,7 @@ export type ActivityGroup = {
   reserveDate2: string; // 予備日の予備日
   reserveVenue2: string; // 予備日の予備日の会場（ちがう場合）
   // 勝ち上がり次第の日（大会の2日目など）。ifLose が "" なら使わない
+  leagueRule: "" | "jjbf" | "diff"; // リーグ戦の順位の決め方（"" はJJBF埼玉）
   ifLose: "" | "練習" | "休養日"; // 敗退したときの予定
   decideDate: string; // どの日の試合の結果で決まるか（例：1日目の日付）
   loseVenue: string; // 敗退→練習のときの会場
@@ -420,6 +427,7 @@ export function newGroup(division: DivisionKey, date = ""): ActivityGroup {
     reserveVenueStation: "",
     reserveDate2: "",
     reserveVenue2: "",
+    leagueRule: "",
     ifLose: "",
     decideDate: "",
     loseVenue: "",
@@ -485,6 +493,11 @@ function db(): Firestore {
   return getFirestore(firebaseApp());
 }
 
+// 点数：数字なら数字、空なら null
+function scoreOf(v: unknown): number | null {
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
+}
+
 function toActivity(id: string, data: Record<string, unknown>): Activity {
   const groups = Array.isArray(data.groups) ? (data.groups as Partial<ActivityGroup>[]) : [];
   return {
@@ -506,6 +519,10 @@ function toActivity(id: string, data: Record<string, unknown>): Activity {
               bench: x.bench === "3塁" ? "3塁" : "1塁",
               afterLunch: x.afterLunch === true,
               lunchMin: Number(x.lunchMin) || 40,
+              sh: scoreOf(x.sh),
+              sa: scoreOf(x.sa),
+              oh: scoreOf(x.oh),
+              oa: scoreOf(x.oa),
             }),
           )
         : [],

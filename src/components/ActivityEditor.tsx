@@ -39,6 +39,7 @@ import {
   type ReserveStatus,
 } from "@/lib/activities";
 import { DirPicker } from "@/components/DirPicker";
+import { LeaguePanel } from "@/components/LeaguePanel";
 import { Card, Choices, ErrorText, Field, inputClass, PanelTitle, PrimaryButton, ToggleButton } from "@/components/ui";
 
 export type ActivityDraft = Omit<Activity, "id"> & { id?: string };
@@ -204,6 +205,69 @@ function TeamSlot({
   );
 }
 
+// 「第1試合の勝者」→「B中と C中の勝者」のように短く
+function teamLabel(t: string, pairs: [string, string][]): string {
+  return describeRef(t, pairs) ?? t;
+}
+
+// 試合の結果（点数）を入れる行。空ならまだ
+function ScoreRow({
+  left,
+  right,
+  sl,
+  sr,
+  ol,
+  or,
+  showOnBase,
+  onChange,
+}: {
+  left: string;
+  right: string;
+  sl: number | null;
+  sr: number | null;
+  ol: number | null;
+  or: number | null;
+  showOnBase: boolean;
+  onChange: (p: Partial<Game>) => void;
+}) {
+  const box = (v: number | null, set: (n: number | null) => void, label: string) => (
+    <input
+      type="number"
+      inputMode="numeric"
+      min={0}
+      max={99}
+      className="score-box"
+      value={v ?? ""}
+      onChange={(e) => set(e.target.value === "" ? null : Math.max(0, Math.min(99, Number(e.target.value))))}
+      aria-label={label}
+      placeholder="－"
+    />
+  );
+  return (
+    <div className="score-row">
+      <span className="score-row__label">結果（試合が終わったら）</span>
+      <div className="score-row__grid">
+        <span className="score-row__team">{left}</span>
+        <span />
+        <span className="score-row__team">{right}</span>
+        {box(sl, (n) => onChange({ sh: n }), `${left}の得点`)}
+        <span className="score-row__dash">−</span>
+        {box(sr, (n) => onChange({ sa: n }), `${right}の得点`)}
+        {showOnBase && (
+          <>
+            <span className="score-row__sub">出塁数</span>
+            <span />
+            <span className="score-row__sub">出塁数</span>
+            {box(ol, (n) => onChange({ oh: n }), `${left}の出塁数`)}
+            <span className="score-row__dash">−</span>
+            {box(or, (n) => onChange({ oa: n }), `${right}の出塁数`)}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function GamesEditor({
   no,
   games,
@@ -230,6 +294,7 @@ function GamesEditor({
 
   // 試合ごとの2チーム（「第1試合の勝者」の説明に使う）
   const pairs: [string, string][] = games.map((g) => [g.others ? g.home ?? "" : "うち", g.opponent]);
+  const [showOnBase, setShowOnBase] = useState(() => games.some((g) => g.oh != null || g.oa != null));
 
   return (
     <Card>
@@ -363,10 +428,27 @@ function GamesEditor({
                     </div>
                   )}
                 </div>
+                {/* 結果（リーグ戦の計算に使う。試合が終わったら入れる） */}
+                <ScoreRow
+                  left={others ? teamLabel(g.home ?? "", pairs) || "チーム1" : "うち"}
+                  right={teamLabel(g.opponent, pairs) || (others ? "チーム2" : "相手")}
+                  sl={g.sh ?? null}
+                  sr={g.sa ?? null}
+                  ol={g.oh ?? null}
+                  or={g.oa ?? null}
+                  showOnBase={showOnBase}
+                  onChange={(p) => update(i, p)}
+                />
               </div>
             </div>
           );
         })}
+        {games.length >= 2 && (
+          <label className="flex items-center gap-2 text-sm font-bold">
+            <input type="checkbox" checked={showOnBase} onChange={(e) => setShowOnBase(e.target.checked)} />
+            出塁数も入れる（勝ち点・失点・得失点差が並んだとき用）
+          </label>
+        )}
         <Suggest id="opponent-options" values={opponents} />
         <p className="f-hint m-0">3チーム以上の日は、うちが出ない試合を「他チーム同士」に。2試合目からは「第1試合の勝者／敗者」をボタンで選べます（リーグ戦・トーナメント用）。</p>
         <button type="button" onClick={add} className="btn btn--ghost">
@@ -554,6 +636,7 @@ function GroupEditor({
       {isMatchType(group.type) && (
         <GamesEditor no={++no} games={group.games} opponents={options.opponents} onChange={(games) => set({ games })} />
       )}
+      {isMatchType(group.type) && <LeaguePanel group={group} onRule={(r) => set({ leagueRule: r })} />}
       {group.type === "合同練習" && (
         <PartnersEditor
           no={++no}

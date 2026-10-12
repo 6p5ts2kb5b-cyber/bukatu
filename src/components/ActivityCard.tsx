@@ -7,6 +7,7 @@
 
 import Link from "next/link";
 import { holidayName } from "@/lib/holidays";
+import { LeaguePanel } from "@/components/LeaguePanel";
 import type { ReactNode } from "react";
 import {
   divisionLabel,
@@ -219,6 +220,7 @@ function GroupBlock({ g, prefix }: { g: ActivityGroup; prefix?: string }) {
       )}
       <Opponents g={g} />
       <GroupDetails g={g} />
+      {isMatchType(g.type) && <LeaguePanel group={g} compact />}
     </div>
   );
 }

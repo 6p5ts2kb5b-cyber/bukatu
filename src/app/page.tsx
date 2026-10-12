@@ -11,6 +11,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { ErrorText } from "@/components/ui";
+import { LeaguePanel } from "@/components/LeaguePanel";
 import {
   isRef,
   listUpcoming,
@@ -116,6 +117,7 @@ function Board({ u }: { u: Unit }) {
               ))}
             </div>
           )}
+          <LeaguePanel group={g} compact />
           <div className="board__checks">
             {checks.map((c) => (
               <div key={c.key} className={`bc bc--${c.level}`}>
