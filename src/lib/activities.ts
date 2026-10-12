@@ -112,7 +112,60 @@ export type Game = {
   lh?: (number | null)[];
   la?: (number | null)[];
   first?: "l" | "r"; // 先攻（l＝先に書いたチーム、r＝相手）
+  // 新聞の記事のような「投手－捕手」と長打（l＝先に書いたチーム、r＝相手）。名前は「、」区切り
+  box?: Box;
 };
+
+export type Box = {
+  lp: string; // 投手（継投は「石野、高橋」）
+  lc: string; // 捕手
+  l2: string; // 二塁打
+  l3: string; // 三塁打
+  lhr: string; // 本塁打
+  rp: string;
+  rc: string;
+  r2: string;
+  r3: string;
+  rhr: string;
+};
+export const BOX_KEYS = ["lp", "lc", "l2", "l3", "lhr", "rp", "rc", "r2", "r3", "rhr"] as const;
+export function emptyBox(): Box {
+  return { lp: "", lc: "", l2: "", l3: "", lhr: "", rp: "", rc: "", r2: "", r3: "", rhr: "" };
+}
+function toBox(x: unknown): Box | undefined {
+  if (!x || typeof x !== "object") return undefined;
+  const o = x as Record<string, unknown>;
+  const b = emptyBox();
+  BOX_KEYS.forEach((k) => (b[k] = typeof o[k] === "string" ? (o[k] as string) : ""));
+  return BOX_KEYS.some((k) => b[k].trim()) ? b : undefined;
+}
+
+// 「石野、高橋　石野」→ ["石野","高橋","石野"]
+export function namesOf(s: string): string[] {
+  return (s ?? "").split(/[、,，・\s　\/／]+/).map((x) => x.trim()).filter(Boolean);
+}
+// 投手－捕手：「石野、高橋－知久」
+export function batteryText(p: string, c: string): string {
+  const ps = namesOf(p).join("、");
+  const cs = namesOf(c).join("、");
+  if (!ps && !cs) return "";
+  return `${ps || "？"}－${cs || "？"}`;
+}
+// 長打：「二塁打（石野）（知久）　本塁打（高橋2）」。同じ人が2本以上なら数を付ける
+export function xbhText(b2: string, b3: string, hr: string): string {
+  const one = (label: string, s: string) => {
+    const names = namesOf(s);
+    if (!names.length) return "";
+    const order: string[] = [];
+    const cnt: Record<string, number> = {};
+    names.forEach((n) => {
+      if (!cnt[n]) order.push(n);
+      cnt[n] = (cnt[n] ?? 0) + 1;
+    });
+    return label + order.map((n) => `（${n}${cnt[n] > 1 ? cnt[n] : ""}）`).join("");
+  };
+  return [one("二塁打", b2), one("三塁打", b3), one("本塁打", hr)].filter(Boolean).join("　");
+}
 
 // ---- 「第1試合の勝者」のような、まだ決まっていない相手 ----
 // 手で「対 1試合目負け」「1試合目勝ち」などと書かれていても、同じ形にそろえる
@@ -535,6 +588,7 @@ function toActivity(id: string, data: Record<string, unknown>): Activity {
               lh: Array.isArray(x.lh) ? x.lh.map(scoreOf) : [],
               la: Array.isArray(x.la) ? x.la.map(scoreOf) : [],
               first: x.first === "r" ? "r" : "l",
+              ...(toBox(x.box) ? { box: toBox(x.box) } : {}),
             }),
           )
         : [],

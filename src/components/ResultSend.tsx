@@ -6,7 +6,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { formatDateLong, tournamentTitle, type ActivityGroup, type Game } from "@/lib/activities";
+import { batteryText, formatDateLong, tournamentTitle, xbhText, type ActivityGroup, type Game } from "@/lib/activities";
 import { leagueRuleOf, leagueView, OUR, resolveGames, resultKindOf } from "@/lib/league";
 import { elementToPdf, elementToPng, shareOrDownload } from "@/lib/sharePdf";
 
@@ -46,6 +46,30 @@ function calledWin(g: Game, a: string | null, b: string | null): string {
   if (!g.called && !auto) return "";
   const inn = g.inn ?? (played > 0 && played < 7 ? played : 5);
   return `${inn}回コールド勝ち`;
+}
+
+// 新聞の記事のような行：「桜・浅羽野・住吉連合　石野、高橋－知久」「二塁打（石野）（知久）　本塁打（高橋）」
+type BoxRow = { name: string; battery: string; xbh: string };
+function boxOf(g: Game, a: string, b: string): BoxRow[] {
+  const x = g.box;
+  if (!x) return [];
+  const l = { name: a, battery: batteryText(x.lp, x.lc), xbh: xbhText(x.l2, x.l3, x.lhr) };
+  const r = { name: b, battery: batteryText(x.rp, x.rc), xbh: xbhText(x.r2, x.r3, x.rhr) };
+  return ((g.first ?? "l") === "r" ? [r, l] : [l, r]).filter((v) => v.battery || v.xbh);
+}
+
+function BoxLines({ rows }: { rows: BoxRow[] }) {
+  return (
+    <div className="rc__box">
+      {rows.map((r, k) => (
+        <p key={k} className={r.name === OUR ? "is-us" : undefined}>
+          <b>{r.name}</b>
+          {r.battery && <span className="rc__battery">{r.battery}</span>}
+          {r.xbh && <span className="rc__xbh">{r.xbh}</span>}
+        </p>
+      ))}
+    </div>
+  );
 }
 
 function LineTable({ line }: { line: Line[] }) {
@@ -170,6 +194,9 @@ function ResultSheet({ group, date, onClose }: { group: ActivityGroup; date: str
           out.push(`　${k === 0 ? "先" : "後"}　${r.name}　${r.cells.slice(0, n).map((c) => c || "-").join(" ")}　計${r.total ?? ""}`),
         );
       }
+      boxOf(group.games[i], g.a ?? "未定", g.b ?? "未定").forEach((r) =>
+        out.push(`　（${r.name}）${[r.battery, r.xbh].filter(Boolean).join("　")}`),
+      );
     });
     if (view) out.push("", "■順位");
     (view?.rows ?? []).forEach((r, i) => {
@@ -260,6 +287,10 @@ function ResultSheet({ group, date, onClose }: { group: ActivityGroup; date: str
                         <LineTable line={line} />
                       </div>
                     ) : null;
+                  })()}
+                  {(() => {
+                    const rows = boxOf(group.games[i], g.a ?? "未定", g.b ?? "未定");
+                    return rows.length ? <BoxLines rows={rows} /> : null;
                   })()}
                 </li>
               );

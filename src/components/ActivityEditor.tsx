@@ -21,7 +21,13 @@ import {
   isSimpleType,
   STAGES,
   recentPlaces,
+  BOX_KEYS,
+  emptyBox,
+  batteryText,
+  xbhText,
+  type Box,
 } from "@/lib/activities";
+import { listPlayers } from "@/lib/players";
 import { addPackingItem, listPackingItems, type PackingItem } from "@/lib/packing";
 import { findVenue, listDirectory, venueList, type DirEntry } from "@/lib/directory";
 import {
@@ -306,6 +312,73 @@ function ScoreRow({
 }
 
 // ランニングスコア（回ごとの点）の入力。入れると合計が上の「結果」に自動で入る
+// 新聞の記事のような「投手－捕手」と長打（二塁打・三塁打・本塁打）
+function BoxEditor({
+  left,
+  right,
+  g,
+  onChange,
+}: {
+  left: string;
+  right: string;
+  g: Game;
+  onChange: (p: Partial<Game>) => void;
+}) {
+  const box = g.box ?? emptyBox();
+  const has = BOX_KEYS.some((k) => box[k].trim());
+  const [open, setOpen] = useState(has);
+  const set = (k: keyof Box, v: string) => onChange({ box: { ...box, [k]: v } });
+  if (!open)
+    return (
+      <button type="button" className="line-open" onClick={() => setOpen(true)}>
+        ＋ 投手・捕手、二塁打・三塁打・本塁打を入れる（新聞の記事風）
+      </button>
+    );
+  const side = (s: "l" | "r", name: string) => {
+    const k = (x: string) => `${s}${x}` as keyof Box;
+    const field = (key: string, label: string, ph: string) => (
+      <label className="box-ed__f">
+        <span>{label}</span>
+        <input
+          className={inputClass}
+          list="player-names"
+          value={box[k(key)]}
+          placeholder={ph}
+          onChange={(e) => set(k(key), e.target.value)}
+        />
+      </label>
+    );
+    return (
+      <div className="box-ed__side">
+        <p className="box-ed__team">{name}</p>
+        <div className="box-ed__grid">
+          {field("p", "投手", s === "l" ? "例：石野、高橋" : "例：山田")}
+          {field("c", "捕手", s === "l" ? "例：知久" : "例：佐藤")}
+          {field("2", "二塁打", s === "l" ? "例：石野、知久" : "")}
+          {field("3", "三塁打", "")}
+          {field("hr", "本塁打", s === "l" ? "例：高橋" : "")}
+        </div>
+        {(batteryText(box[k("p")], box[k("c")]) || xbhText(box[k("2")], box[k("3")], box[k("hr")])) && (
+          <p className="box-ed__prev">
+            {batteryText(box[k("p")], box[k("c")])}
+            {batteryText(box[k("p")], box[k("c")]) && xbhText(box[k("2")], box[k("3")], box[k("hr")]) ? "　" : ""}
+            {xbhText(box[k("2")], box[k("3")], box[k("hr")])}
+          </p>
+        )}
+      </div>
+    );
+  };
+  return (
+    <div className="box-ed">
+      <p className="box-ed__hint">
+        2人以上は「、」で区切ります（投げた順に：石野、高橋）。同じ人が2本打ったら2回書くと「（石野2）」になります。相手チームは分かる所だけでOK。
+      </p>
+      {side("l", left)}
+      {side("r", right)}
+    </div>
+  );
+}
+
 function LineEditor({
   left,
   right,
@@ -441,6 +514,14 @@ function GamesEditor({
   // 試合ごとの2チーム（「第1試合の勝者」の説明に使う）
   const pairs: [string, string][] = games.map((g) => [g.others ? g.home ?? "" : "うち", g.opponent]);
   const [showOnBase, setShowOnBase] = useState(() => games.some((g) => g.oh != null || g.oa != null));
+  // 選手の名字（投手・捕手・長打の入力候補）
+  const [playerNames, setPlayerNames] = useState<string[]>([]);
+  useEffect(() => {
+    if (!scores) return;
+    listPlayers()
+      .then((ps) => setPlayerNames([...new Set(ps.map((p) => p.name.trim().split(/[\s　]+/)[0]).filter(Boolean))]))
+      .catch(() => {});
+  }, [scores]);
   // 前の試合の結果で決まったチーム名（「第1試合の敗者」→「C中」）
   const resolved = resolveGames(games);
   const nameL = (i: number, g: Game) =>
@@ -601,6 +682,14 @@ function GamesEditor({
                     onChange={(p) => update(i, p)}
                   />
                 )}
+                {scores && (
+                  <BoxEditor
+                    left={nameL(i, g)}
+                    right={nameR(i, g)}
+                    g={g}
+                    onChange={(p) => update(i, p)}
+                  />
+                )}
               </div>
             </div>
           );
@@ -612,6 +701,7 @@ function GamesEditor({
           </label>
         )}
         <Suggest id="opponent-options" values={opponents} />
+        <Suggest id="player-names" values={playerNames} />
         <p className="f-hint m-0">3チーム以上の日は、うちが出ない試合を「他チーム同士」に。2試合目からは「第1試合の勝者／敗者」をボタンで選べます（リーグ戦・トーナメント用）。</p>
         <button type="button" onClick={add} className="btn btn--ghost">
           ＋ 試合を追加
