@@ -5,14 +5,17 @@
 
 import { leagueRuleOf, leagueView, OUR } from "@/lib/league";
 import type { ActivityGroup } from "@/lib/activities";
+import { ResultSend } from "@/components/ResultSend";
 
 // JJBF大会・STORM杯（大会名で判断）だけで出す。順位の決め方はそれぞれの要項どおり
 export function LeaguePanel({
   group,
   compact = false,
+  date,
 }: {
   group: ActivityGroup;
   compact?: boolean; // 一覧・ホーム用（順位表は省く）
+  date?: string; // 入力画面：保護者に結果を送るボタンを出す（その日の日付）
 }) {
   const rule = leagueRuleOf(group);
   if (!rule) return null;
@@ -67,6 +70,7 @@ export function LeaguePanel({
       )}
       {v.waiting && <p className="lg__wait">{v.waiting}</p>}
       {!compact && <p className="lg__rulenote">順位の決め方：{v.ruleLabel}</p>}
+      {!compact && date && <ResultSend group={group} date={date} />}
     </div>
   );
 }

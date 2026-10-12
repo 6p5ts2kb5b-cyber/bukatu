@@ -44,7 +44,7 @@ function normalizeColors(root: HTMLElement) {
 // ---- 画面の組み方そのままに、自分でキャンバスへえがく ----
 // html2canvas は日本語の文字が少し下にずれて、表の線に切られることがある。
 // そこで、ブラウザが決めた「文字1つ1つの位置」をそのまま使って、線・背景・文字を自分でえがく。
-function domToCanvas(root: HTMLElement, scale: number): HTMLCanvasElement {
+export function domToCanvas(root: HTMLElement, scale: number): HTMLCanvasElement {
   const origin = root.getBoundingClientRect();
   const c = document.createElement("canvas");
   c.width = Math.ceil(origin.width * scale);
@@ -298,6 +298,24 @@ export async function elementToPdf(
       pages.push(await toJpeg(c));
     }
     return new File([jpegPagesToPdf(pages)], filename, { type: "application/pdf" });
+  } finally {
+    host.remove();
+  }
+}
+
+// 要素を画像（PNG）にする。幅 width で組んでからえがく（LINEで、そのまま見られる画像）
+export async function elementToPng(source: HTMLElement, filename: string, width = 600): Promise<File> {
+  await document.fonts?.ready;
+  const host = document.createElement("div");
+  host.style.cssText = `position:fixed;left:-20000px;top:0;width:${width}px;background:#fff;`;
+  const clone = source.cloneNode(true) as HTMLElement;
+  host.appendChild(clone);
+  document.body.appendChild(host);
+  try {
+    normalizeColors(clone);
+    const c = domToCanvas(clone, 2);
+    const blob: Blob = await new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("png"))), "image/png"));
+    return new File([blob], filename, { type: "image/png" });
   } finally {
     host.remove();
   }

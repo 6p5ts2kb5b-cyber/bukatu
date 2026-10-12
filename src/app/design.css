@@ -2966,6 +2966,231 @@ td.pl-mark {
   color: var(--ink);
 }
 
+/* 結果を保護者に送る：画面全体のシート */
+.lg__send {
+  width: 100%;
+  margin-top: 4px;
+}
+.rs-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  overflow-y: auto;
+  background: rgba(10, 30, 22, 0.55);
+  padding: calc(env(safe-area-inset-top) + 10px) 10px calc(env(safe-area-inset-bottom) + 20px);
+}
+.rs-sheet__inner {
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--paper);
+}
+.rs-sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.rs-sheet__head p {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 900;
+}
+.rs-sheet__close {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid var(--rule);
+  font-size: 18px;
+  font-weight: 800;
+}
+.rs-sheet__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.rs-sheet__field textarea {
+  padding: 10px;
+  border-radius: 12px;
+  border: 1.5px solid var(--rule);
+  background: #fff;
+  font-size: 15px;
+}
+.rs-sheet__btns {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rs-sheet__note {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: #b06a00;
+}
+.rs-sheet__text summary {
+  font-size: 13px;
+  font-weight: 800;
+}
+.rs-sheet__text pre {
+  margin: 8px 0 0;
+  padding: 10px;
+  border-radius: 10px;
+  background: #fff;
+  font-family: var(--jp);
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+/* 送る絵（結果カード）：幅600pxで組む */
+.rc {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  background: #fff;
+  color: #111;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #d8ded5;
+  font-family: var(--jp);
+  padding-bottom: 14px;
+}
+.rc__head {
+  padding: 16px 18px 14px;
+  background: #123f31;
+  color: #fff;
+}
+.rc__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.3;
+}
+.rc__date {
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+}
+.rc__label {
+  margin: 14px 18px 6px;
+  font-size: 13px;
+  font-weight: 900;
+  color: #123f31;
+  letter-spacing: 0.1em;
+}
+.rc__games {
+  margin: 0 14px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rc__game {
+  display: grid;
+  grid-template-columns: 26px 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  background: #f3f5f2;
+}
+.rc__no {
+  font-size: 18px;
+  font-weight: 900;
+  text-align: center;
+}
+.rc__team {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.rc__team--a {
+  text-align: right;
+}
+.rc__team.is-win {
+  font-weight: 900;
+}
+.rc__team.is-us {
+  color: #123f31;
+  font-weight: 900;
+}
+.rc__score {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--num);
+}
+.rc__score b {
+  min-width: 1.2em;
+  text-align: center;
+  font-size: 28px;
+  font-weight: 800;
+  color: #777;
+}
+.rc__score b.is-win {
+  color: #c42b3b;
+}
+.rc__score i {
+  font-style: normal;
+  font-size: 16px;
+  font-weight: 800;
+  color: #555;
+}
+.rc__table {
+  width: calc(100% - 28px);
+  margin: 0 14px;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.rc__table th {
+  padding: 6px 4px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #555;
+  border-bottom: 2px solid #123f31;
+}
+.rc__table td {
+  padding: 9px 4px;
+  text-align: center;
+  font-weight: 700;
+  border-bottom: 1px solid #e0e5dd;
+}
+.rc__table td:nth-child(2) {
+  text-align: left;
+}
+.rc__table tr.is-us td {
+  background: #fff6cf;
+  font-weight: 900;
+}
+.rc__msg {
+  margin: 14px 14px 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f3f5f2;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+.rc__msg.is-win {
+  background: #e5f6eb;
+  color: #157a3c;
+  font-size: 18px;
+}
+.rc__rule {
+  margin: 10px 18px 0;
+  font-size: 10.5px;
+  color: #777;
+  line-height: 1.5;
+}
+
 /* 印刷のときは動き（ふわっと出る・数字がめくれる）を止めて、すぐ全部見えるように。
    画面で隠れていた部品（送付書の印刷用の絵など）が、透明のまま印刷されるのを防ぐ */
 @media print {

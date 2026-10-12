@@ -51,6 +51,7 @@ type Options = {
   dir: DirEntry[]; // 名簿（会場の住所・最寄駅）
   reloadDir: () => void;
   prevMatches: PrevMatch[]; // この日より前の試合の日（勝ち上がり次第の日に使う）
+  date: string; // この予定の日付
   meetPlaces: string[];
   opponents: string[];
   tournaments: string[];
@@ -677,7 +678,7 @@ function GroupEditor({
           scores={leagueRuleOf(group)}
         />
       )}
-      {isMatchType(group.type) && <LeaguePanel group={group} />}
+      {isMatchType(group.type) && <LeaguePanel group={group} date={options.date} />}
       {group.type === "合同練習" && (
         <PartnersEditor
           no={++no}
@@ -1320,7 +1321,7 @@ export function ActivityEditor({
           key={current.division}
           group={current}
           onChange={updateGroup}
-          options={{ packingItems, onAddPacking, ...places, dir, reloadDir, prevMatches }}
+          options={{ packingItems, onAddPacking, ...places, dir, reloadDir, prevMatches, date: a.date }}
           tabs={tabs}
           extra={
             top && academy && tab === "academy" ? (
