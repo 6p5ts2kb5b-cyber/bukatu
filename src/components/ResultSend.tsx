@@ -5,11 +5,62 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { formatDateLong, tournamentTitle, type ActivityGroup } from "@/lib/activities";
+import { formatDateLong, tournamentTitle, type ActivityGroup, type Game } from "@/lib/activities";
 import { leagueRuleOf, leagueView, OUR, resolveGames } from "@/lib/league";
 import { elementToPdf, elementToPng, shareOrDownload } from "@/lib/sharePdf";
 
 const CIRCLED = "①②③④⑤⑥⑦⑧⑨⑩";
+
+// ランニングスコア：先攻・後攻の順に、回ごとの点（「X」＝裏の攻撃なし）
+type Line = { name: string; cells: string[]; total: number | null };
+function lineOf(g: Game, a: string, b: string): Line[] | null {
+  const lh = g.lh ?? [];
+  const la = g.la ?? [];
+  if (!lh.some((v) => v != null) && !la.some((v) => v != null)) return null;
+  const leftFirst = (g.first ?? "l") === "l";
+  const top = leftFirst ? { name: a, v: lh, t: g.sh } : { name: b, v: la, t: g.sa };
+  const bot = leftFirst ? { name: b, v: la, t: g.sa } : { name: a, v: lh, t: g.sh };
+  const n = Math.max(top.v.length, bot.v.length);
+  const cols = Math.max(7, n);
+  const cell = (v: (number | null)[], i: number, isBottom: boolean) => {
+    const x = v[i];
+    if (x != null) return String(x);
+    // 最終回の裏をやらなかった（後攻が勝っていた）
+    if (isBottom && i === n - 1 && top.v[i] != null) return "X";
+    return "";
+  };
+  return [
+    { name: top.name, cells: Array.from({ length: cols }, (_, i) => cell(top.v, i, false)), total: top.t ?? null },
+    { name: bot.name, cells: Array.from({ length: cols }, (_, i) => cell(bot.v, i, true)), total: bot.t ?? null },
+  ];
+}
+
+function LineTable({ line }: { line: Line[] }) {
+  return (
+    <table className="rc__line">
+      <thead>
+        <tr>
+          <th />
+          {line[0].cells.map((_, i) => (
+            <th key={i}>{i + 1}</th>
+          ))}
+          <th>計</th>
+        </tr>
+      </thead>
+      <tbody>
+        {line.map((r, k) => (
+          <tr key={k} className={r.name === OUR ? "is-us" : undefined}>
+            <td className="rc__line-team">{r.name}</td>
+            {r.cells.map((c, i) => (
+              <td key={i}>{c}</td>
+            ))}
+            <td className="rc__line-sum">{r.total ?? ""}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
 
 export function ResultSend({ group, date }: { group: ActivityGroup; date: string }) {
   const [open, setOpen] = useState(false);
@@ -75,6 +126,11 @@ function ResultSheet({ group, date, onClose }: { group: ActivityGroup; date: str
     games.forEach((g, i) => {
       const done = g.sa != null && g.sb != null;
       out.push(`${CIRCLED[i]}　${g.a ?? "未定"}　${done ? `${g.sa} − ${g.sb}` : "対"}　${g.b ?? "未定"}${done ? "" : "（これから）"}`);
+      const line = lineOf(group.games[i], g.a ?? "未定", g.b ?? "未定");
+      if (line)
+        line.forEach((r, k) =>
+          out.push(`　${k === 0 ? "先" : "後"}　${r.name}　${r.cells.map((c) => c || "-").join(" ")}　計${r.total ?? ""}`),
+        );
     });
     out.push("", "■順位");
     view.rows.forEach((r, i) => {
@@ -85,7 +141,7 @@ function ResultSheet({ group, date, onClose }: { group: ActivityGroup; date: str
     });
     if (message.trim()) out.push("", message.trim());
     return out.join("\n");
-  }, [title, date, games, view.rows, storm, message]);
+  }, [title, date, games, view.rows, storm, message, group.games]);
 
   const [copied, setCopied] = useState(false);
   const copy = async () => {
@@ -142,6 +198,14 @@ function ResultSheet({ group, date, onClose }: { group: ActivityGroup; date: str
                     )}
                   </span>
                   <span className={`rc__team rc__team--b${bw ? " is-win" : ""}${g.b === OUR ? " is-us" : ""}`}>{g.b ?? "未定"}</span>
+                  {(() => {
+                    const line = lineOf(group.games[i], g.a ?? "未定", g.b ?? "未定");
+                    return line ? (
+                      <div className="rc__line-wrap">
+                        <LineTable line={line} />
+                      </div>
+                    ) : null;
+                  })()}
                 </li>
               );
             })}

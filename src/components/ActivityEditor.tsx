@@ -40,7 +40,7 @@ import {
 } from "@/lib/activities";
 import { DirPicker } from "@/components/DirPicker";
 import { LeaguePanel } from "@/components/LeaguePanel";
-import { leagueRuleOf, OUR as LEAGUE_OUR, type LeagueRule } from "@/lib/league";
+import { leagueRuleOf, OUR as LEAGUE_OUR, resolveGames, type LeagueRule } from "@/lib/league";
 import { Card, Choices, ErrorText, Field, inputClass, PanelTitle, PrimaryButton, ToggleButton } from "@/components/ui";
 
 export type ActivityDraft = Omit<Activity, "id"> & { id?: string };
@@ -299,6 +299,113 @@ function ScoreRow({
   );
 }
 
+// ランニングスコア（回ごとの点）の入力。入れると合計が上の「結果」に自動で入る
+function LineEditor({
+  left,
+  right,
+  g,
+  onChange,
+}: {
+  left: string;
+  right: string;
+  g: Game;
+  onChange: (p: Partial<Game>) => void;
+}) {
+  const lh = g.lh ?? [];
+  const la = g.la ?? [];
+  const [open, setOpen] = useState(lh.some((v) => v != null) || la.some((v) => v != null));
+  const [cols, setCols] = useState(Math.max(7, lh.length, la.length));
+  const first = g.first ?? "l";
+  // 先攻を上の段に
+  const rows: { side: "l" | "r"; name: string; vals: (number | null)[] }[] =
+    first === "l"
+      ? [
+          { side: "l", name: left, vals: lh },
+          { side: "r", name: right, vals: la },
+        ]
+      : [
+          { side: "r", name: right, vals: la },
+          { side: "l", name: left, vals: lh },
+        ];
+  const sum = (v: (number | null)[]) => (v.some((x) => x != null) ? v.reduce<number>((t, x) => t + (x ?? 0), 0) : null);
+  const setCell = (side: "l" | "r", i: number, v: number | null) => {
+    const cur = [...(side === "l" ? lh : la)];
+    while (cur.length < cols) cur.push(null);
+    cur[i] = v;
+    // 後ろの空いた回は切る
+    while (cur.length && cur[cur.length - 1] == null) cur.pop();
+    const nl = side === "l" ? cur : lh;
+    const nr = side === "r" ? cur : la;
+    onChange({ lh: nl, la: nr, sh: sum(nl) ?? g.sh ?? null, sa: sum(nr) ?? g.sa ?? null });
+  };
+  if (!open)
+    return (
+      <button type="button" className="line-open" onClick={() => setOpen(true)}>
+        ＋ ランニングスコア（回ごとの点）を入れる
+      </button>
+    );
+  return (
+    <div className="line-ed">
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-extrabold text-navy-soft">先攻</span>
+        <div className="seg flex-1" role="group" aria-label="先攻">
+          <button type="button" className="seg__btn" aria-pressed={first === "l"} onClick={() => onChange({ first: "l" })}>
+            {left}
+          </button>
+          <button type="button" className="seg__btn" aria-pressed={first === "r"} onClick={() => onChange({ first: "r" })}>
+            {right}
+          </button>
+        </div>
+      </div>
+      <div className="line-ed__scroll">
+        <table className="line-ed__table">
+          <thead>
+            <tr>
+              <th />
+              {Array.from({ length: cols }, (_, i) => (
+                <th key={i}>{i + 1}</th>
+              ))}
+              <th>計</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.side}>
+                <th className="line-ed__team">{r.name}</th>
+                {Array.from({ length: cols }, (_, i) => (
+                  <td key={i}>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={30}
+                      value={r.vals[i] ?? ""}
+                      placeholder="－"
+                      aria-label={`${r.name} ${i + 1}回`}
+                      onChange={(e) =>
+                        setCell(r.side, i, e.target.value === "" ? null : Math.max(0, Math.min(30, Number(e.target.value))))
+                      }
+                    />
+                  </td>
+                ))}
+                <td className="line-ed__sum">{sum(r.vals) ?? ""}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <span className="f-hint m-0">裏の攻撃をしなかった回は空のまま（表に「X」と出ます）。</span>
+        {cols < 10 && (
+          <button type="button" className="btn btn--ghost btn--small shrink-0" onClick={() => setCols(cols + 1)}>
+            ＋延長
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function GamesEditor({
   no,
   games,
@@ -328,6 +435,11 @@ function GamesEditor({
   // 試合ごとの2チーム（「第1試合の勝者」の説明に使う）
   const pairs: [string, string][] = games.map((g) => [g.others ? g.home ?? "" : "うち", g.opponent]);
   const [showOnBase, setShowOnBase] = useState(() => games.some((g) => g.oh != null || g.oa != null));
+  // 前の試合の結果で決まったチーム名（「第1試合の敗者」→「C中」）
+  const resolved = resolveGames(games);
+  const nameL = (i: number, g: Game) =>
+    g.others ? resolved[i]?.a ?? (teamLabel(g.home ?? "", pairs) || "チーム1") : LEAGUE_OUR;
+  const nameR = (i: number, g: Game) => resolved[i]?.b ?? (teamLabel(g.opponent, pairs) || (g.others ? "チーム2" : "相手"));
 
   return (
     <Card>
@@ -463,8 +575,8 @@ function GamesEditor({
                 </div>
                 {/* 結果（JJBF大会のリーグ戦の計算に使う。試合が終わったら入れる） */}
                 {scores && <ScoreRow
-                  left={others ? teamLabel(g.home ?? "", pairs) || "チーム1" : LEAGUE_OUR}
-                  right={teamLabel(g.opponent, pairs) || (others ? "チーム2" : "相手")}
+                  left={nameL(i, g)}
+                  right={nameR(i, g)}
                   sl={g.sh ?? null}
                   sr={g.sa ?? null}
                   ol={g.oh ?? null}
@@ -475,6 +587,14 @@ function GamesEditor({
                   inn={g.inn ?? null}
                   onChange={(p) => update(i, p)}
                 />}
+                {scores && (
+                  <LineEditor
+                    left={nameL(i, g)}
+                    right={nameR(i, g)}
+                    g={g}
+                    onChange={(p) => update(i, p)}
+                  />
+                )}
               </div>
             </div>
           );

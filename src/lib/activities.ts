@@ -108,6 +108,10 @@ export type Game = {
   // STORM杯：コールドゲームか・試合の回数（失点率の計算用。空ならふつうの7回）
   called?: boolean;
   inn?: number | null;
+  // ランニングスコア（回ごとの点）。lh＝先に書いたチーム、la＝相手。null は「まだ・やっていない（X）」
+  lh?: (number | null)[];
+  la?: (number | null)[];
+  first?: "l" | "r"; // 先攻（l＝先に書いたチーム、r＝相手）
 };
 
 // ---- 「第1試合の勝者」のような、まだ決まっていない相手 ----
@@ -528,6 +532,9 @@ function toActivity(id: string, data: Record<string, unknown>): Activity {
               oa: scoreOf(x.oa),
               called: x.called === true,
               inn: scoreOf(x.inn),
+              lh: Array.isArray(x.lh) ? x.lh.map(scoreOf) : [],
+              la: Array.isArray(x.la) ? x.la.map(scoreOf) : [],
+              first: x.first === "r" ? "r" : "l",
             }),
           )
         : [],

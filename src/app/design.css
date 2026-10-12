@@ -3191,6 +3191,116 @@ td.pl-mark {
   line-height: 1.5;
 }
 
+/* ランニングスコアの入力 */
+.line-open {
+  align-self: flex-start;
+  padding: 6px 2px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--board);
+  text-decoration: underline;
+}
+.line-ed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--rule);
+}
+.line-ed__scroll {
+  overflow-x: auto;
+}
+.line-ed__table {
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.line-ed__table th {
+  padding: 2px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink-3);
+  text-align: center;
+}
+.line-ed__team {
+  max-width: 4.2em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left !important;
+  color: var(--ink) !important;
+  font-size: 12px !important;
+}
+.line-ed__table td {
+  padding: 1px;
+}
+.line-ed__table input {
+  width: 30px;
+  height: 38px;
+  border-radius: 8px;
+  border: 1.5px solid var(--rule);
+  background: #fff;
+  text-align: center;
+  font-family: var(--num);
+  font-size: 17px;
+  font-weight: 800;
+  -moz-appearance: textfield;
+}
+.line-ed__table input::-webkit-outer-spin-button,
+.line-ed__table input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.line-ed__sum {
+  min-width: 30px;
+  text-align: center;
+  font-family: var(--num);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+/* 結果カードのランニングスコア */
+.rc__line-wrap {
+  grid-column: 1 / -1;
+  margin-top: 6px;
+}
+.rc__line {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  font-family: var(--num);
+  font-size: 15px;
+}
+.rc__line th {
+  padding: 3px 0;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  background: #123f31;
+  text-align: center;
+}
+.rc__line td {
+  padding: 5px 0;
+  text-align: center;
+  font-weight: 700;
+  border: 1px solid #dfe5dc;
+}
+.rc__line td.rc__line-team {
+  width: 34%;
+  padding-left: 6px;
+  text-align: left;
+  font-family: var(--jp);
+  font-size: 12px;
+  font-weight: 800;
+}
+.rc__line td.rc__line-sum {
+  font-size: 17px;
+  font-weight: 800;
+  color: #c42b3b;
+}
+.rc__line tr.is-us td {
+  background: #fff6cf;
+}
+
 /* 印刷のときは動き（ふわっと出る・数字がめくれる）を止めて、すぐ全部見えるように。
    画面で隠れていた部品（送付書の印刷用の絵など）が、透明のまま印刷されるのを防ぐ */
 @media print {
