@@ -93,8 +93,12 @@ export function TimePicker10({
   const [h, m] = value ? value.split(":") : ["", ""];
   const hours = Array.from({ length: 18 }, (_, i) => String(i + 5).padStart(2, "0")); // 5時〜22時
   if (h && !hours.includes(h)) hours.unshift(h);
-  const mins = ["00", "10", "20", "30", "40", "50"];
-  if (m && !mins.includes(m)) mins.push(m); // 前に入れた半端な分も消さずに残す
+  // 5分刻み（00・05・10 … 55）
+  const mins = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
+  if (m && !mins.includes(m)) {
+    mins.push(m); // 前に入れた半端な分も消さずに残す
+    mins.sort();
+  }
   return (
       <div className="time-sel">
         <select
