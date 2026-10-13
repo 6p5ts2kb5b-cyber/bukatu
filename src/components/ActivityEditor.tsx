@@ -25,6 +25,7 @@ import {
   emptyBox,
   batteryText,
   xbhText,
+  slotsOf,
   type Box,
 } from "@/lib/activities";
 import { listPlayers } from "@/lib/players";
@@ -347,8 +348,15 @@ function BoxEditor({
     return (
       <div className="box-ed__side">
         <p className="box-ed__team">{name}</p>
-        {field("p", "投手（投げた順）", "＋ 継投（次の投手）", s === "l" ? "例：石野" : "例：山田", "→")}
-        {field("c", "捕手（守った順）", "＋ 捕手交代", s === "l" ? "例：知久" : "例：佐藤", "→")}
+        <div className="box-ed__f">
+          <span>投手－捕手（代わった順に上から）</span>
+          <BatteryRows
+            p={box[k("p")]}
+            c={box[k("c")]}
+            onChange={(p, c) => onChange({ box: { ...box, [k("p")]: p, [k("c")]: c } })}
+            ph={s === "l" ? ["例：石野", "例：知久"] : ["例：山田", "例：佐藤"]}
+          />
+        </div>
         {field("2", "二塁打", "＋ もう1本", "", "")}
         {field("3", "三塁打", "＋ もう1本", "", "")}
         {field("hr", "本塁打", "＋ もう1本", "", "")}
@@ -365,10 +373,67 @@ function BoxEditor({
   return (
     <div className="box-ed">
       <p className="box-ed__hint">
-        1つの枠に1人ずつ入れます。ピッチャーが代わったら「＋ 継投」、キャッチャーが代わったら「＋ 捕手交代」。同じ人が2本打ったら2回入れると「（石野2）」になります。相手チームは分かる所だけでOK。
+        ピッチャーかキャッチャーが代わったら「＋ 交代」で次の組み合わせを入れます（代わらなかった方は空のままでOK）。同じ人が2本打ったら2回入れると「（石野2）」になります。相手チームは分かる所だけでOK。
       </p>
       {side("l", left)}
       {side("r", right)}
+    </div>
+  );
+}
+
+// 投手－捕手の組み合わせを1行ずつ（交代したら行を増やす）。保存は投手・捕手それぞれ「石野、知久」の形（行の順）
+function BatteryRows({
+  p,
+  c,
+  onChange,
+  ph,
+}: {
+  p: string;
+  c: string;
+  onChange: (p: string, c: string) => void;
+  ph: [string, string];
+}) {
+  const ps = slotsOf(p);
+  const cs = slotsOf(c);
+  const n = Math.max(1, ps.length, cs.length);
+  const rows = Array.from({ length: n }, (_, i) => [ps[i] ?? "", cs[i] ?? ""] as [string, string]);
+  const save = (next: [string, string][]) => {
+    const empty = next.every(([a, b]) => !a && !b) && next.length === 1;
+    onChange(empty ? "" : next.map((r) => r[0]).join("、"), empty ? "" : next.map((r) => r[1]).join("、"));
+  };
+  const clean = (v: string) => v.replace(/[、,，]/g, "");
+  return (
+    <div className="bat">
+      {rows.map(([a, b], i) => (
+        <div key={i} className="bat__row">
+          <span className="bat__no">{i + 1}</span>
+          <input
+            className={inputClass}
+            list="player-names"
+            value={a}
+            placeholder={i === 0 ? ph[0] : "（同じ）"}
+            aria-label={`${i + 1}組目の投手`}
+            onChange={(e) => save(rows.map((r, j) => (j === i ? [clean(e.target.value), r[1]] : r)))}
+          />
+          <i className="mname__sep">－</i>
+          <input
+            className={inputClass}
+            list="player-names"
+            value={b}
+            placeholder={i === 0 ? ph[1] : "（同じ）"}
+            aria-label={`${i + 1}組目の捕手`}
+            onChange={(e) => save(rows.map((r, j) => (j === i ? [r[0], clean(e.target.value)] : r)))}
+          />
+          {n > 1 && (
+            <button type="button" className="mname__x" aria-label="この組を消す" onClick={() => save(rows.filter((_, j) => j !== i))}>
+              ×
+            </button>
+          )}
+        </div>
+      ))}
+      <button type="button" className="mname__add" onClick={() => save([...rows, ["", ""]])}>
+        ＋ 交代（投手・捕手が代わった）
+      </button>
     </div>
   );
 }

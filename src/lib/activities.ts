@@ -144,12 +144,27 @@ function toBox(x: unknown): Box | undefined {
 export function namesOf(s: string): string[] {
   return (s ?? "").split(/[、,，・\s　\/／]+/).map((x) => x.trim()).filter(Boolean);
 }
-// 投手－捕手：「石野、高橋－知久」
+// 1人ずつの枠の並び（空の枠も残す）：「石野、、高橋」→ ["石野","","高橋"]
+export function slotsOf(s: string): string[] {
+  return s ? s.split(/[、,，]/).map((x) => x.replace(/^[\s　]+|[\s　]+$/g, "")) : [];
+}
+// 投手－捕手の組み合わせ（上から順に）：「石野－知久、知久－石野」
+//   空の枠は、ひとつ前の人のまま（ピッチャーだけ代わった、など）
 export function batteryText(p: string, c: string): string {
-  const ps = namesOf(p).join("、");
-  const cs = namesOf(c).join("、");
-  if (!ps && !cs) return "";
-  return `${ps || "？"}－${cs || "？"}`;
+  const ps = slotsOf(p);
+  const cs = slotsOf(c);
+  const n = Math.max(ps.length, cs.length);
+  const out: string[] = [];
+  let lp = "";
+  let lc = "";
+  for (let i = 0; i < n; i++) {
+    lp = ps[i] || lp;
+    lc = cs[i] || lc;
+    if (!lp && !lc) continue;
+    const t = `${lp || "？"}－${lc || "？"}`;
+    if (out[out.length - 1] !== t) out.push(t);
+  }
+  return out.join("、");
 }
 // 長打：「二塁打（石野）（知久）　本塁打（高橋2）」。同じ人が2本以上なら数を付ける
 export function xbhText(b2: string, b3: string, hr: string): string {
