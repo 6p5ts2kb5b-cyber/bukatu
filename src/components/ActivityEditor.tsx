@@ -22,6 +22,7 @@ import {
   STAGES,
   recentPlaces,
   BOX_KEYS,
+  autoUmpire,
   emptyBox,
   batteryText,
   xbhText,
@@ -384,6 +385,67 @@ function BoxEditor({
   );
 }
 
+// 審判（大会）：この日のチーム・「第1試合の勝者／敗者」・手で入力。空なら自動
+function UmpirePicker({
+  i,
+  value,
+  auto,
+  teams,
+  onChange,
+}: {
+  i: number;
+  value: string;
+  auto: string;
+  teams: string[];
+  onChange: (v: string) => void;
+}) {
+  const refs = Array.from({ length: i }, (_, k) => [`第${k + 1}試合の勝者`, `第${k + 1}試合の敗者`]).flat();
+  const options = [...teams, ...refs];
+  const cur = value.trim() || auto;
+  const custom = !!value.trim() && !options.includes(value.trim());
+  const [typing, setTyping] = useState(false);
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-baseline gap-2">
+        <span className="shrink-0 text-sm font-extrabold text-navy-soft">審判</span>
+        <span className="text-sm font-bold">
+          {cur || "未定"}
+          {!value.trim() && auto && <small className="ml-1 text-ink-3">（自動）</small>}
+        </span>
+      </div>
+      <div className="picks">
+        {options.map((o) => (
+          <button
+            key={o}
+            type="button"
+            className={`pick${parseRef(o) ? " pick--ref" : ""}`}
+            aria-pressed={cur === o}
+            onClick={() => {
+              setTyping(false);
+              // 自動と同じものを押したら、自動のまま（空）にしておく
+              onChange(o === auto ? "" : value.trim() === o ? "" : o);
+            }}
+          >
+            {o}
+          </button>
+        ))}
+        <button type="button" className="pick pick--other" aria-pressed={custom || typing} onClick={() => setTyping(!typing)}>
+          {custom ? `✎ ${value}` : "手で入力"}
+        </button>
+      </div>
+      {(typing || custom) && (
+        <input
+          className={`${inputClass} f-input--white`}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="審判のチーム名"
+          autoComplete="off"
+        />
+      )}
+    </div>
+  );
+}
+
 // 投手－捕手の組み合わせを1行ずつ（交代したら行を増やす）。保存は投手・捕手それぞれ「石野、知久」の形（行の順）
 function BatteryRows({
   p,
@@ -596,8 +658,10 @@ function GamesEditor({
   opponents,
   onChange,
   scores = null,
+  type = "",
 }: {
   no: number;
+  type?: string;
   games: Game[];
   opponents: string[];
   onChange: (g: Game[]) => void;
@@ -631,6 +695,14 @@ function GamesEditor({
   const resolved = resolveGames(games);
   const nameL = (i: number, g: Game) =>
     g.others ? resolved[i]?.a ?? (teamLabel(g.home ?? "", pairs) || "チーム1") : LEAGUE_OUR;
+  // この日のチーム（審判の候補）
+  const dayTeams = [
+    ...new Set(
+      [LEAGUE_OUR, ...games.flatMap((x) => [x.others ? x.home ?? "" : "", x.opponent])]
+        .map((t) => t.trim())
+        .filter((t) => t && !parseRef(t)),
+    ),
+  ];
   const nameR = (i: number, g: Game) => resolved[i]?.b ?? (teamLabel(g.opponent, pairs) || (g.others ? "チーム2" : "相手"));
 
   return (
@@ -796,6 +868,15 @@ function GamesEditor({
                     </div>
                   )}
                 </div>
+                {type && type !== "練習試合" && (
+                  <UmpirePicker
+                    i={i}
+                    value={g.ump ?? ""}
+                    auto={autoUmpire(type, games.length, i)}
+                    teams={dayTeams}
+                    onChange={(v) => update(i, { ump: v })}
+                  />
+                )}
                 {/* 結果（JJBF大会のリーグ戦の計算に使う。試合が終わったら入れる） */}
                 {scores && <ScoreRow
                   left={nameL(i, g)}
@@ -1028,6 +1109,7 @@ function GroupEditor({
           opponents={options.opponents}
           onChange={(games) => set({ games })}
           scores={resultKindOf(group)}
+          type={group.type}
         />
       )}
       {isMatchType(group.type) && <LeaguePanel group={group} date={options.date} />}

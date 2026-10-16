@@ -11,6 +11,7 @@ import { holidayName, isHoliday } from "@/lib/holidays";
 import { PaperPreview } from "@/components/PaperPreview";
 import { Choices, cssVars, ErrorText, Field, PageHead, Toast, ToggleButton } from "@/components/ui";
 import { elementToPdf, elementToPng, shareOrDownload } from "@/lib/sharePdf";
+import { umpireName } from "@/lib/league";
 import {
   DIVISIONS,
   divisionLabel,
@@ -199,7 +200,7 @@ function groupText(g: ActivityGroup, prefix: string, withDiv: boolean): string[]
             x.others
               ? `${team(x.home ?? "") || "未定"} 対 ${team(x.opponent) || "未定"}（観戦・補助役員）`
               : `vs ${team(x.opponent) || "未定"}`
-          }`,
+          }${umpireName(g.type, g.games, g.games.indexOf(x)) ? `（審判　${umpireName(g.type, g.games, g.games.indexOf(x))}）` : ""}`,
         ),
       );
   }
@@ -306,6 +307,9 @@ function GroupLines({ g, showDivision, prefix }: { g: ActivityGroup; showDivisio
                 {x.others
                   ? `${team(x.home ?? "") || "未定"} 対 ${team(x.opponent) || "未定"}（観戦・補助役員）`
                   : `vs ${team(x.opponent) || "未定"}`}
+                {umpireName(g.type, g.games, g.games.indexOf(x)) && (
+                  <small className="pl-game__ump">審判 {umpireName(g.type, g.games, g.games.indexOf(x))}</small>
+                )}
               </span>
             ))}
           </span>

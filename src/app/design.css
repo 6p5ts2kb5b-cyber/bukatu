@@ -3532,3 +3532,17 @@ td.pl-mark {
   padding: 6px 10px;
   font-size: 15px;
 }
+
+/* 審判（予定の試合の行・印刷） */
+.acard__ump {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--ink-3);
+}
+.pl-game__ump {
+  margin-left: 4px;
+  font-size: 0.82em;
+  font-weight: 700;
+  color: #555;
+}

@@ -8,6 +8,7 @@
 import Link from "next/link";
 import { holidayName } from "@/lib/holidays";
 import { LeaguePanel } from "@/components/LeaguePanel";
+import { umpireName } from "@/lib/league";
 import type { ReactNode } from "react";
 import {
   divisionLabel,
@@ -161,6 +162,7 @@ function GroupDetails({ g }: { g: ActivityGroup }) {
             {gameStart(x, i) && gameLabel(x) && "　"}
             {gameLabel(x)}
             {isOthersGame(x) && "（観戦・補助役員）"}
+            {umpireName(g.type, g.games, i) && <span className="acard__ump">審判　{umpireName(g.type, g.games, i)}</span>}
           </span>
         ) : null,
       ]),

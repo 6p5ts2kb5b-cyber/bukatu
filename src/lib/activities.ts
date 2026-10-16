@@ -101,6 +101,8 @@ export type Game = {
   lunchMin?: number;
   afterPrev?: boolean; // 開始を「1試合目終了○分後」にする（2試合目から）
   prevMin?: number;
+  // 審判（大会）。空なら自動（3試合の日：2試合目＝第1試合の勝者、3試合目＝第1試合の敗者）
+  ump?: string;
   // 結果（リーグ戦の計算用）。sh＝先に書いたチーム（うち／チーム1）の得点、sa＝相手の得点。未入力は null
   sh?: number | null;
   sa?: number | null;
@@ -199,6 +201,16 @@ export function normalizeTeam(t: string): string {
 export function parseRef(t: string): { game: number; win: boolean } | null {
   const m = normalizeTeam(t).match(/^第(\d+)試合の(勝者|敗者)$/);
   return m ? { game: Number(m[1]), win: m[2] === "勝者" } : null;
+}
+
+// 審判の自動（大会で3試合の日：2試合目＝第1試合の勝者、3試合目＝第1試合の敗者）
+export function autoUmpire(type: string, count: number, i: number): string {
+  if (type === "練習試合" || count < 3) return "";
+  return i === 1 ? "第1試合の勝者" : i === 2 ? "第1試合の敗者" : "";
+}
+// この試合の審判（手で入れたもの、なければ自動）
+export function umpireOf(type: string, games: Game[], i: number): string {
+  return (games[i]?.ump ?? "").trim() || autoUmpire(type, games.length, i);
 }
 
 export function isRef(t: string): boolean {
@@ -612,6 +624,7 @@ function toActivity(id: string, data: Record<string, unknown>): Activity {
               lunchMin: Number(x.lunchMin) || 40,
               afterPrev: x.afterPrev === true,
               prevMin: Number(x.prevMin) || 20,
+              ump: String(x.ump ?? ""),
               sh: scoreOf(x.sh),
               sa: scoreOf(x.sa),
               oh: scoreOf(x.oh),

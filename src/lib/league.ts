@@ -5,7 +5,7 @@
 //                                    → 失点率（失点÷守った回数）→ 得失点差 → 出塁数 → 抽選（じゃんけん）
 // どちらも各リーグの1位だけが2日目に進む。
 
-import { parseRef, type Game } from "./activities";
+import { parseRef, umpireOf, type Game } from "./activities";
 
 // 自分たちのチーム名（表や文に出す名前）
 export const OUR = "桜・浅羽野・住吉連合";
@@ -72,6 +72,16 @@ export type LGame = {
 const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
 
 // 試合の並びから、チーム名を読み替える
+// 審判の名前：「第1試合の勝者」は、結果が入っていればチーム名に（まだなら「第1試合の勝者」のまま）
+export function umpireName(type: string, games: Game[], i: number): string {
+  const u = umpireOf(type, games, i);
+  const r = parseRef(u);
+  if (!r) return u;
+  const p = resolveGames(games)[r.game - 1];
+  if (!p || p.a == null || p.b == null || p.sa == null || p.sb == null || p.sa === p.sb) return u;
+  return r.win === p.sa > p.sb ? p.a : p.b;
+}
+
 export function resolveGames(games: Game[]): LGame[] {
   const out: LGame[] = [];
   games.forEach((g) => {
