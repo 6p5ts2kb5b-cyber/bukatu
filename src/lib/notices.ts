@@ -55,6 +55,7 @@ export const NOTICE_KINDS: { key: NoticeKind; label: string; short: string }[] =
 
 export type Notice = {
   id: string;
+  updatedMs?: number; // 最後に保存した時刻（読み込み専用。保存はしない）
   kind: NoticeKind;
   activityId: string; // 読み込んだ予定
   teams: string[]; // この日のチーム（ボタンで選べるように）
@@ -229,6 +230,27 @@ export function fillUmpires(kind: NoticeKind, games: NoticeGame[], teams: string
   });
 }
 
+// 予定で試合の時刻（時刻・昼食後・○試合目終了後）を変えたら、送付書の時刻も合わせる。
+// 試合の数が同じときだけ（相手・審判はそのまま）。変わらなければ null
+export function syncGameTimes(n: NoticeDraft, a: Activity): NoticeGame[] | null {
+  const from = applyActivity(n, a).games;
+  if (from.length !== n.games.length) return null;
+  let changed = false;
+  const games = n.games.map((g, i) => {
+    const f = from[i];
+    const same =
+      g.time === f.time &&
+      !!g.afterLunch === !!f.afterLunch &&
+      (!f.afterLunch || (g.lunchMin || 40) === (f.lunchMin || 40)) &&
+      !!g.afterPrev === !!f.afterPrev &&
+      (!f.afterPrev || (g.prevMin || 20) === (f.prevMin || 20));
+    if (same) return g;
+    changed = true;
+    return { ...g, time: f.time, afterLunch: f.afterLunch, lunchMin: f.lunchMin, afterPrev: f.afterPrev, prevMin: f.prevMin };
+  });
+  return changed ? games : null;
+}
+
 // 予定（試合の日）から、件名・期日・会場・相手チーム・試合順・審判を入れる
 export function applyActivity(n: NoticeDraft, a: Activity): NoticeDraft {
   const g = a.groups.find((x) => x.games.length > 0 || x.tournamentName) ?? a.groups[0];
@@ -310,8 +332,10 @@ function toNotice(id: string, x: Record<string, unknown>): Notice {
   const b = blankNotice();
   const s = (k: keyof NoticeDraft) => (x[k] === undefined ? (b[k] as string) : String(x[k] ?? ""));
   const kind = x.kind === "practice2" || x.kind === "practice3" ? x.kind : "tournament";
+  const up = x.updatedAt as { toMillis?: () => number } | undefined;
   return {
     id,
+    updatedMs: up && typeof up.toMillis === "function" ? up.toMillis() : 0,
     kind,
     activityId: String(x.activityId ?? ""),
     teams: Array.isArray(x.teams) ? (x.teams as string[]) : [OUR_TEAM],
@@ -432,8 +456,10 @@ export async function getNotice(id: string): Promise<Notice | null> {
 }
 
 export async function createNotice(n: NoticeDraft): Promise<string> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { updatedMs, ...data } = n as NoticeDraft & { updatedMs?: number };
   const ref = await addDoc(collection(db(), "notices"), {
-    ...n,
+    ...data,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -441,7 +467,8 @@ export async function createNotice(n: NoticeDraft): Promise<string> {
 }
 
 export async function saveNotice(n: Notice): Promise<void> {
-  const { id, ...rest } = n;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { id, updatedMs, ...rest } = n;
   await updateDoc(doc(db(), "notices", id), { ...rest, updatedAt: serverTimestamp() });
 }
 

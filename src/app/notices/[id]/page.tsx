@@ -13,6 +13,7 @@ import {
   deleteNotice,
   emptyGame,
   applyActivity,
+  syncGameTimes,
   getNotice,
   isPlaceholderTeam,
   NOTICE_KINDS,
@@ -450,6 +451,8 @@ export default function NoticePage() {
   const [note, setNote] = useState("");
   const loaded = useRef(false);
   const packingFilled = useRef(false);
+  const timesSynced = useRef(false);
+  const [syncNote, setSyncNote] = useState("");
   const [matches, setMatches] = useState<Activity[]>([]);
   const [showPick, setShowPick] = useState(false);
   const [dir, setDir] = useState<DirEntry[]>([]);
@@ -584,6 +587,19 @@ export default function NoticePage() {
       ),
     );
   }
+  // 送付書を作ったあとに予定の試合時刻を変えていたら、送付書の時刻も予定に合わせる（1回だけ）
+  if (linked && !timesSynced.current) {
+    timesSynced.current = true;
+    if ((linked.updatedMs ?? 0) > (n.updatedMs ?? 0)) {
+      const synced = syncGameTimes(n, linked);
+      if (synced) {
+        queueMicrotask(() => {
+          setN((cur) => (cur ? { ...cur, games: synced } : cur));
+          setSyncNote("予定で変えた試合の時刻に合わせました。");
+        });
+      }
+    }
+  }
   const title = `送付書_${n.subject || "大会"}${n.to ? `_${n.to.replace(/\s*代表者.*$/, "")}` : ""}`;
 
   const send = async () => {
@@ -640,6 +656,7 @@ export default function NoticePage() {
                   : "予定から読み込んでいません"}
             </span>
           </div>
+          {syncNote && <p className="m-0 rounded-lg bg-[#e8f4ec] px-3 py-2 text-sm font-bold text-board">{syncNote}</p>}
           <div className="grid grid-cols-2 gap-2">
             {linked && (
               <button type="button" className="btn btn--ghost btn--small" onClick={() => loadActivity(linked)}>

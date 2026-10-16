@@ -493,7 +493,14 @@ export type Activity = {
   groups: ActivityGroup[];
   // この日がほかの大会の予備日のとき、その大会がどうなったか（"" = 確認中）
   reserveStatus?: ReserveStatus;
+  updatedMs?: number; // 最後に保存した時刻（読み込み専用。保存はしない）
 };
+
+// Firestore の時刻 → ミリ秒
+export function msOf(v: unknown): number {
+  const t = v as { toMillis?: () => number } | null;
+  return t && typeof t.toMillis === "function" ? t.toMillis() : 0;
+}
 
 export function newGroup(division: DivisionKey, date = ""): ActivityGroup {
   return {
@@ -588,6 +595,7 @@ function toActivity(id: string, data: Record<string, unknown>): Activity {
     date: String(data.date ?? ""),
     note: String(data.note ?? ""),
     reserveStatus: toReserveStatus(data.reserveStatus),
+    updatedMs: msOf(data.updatedAt),
     groups: groups.map((g) => ({
       ...newGroup((g.division as DivisionKey) ?? "main"),
       ...g,
@@ -669,8 +677,10 @@ export async function getActivity(id: string): Promise<Activity | null> {
 }
 
 export async function createActivity(a: Omit<Activity, "id">): Promise<string> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { updatedMs, ...data } = a;
   const ref = await addDoc(collection(db(), "activities"), {
-    ...a,
+    ...data,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -678,7 +688,8 @@ export async function createActivity(a: Omit<Activity, "id">): Promise<string> {
 }
 
 export async function saveActivity(a: Activity): Promise<void> {
-  const { id, ...rest } = a;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { id, updatedMs, ...rest } = a;
   await updateDoc(doc(db(), "activities", id), { ...rest, updatedAt: serverTimestamp() });
 }
 
