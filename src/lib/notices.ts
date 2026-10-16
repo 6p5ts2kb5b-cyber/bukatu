@@ -232,7 +232,8 @@ export function fillUmpires(kind: NoticeKind, games: NoticeGame[], teams: string
 
 // 予定で試合の時刻（時刻・昼食後・○試合目終了後）を変えたら、送付書の時刻も合わせる。
 // 試合の数が同じときだけ（相手・審判はそのまま）。変わらなければ null
-export function syncGameTimes(n: NoticeDraft, a: Activity): NoticeGame[] | null {
+//   newer = 予定のほうが後から保存された。false のときは、送付書で空いている審判だけ埋める
+export function syncGameTimes(n: NoticeDraft, a: Activity, newer = true): NoticeGame[] | null {
   const from = applyActivity(n, a).games;
   if (from.length !== n.games.length) return null;
   let changed = false;
@@ -244,9 +245,15 @@ export function syncGameTimes(n: NoticeDraft, a: Activity): NoticeGame[] | null 
       (!f.afterLunch || (g.lunchMin || 40) === (f.lunchMin || 40)) &&
       !!g.afterPrev === !!f.afterPrev &&
       (!f.afterPrev || (g.prevMin || 20) === (f.prevMin || 20));
-    if (same) return g;
+    // 予定で入れた審判（大会は「第1試合の勝者」などの自動も）も合わせる
+    const umpSame = !f.plate || (newer ? g.plate === f.plate && g.base === f.base : !!(g.plate || g.base));
+    if ((same || !newer) && umpSame) return g;
     changed = true;
-    return { ...g, time: f.time, afterLunch: f.afterLunch, lunchMin: f.lunchMin, afterPrev: f.afterPrev, prevMin: f.prevMin };
+    return {
+      ...g,
+      ...(same || !newer ? {} : { time: f.time, afterLunch: f.afterLunch, lunchMin: f.lunchMin, afterPrev: f.afterPrev, prevMin: f.prevMin }),
+      ...(umpSame ? {} : { plate: f.plate, base: f.base }),
+    };
   });
   return changed ? games : null;
 }

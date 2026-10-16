@@ -590,12 +590,12 @@ export default function NoticePage() {
   // 送付書を作ったあとに予定の試合時刻を変えていたら、送付書の時刻も予定に合わせる（1回だけ）
   if (linked && !timesSynced.current) {
     timesSynced.current = true;
-    if ((linked.updatedMs ?? 0) > (n.updatedMs ?? 0)) {
-      const synced = syncGameTimes(n, linked);
+    {
+      const synced = syncGameTimes(n, linked, (linked.updatedMs ?? 0) > (n.updatedMs ?? 0));
       if (synced) {
         queueMicrotask(() => {
           setN((cur) => (cur ? { ...cur, games: synced } : cur));
-          setSyncNote("予定で変えた試合の時刻に合わせました。");
+          setSyncNote("予定で変えた試合の時刻・審判に合わせました。");
         });
       }
     }
