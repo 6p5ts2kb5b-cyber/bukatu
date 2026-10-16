@@ -39,7 +39,13 @@ export function cellsOf(g: ActivityGroup): Cell[] {
   const cells: Cell[] = [{ label: "集合", value: clock(g.meetTime) }];
   if (isMatchType(g.type) && g.games.length) {
     g.games.forEach((x, i) =>
-      cells.push({ label: `第${i + 1}試合`, value: x.afterLunch ? `昼+${x.lunchMin || 40}` : clock(x.startTime) }),
+      cells.push({ label: `第${i + 1}試合`, value:
+          x.afterPrev && i > 0
+            ? `${i}試合後+${x.prevMin || 20}`
+            : x.afterLunch
+              ? `昼+${x.lunchMin || 40}`
+              : clock(x.startTime),
+      }),
     );
   } else {
     cells.push({ label: "開始", value: clock(g.startTime) }, { label: "終了", value: clock(g.endTime) });
@@ -73,7 +79,7 @@ export function checkGroup(g: ActivityGroup, noticeDone: boolean): CheckItem[] {
     if (!games.length) items.push({ key: "games", label: "対戦相手", level: "ng", text: "未定" });
     else {
       const missing = games.filter((x) => !normalizeTeam(x.opponent) || (x.others && !normalizeTeam(x.home ?? ""))).length;
-      const noTime = games.filter((x) => !gameStart(x)).length;
+      const noTime = games.filter((x, i) => !gameStart(x, i)).length;
       const real = [
         ...new Set(
           games.filter((x) => !x.others).map((x) => normalizeTeam(x.opponent)).filter((t) => t && !isRef(t)),

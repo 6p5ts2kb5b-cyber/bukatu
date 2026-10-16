@@ -99,6 +99,8 @@ export type Game = {
   bench?: "1塁" | "3塁";
   afterLunch?: boolean; // 開始を「昼食後○分後」にする
   lunchMin?: number;
+  afterPrev?: boolean; // 開始を「1試合目終了○分後」にする（2試合目から）
+  prevMin?: number;
   // 結果（リーグ戦の計算用）。sh＝先に書いたチーム（うち／チーム1）の得点、sa＝相手の得点。未入力は null
   sh?: number | null;
   sa?: number | null;
@@ -417,8 +419,14 @@ export function advanceView(g: ActivityGroup): AdvanceView {
   return { mode: "both", day, win: title, lose, loseRest: rest };
 }
 
-// 試合の開始の書き方（「9:00」または「昼食後40分後」）
-export function gameStart(x: Game): string {
+// 開始が時刻ではなく「昼食後」「前の試合の後」か
+export function isRelStart(x: Game, i: number): boolean {
+  return (x.afterPrev === true && i > 0) || x.afterLunch === true;
+}
+
+// 試合の開始の書き方（「9:00」「昼食後40分後」「1試合目終了20分後」）。i＝この試合の順番（0から）
+export function gameStart(x: Game, i?: number): string {
+  if (x.afterPrev && i !== 0) return `${i ? `${i}試合目` : "前の試合"}終了${x.prevMin || 20}分後`;
   if (x.afterLunch) return `昼食後${x.lunchMin || 40}分後`;
   return x.startTime;
 }
@@ -594,6 +602,8 @@ function toActivity(id: string, data: Record<string, unknown>): Activity {
               bench: x.bench === "3塁" ? "3塁" : "1塁",
               afterLunch: x.afterLunch === true,
               lunchMin: Number(x.lunchMin) || 40,
+              afterPrev: x.afterPrev === true,
+              prevMin: Number(x.prevMin) || 20,
               sh: scoreOf(x.sh),
               sa: scoreOf(x.sa),
               oh: scoreOf(x.oh),

@@ -724,20 +724,50 @@ function GamesEditor({
                   <div className="flex items-center gap-2">
                     <span className="shrink-0 text-sm font-extrabold text-navy-soft">開始</span>
                     <div className="seg flex-1" role="group" aria-label="開始の書き方">
-                      <button type="button" className="seg__btn" aria-pressed={!g.afterLunch} onClick={() => update(i, { afterLunch: false })}>
-                        時刻
-                      </button>
                       <button
                         type="button"
                         className="seg__btn"
-                        aria-pressed={!!g.afterLunch}
-                        onClick={() => update(i, { afterLunch: true, lunchMin: g.lunchMin || 40 })}
+                        aria-pressed={!g.afterLunch && !(g.afterPrev && i > 0)}
+                        onClick={() => update(i, { afterLunch: false, afterPrev: false })}
+                      >
+                        時刻
+                      </button>
+                      {i > 0 && (
+                        <button
+                          type="button"
+                          className="seg__btn"
+                          aria-pressed={!!g.afterPrev}
+                          onClick={() => update(i, { afterPrev: true, afterLunch: false, prevMin: g.prevMin || 20 })}
+                        >
+                          {i}試合目終了○分後
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="seg__btn"
+                        aria-pressed={!!g.afterLunch && !(g.afterPrev && i > 0)}
+                        onClick={() => update(i, { afterLunch: true, afterPrev: false, lunchMin: g.lunchMin || 40 })}
                       >
                         昼食後○分後
                       </button>
                     </div>
                   </div>
-                  {g.afterLunch ? (
+                  {g.afterPrev && i > 0 ? (
+                    <div className="picks items-center">
+                      <span className="text-sm font-extrabold text-navy-soft">{i}試合目が終わって</span>
+                      {[10, 15, 20, 25, 30, 40].map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          className="pick"
+                          aria-pressed={(g.prevMin || 20) === m}
+                          onClick={() => update(i, { prevMin: m })}
+                        >
+                          {m}分後
+                        </button>
+                      ))}
+                    </div>
+                  ) : g.afterLunch ? (
                     <div className="picks">
                       {[30, 40, 45, 50, 60].map((m) => (
                         <button

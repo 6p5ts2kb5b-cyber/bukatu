@@ -279,7 +279,10 @@ function paint(p: Painter, n: NoticeDraft) {
       team(g.third, cx, cols[3]);
       cx += cols[3];
       // 時刻
-      if (g.afterLunch) {
+      if (g.afterPrev && i > 0) {
+        p.fitText(`${i}試合目終了`, cx + 1, p.y + h * 0.36, cols[4] - 2, 10.5, 800, "center");
+        p.fitText(`${g.prevMin || 20}分後`, cx + 1, p.y + h * 0.7, cols[4] - 2, 10.5, 800, "center");
+      } else if (g.afterLunch) {
         p.fitText("昼食後", cx + 1, p.y + h * 0.36, cols[4] - 2, 10.5, 800, "center");
         p.fitText(`${g.lunchMin || 40}分後`, cx + 1, p.y + h * 0.7, cols[4] - 2, 10.5, 800, "center");
       } else if (g.time) {

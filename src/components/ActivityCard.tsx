@@ -13,6 +13,7 @@ import {
   divisionLabel,
   gameLabel,
   gameStart,
+  isRelStart,
   isRef,
   formatDate,
   tournamentTitle,
@@ -154,10 +155,10 @@ function GroupDetails({ g }: { g: ActivityGroup }) {
     g.games.forEach((x, i) =>
       items.push([
         `第${i + 1}試合`,
-        gameStart(x) || gameLabel(x) ? (
+        gameStart(x, i) || gameLabel(x) ? (
           <span className={isOthersGame(x) ? "acard__others" : undefined}>
-            {x.afterLunch ? gameStart(x) : x.startTime && <Num>{x.startTime}</Num>}
-            {gameStart(x) && gameLabel(x) && "　"}
+            {isRelStart(x, i) ? gameStart(x, i) : x.startTime && <Num>{x.startTime}</Num>}
+            {gameStart(x, i) && gameLabel(x) && "　"}
             {gameLabel(x)}
             {isOthersGame(x) && "（観戦・補助役員）"}
           </span>

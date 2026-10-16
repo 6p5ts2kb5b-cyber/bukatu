@@ -32,10 +32,13 @@ export type NoticeGame = {
   base: string; // 塁審
   afterLunch?: boolean; // 時刻の代わりに「昼食後○分後」
   lunchMin?: number; // 昼食後の分（ふつう40）
+  afterPrev?: boolean; // 時刻の代わりに「1試合目終了○分後」（2試合目から）
+  prevMin?: number;
 };
 
-// 試合の時刻の書き方（「9:00」または「昼食後40分後」）
-export function gameTimeText(g: NoticeGame): string {
+// 試合の時刻の書き方（「9:00」「昼食後40分後」「1試合目終了20分後」）。i＝この試合の順番（0から）
+export function gameTimeText(g: NoticeGame, i?: number): string {
+  if (g.afterPrev && i !== 0) return `${i ? `${i}試合目` : "前の試合"}終了${g.prevMin || 20}分後`;
   if (g.afterLunch) return `昼食後${g.lunchMin || 40}分後`;
   if (!g.time) return "";
   const [h, m] = g.time.split(":");
@@ -249,6 +252,8 @@ export function applyActivity(n: NoticeDraft, a: Activity): NoticeDraft {
     base: "",
     afterLunch: x.afterLunch === true,
     lunchMin: x.lunchMin || 40,
+    afterPrev: i > 0 && x.afterPrev === true,
+    prevMin: x.prevMin || 20,
     } as NoticeGame;
   });
   if (!games.length && kind !== "tournament") games = practiceGames(kind, opponents[0] ?? "", opponents[1] ?? "");
@@ -338,6 +343,8 @@ function toNotice(id: string, x: Record<string, unknown>): Notice {
           timeNote: g.timeNote === "開始" ? "開始" : "予定",
           afterLunch: g.afterLunch === true,
           lunchMin: Number(g.lunchMin) || 40,
+          afterPrev: g.afterPrev === true,
+          prevMin: Number(g.prevMin) || 20,
         }))
       : [],
     rain: s("rain"),
@@ -398,7 +405,7 @@ export function parentMessage(n: NoticeDraft): string {
     games.forEach((g, i) => {
       const ump = g.plate ? `　球審　${teamText(g.plate, games)}` : "";
       out.push(`${i + 1}試合目　${teamText(g.first, games) || "未定"}　対　${teamText(g.third, games) || "未定"}`);
-      out.push(`${g.afterLunch ? `${gameTimeText(g)}開始` : g.time ? `${clock(g.time)}〜` : "時間未定"}${ump}`);
+      out.push(`${(g.afterPrev && i > 0) || g.afterLunch ? `${gameTimeText(g, i)}開始` : g.time ? `${clock(g.time)}〜` : "時間未定"}${ump}`);
       if (i < games.length - 1) out.push("");
     });
     out.push("");

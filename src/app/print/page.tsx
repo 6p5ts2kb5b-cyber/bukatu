@@ -16,6 +16,7 @@ import {
   divisionLabel,
   describeRef,
   gameStart,
+  isRelStart,
   tournamentTitle,
   isMatchType,
   isOffType,
@@ -194,7 +195,7 @@ function groupText(g: ActivityGroup, prefix: string, withDiv: boolean): string[]
       .filter((x) => x.opponent || x.home || gameStart(x))
       .forEach((x, i) =>
         out.push(
-          `　${circled(i)}　${x.afterLunch ? gameStart(x) : clock(x.startTime) || "時間未定"}　${
+          `　${circled(i)}　${isRelStart(x, i) ? gameStart(x, i) : clock(x.startTime) || "時間未定"}　${
             x.others
               ? `${team(x.home ?? "") || "未定"} 対 ${team(x.opponent) || "未定"}（観戦・補助役員）`
               : `vs ${team(x.opponent) || "未定"}`
@@ -301,7 +302,7 @@ function GroupLines({ g, showDivision, prefix }: { g: ActivityGroup; showDivisio
             {games.map((x, i) => (
               <span key={i} className={x.others ? "pl-game pl-game--others" : "pl-game"}>
                 <span className="pl-game__no">{circled(i)}</span>
-                <b>{x.afterLunch ? gameStart(x) : clock(x.startTime) || "時間未定"}</b>
+                <b>{isRelStart(x, i) ? gameStart(x, i) : clock(x.startTime) || "時間未定"}</b>
                 {x.others
                   ? `${team(x.home ?? "") || "未定"} 対 ${team(x.opponent) || "未定"}（観戦・補助役員）`
                   : `vs ${team(x.opponent) || "未定"}`}
