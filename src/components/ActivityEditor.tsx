@@ -51,6 +51,9 @@ import { OUR as LEAGUE_OUR, resolveGames, resultKindOf, type ResultKind } from "
 import { ResultSend } from "@/components/ResultSend";
 import { Card, Choices, ErrorText, Field, inputClass, PanelTitle, PrimaryButton, ToggleButton } from "@/components/ui";
 
+// 10分刻み（10〜90分）。前に選んだ半端な分（45分など）も残す
+const tenSteps = (cur: number) => [...new Set([10, 20, 30, 40, 50, 60, 70, 80, 90, cur])].sort((x, y) => x - y);
+
 export type ActivityDraft = Omit<Activity, "id"> & { id?: string };
 
 type Options = {
@@ -755,7 +758,7 @@ function GamesEditor({
                   {g.afterPrev && i > 0 ? (
                     <div className="picks items-center">
                       <span className="text-sm font-extrabold text-navy-soft">{i}試合目が終わって</span>
-                      {[10, 15, 20, 25, 30, 40].map((m) => (
+                      {tenSteps(g.prevMin || 20).map((m) => (
                         <button
                           key={m}
                           type="button"
@@ -768,8 +771,9 @@ function GamesEditor({
                       ))}
                     </div>
                   ) : g.afterLunch ? (
-                    <div className="picks">
-                      {[30, 40, 45, 50, 60].map((m) => (
+                    <div className="picks items-center">
+                      <span className="text-sm font-extrabold text-navy-soft">昼食後</span>
+                      {tenSteps(g.lunchMin || 40).map((m) => (
                         <button
                           key={m}
                           type="button"
@@ -777,7 +781,7 @@ function GamesEditor({
                           aria-pressed={(g.lunchMin || 40) === m}
                           onClick={() => update(i, { lunchMin: m })}
                         >
-                          昼食後{m}分後
+                          {m}分後
                         </button>
                       ))}
                     </div>
