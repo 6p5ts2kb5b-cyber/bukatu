@@ -190,7 +190,7 @@ function groupText(g: ActivityGroup, prefix: string, withDiv: boolean): string[]
   if (time(g.startTime, g.endTime)) out.push(`　時間　${time(g.startTime, g.endTime)}`);
   if (g.venue) out.push(`　会場　${g.venue}`);
   if (isMatchType(g.type)) {
-    const pairs = g.games.map((x) => [x.others ? x.home ?? "" : "うち", x.opponent] as [string, string]);
+    const pairs = g.games.map((x) => [x.others ? x.home ?? "" : "桜・浅羽野・住吉", x.opponent] as [string, string]);
     const team = (t: string) => describeRef(t, pairs) ?? t;
     g.games
       .filter((x) => x.opponent || x.home || gameStart(x))
@@ -273,7 +273,7 @@ function GroupLines({ g, showDivision, prefix }: { g: ActivityGroup; showDivisio
   const quiet = off || plainClubDay;
 
   // 試合：うちの試合は「vs 相手」、他チーム同士は薄く。「第1試合の勝者」は中身も書く
-  const pairs = g.games.map((x) => [x.others ? x.home ?? "" : "うち", x.opponent] as [string, string]);
+  const pairs = g.games.map((x) => [x.others ? x.home ?? "" : "桜・浅羽野・住吉", x.opponent] as [string, string]);
   const team = (t: string) => describeRef(t, pairs) ?? t;
   const games = isMatchType(g.type)
     ? g.games.filter((x) => x.opponent || x.home || gameStart(x))

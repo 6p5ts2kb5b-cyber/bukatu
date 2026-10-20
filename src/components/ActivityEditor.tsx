@@ -721,7 +721,7 @@ function GamesEditor({
   };
 
   // 試合ごとの2チーム（「第1試合の勝者」の説明に使う）
-  const pairs: [string, string][] = games.map((g) => [g.others ? g.home ?? "" : "うち", g.opponent]);
+  const pairs: [string, string][] = games.map((g) => [g.others ? g.home ?? "" : "桜・浅羽野・住吉", g.opponent]);
   const [showOnBase, setShowOnBase] = useState(() => games.some((g) => g.oh != null || g.oa != null));
   // 選手の名字（投手・捕手・長打の入力候補）
   const [playerNames, setPlayerNames] = useState<string[]>([]);
