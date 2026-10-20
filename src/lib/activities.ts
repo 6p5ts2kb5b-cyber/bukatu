@@ -203,10 +203,68 @@ export function parseRef(t: string): { game: number; win: boolean } | null {
   return m ? { game: Number(m[1]), win: m[2] === "勝者" } : null;
 }
 
-// 審判の自動（大会で3試合の日：2試合目＝第1試合の勝者、3試合目＝第1試合の敗者）
-export function autoUmpire(type: string, count: number, i: number): string {
-  if (type === "練習試合" || count < 3) return "";
+// この日のチーム（「第1試合の勝者」などは数えない）
+export function dayTeamNames(games: Game[], our: string): string[] {
+  return [
+    ...new Set(
+      [our, ...games.flatMap((x) => [x.others ? x.home ?? "" : our, x.opponent])]
+        .map((t) => (t ?? "").trim())
+        .filter((t) => t && !parseRef(t)),
+    ),
+  ];
+}
+
+// 審判の自動（大会で、チームが3つ・3試合の日：2試合目＝第1試合の勝者、3試合目＝第1試合の敗者）
+export function autoUmpire(type: string, games: Game[], i: number): string {
+  if (type === "練習試合" || games.length < 3) return "";
+  if (dayTeamNames(games, "\u0000us").length !== 3) return "";
   return i === 1 ? "第1試合の勝者" : i === 2 ? "第1試合の敗者" : "";
+}
+
+// ---- 審判の組み合わせ ----
+//   items＝出すチーム（「第1試合の敗者」も可）、n＝各チームから何名（0＝書かない）、fed＝連盟から何名
+export type UmpSet = { items: string[]; n: number; fed: number };
+export function parseUmp(u: string, games: Game[], our: string): UmpSet {
+  const s = (u ?? "").trim();
+  if (!s) return { items: [], n: 0, fed: 0 };
+  if (s.startsWith("@s")) {
+    try {
+      const o = JSON.parse(s.slice(2)) as { t?: unknown; n?: unknown; f?: unknown };
+      return {
+        items: Array.isArray(o.t) ? o.t.map(String).filter(Boolean) : [],
+        n: Number(o.n) || 0,
+        fed: Number(o.f) || 0,
+      };
+    } catch {
+      return { items: [], n: 0, fed: 0 };
+    }
+  }
+  // 前の形「第2試合のチームから2名ずつ」
+  const c = parseCross(s);
+  if (c) {
+    const g = games[c.game - 1];
+    const items = g ? [g.others ? g.home ?? "" : our, g.opponent].map((t) => t.trim()).filter(Boolean) : [];
+    return { items, n: c.n, fed: 0 };
+  }
+  return { items: [s], n: 0, fed: 0 };
+}
+export function encodeUmp(x: UmpSet): string {
+  if (x.items.length <= 1 && !x.n && !x.fed) return x.items[0] ?? "";
+  return `@s${JSON.stringify({ t: x.items, n: x.n, f: x.fed })}`;
+}
+// 「第1・第2試合の敗者より1名ずつ、連盟より2名」。name でチーム名に読みかえる（結果が出ていれば）
+export function umpText(x: UmpSet, name: (t: string) => string = (t) => t): string {
+  const names = x.items.map(name);
+  // 読みかえられなかった「第○試合の敗者」が並んだら、まとめる
+  const refs = names.map((t) => parseRef(t));
+  let who: string;
+  if (names.length >= 2 && refs.every((r) => r) && refs.every((r) => r!.win === refs[0]!.win)) {
+    who = `${refs.map((r) => `第${r!.game}`).join("・")}試合の${refs[0]!.win ? "勝者" : "敗者"}`;
+  } else who = names.join("・");
+  const parts: string[] = [];
+  if (who) parts.push(x.n ? `${who}より${x.n}名${names.length >= 2 ? "ずつ" : ""}` : who);
+  if (x.fed) parts.push(`連盟より${x.fed}名`);
+  return parts.join("、");
 }
 // 「第2試合のチームから2名ずつ」の印（審判の欄に入れる）："@g2x2"
 export function crossUmp(game: number, n: number): string {
@@ -227,7 +285,7 @@ export function crossText(games: Game[], game: number, n: number, our: string, n
 
 // この試合の審判（手で入れたもの、なければ自動）
 export function umpireOf(type: string, games: Game[], i: number): string {
-  return (games[i]?.ump ?? "").trim() || autoUmpire(type, games.length, i);
+  return (games[i]?.ump ?? "").trim() || autoUmpire(type, games, i);
 }
 
 export function isRef(t: string): boolean {

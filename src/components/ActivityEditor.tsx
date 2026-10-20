@@ -23,9 +23,10 @@ import {
   recentPlaces,
   BOX_KEYS,
   autoUmpire,
-  crossText,
-  crossUmp,
-  parseCross,
+  encodeUmp,
+  parseUmp,
+  umpText,
+  type UmpSet,
   emptyBox,
   batteryText,
   xbhText,
@@ -388,7 +389,8 @@ function BoxEditor({
   );
 }
 
-// 審判（大会）：この日のチーム・「第1試合の勝者／敗者」・手で入力。空なら自動
+// 審判（大会）：この日のチーム・「第1試合の勝者／敗者」を選ぶ（いくつでも）。
+//   2つ以上選んだら「各チームから○名ずつ」、ほかに「連盟から○名」も足せる。何も選ばなければ自動
 function UmpirePicker({
   i,
   value,
@@ -406,82 +408,132 @@ function UmpirePicker({
 }) {
   const refs = Array.from({ length: i }, (_, k) => [`第${k + 1}試合の勝者`, `第${k + 1}試合の敗者`]).flat();
   const options = [...teams, ...refs];
-  const cross = parseCross(value.trim());
-  // ほかの試合（この試合以外）：「第2試合のチームから○名ずつ」
-  const others = games.map((_, j) => j).filter((j) => j !== i);
-  const cur = cross ? crossText(games, cross.game, cross.n, LEAGUE_OUR) : value.trim() || auto;
-  const custom = !!value.trim() && !cross && !options.includes(value.trim());
+  const set = parseUmp(value, games, LEAGUE_OUR);
+  const usingAuto = !value.trim() && !!auto;
+  const shown = usingAuto ? parseUmp(auto, games, LEAGUE_OUR) : set;
+  const custom = set.items.filter((t) => !options.includes(t));
   const [typing, setTyping] = useState(false);
+  const save = (x: UmpSet) => {
+    // 自動と同じになったら空（自動のまま）
+    const v = encodeUmp(x);
+    onChange(v === auto ? "" : v);
+  };
+  const toggle = (o: string) => {
+    // 自動のときは、選び直し（自動に足さない）
+    const base = usingAuto ? { items: [], n: 0, fed: shown.fed } : set;
+    const items = base.items.includes(o) ? base.items.filter((t) => t !== o) : [...base.items, o];
+    save({ ...base, items, n: items.length >= 2 ? base.n || 1 : base.n });
+  };
+  // ほかの試合の2チームをまとめて選ぶ（例：1試合目の審判を「2試合目の両チームから2名ずつ」）
+  const others = games.map((_, j) => j).filter((j) => j !== i);
+  const gameTeams = (j: number) =>
+    [games[j].others ? games[j].home ?? "" : LEAGUE_OUR, games[j].opponent].map((t) => t.trim()).filter(Boolean);
+  const text = umpText(shown);
   return (
-    <div className="flex flex-col gap-2">
+    <div className="ump flex flex-col gap-2">
       <div className="flex items-baseline gap-2">
         <span className="shrink-0 text-sm font-extrabold text-navy-soft">審判</span>
         <span className="text-sm font-bold">
-          {cur || "未定"}
-          {!value.trim() && auto && <small className="ml-1 text-ink-3">（自動）</small>}
+          {text || "未定"}
+          {usingAuto && <small className="ml-1 text-ink-3">（自動）</small>}
         </span>
       </div>
+      <p className="m-0 text-xs font-bold text-ink-3">出すチームを押します（いくつでも選べます）。</p>
       <div className="picks">
         {options.map((o) => (
           <button
             key={o}
             type="button"
             className={`pick${parseRef(o) ? " pick--ref" : ""}`}
-            aria-pressed={cur === o}
+            aria-pressed={shown.items.includes(o)}
             onClick={() => {
               setTyping(false);
-              // 自動と同じものを押したら、自動のまま（空）にしておく
-              onChange(o === auto ? "" : value.trim() === o ? "" : o);
+              toggle(o);
             }}
           >
             {o}
           </button>
         ))}
-        {others.map((j) => (
-          <button
-            key={`x${j}`}
-            type="button"
-            className="pick pick--cross"
-            aria-pressed={cross?.game === j + 1}
-            onClick={() => {
-              setTyping(false);
-              onChange(cross?.game === j + 1 ? "" : crossUmp(j + 1, cross?.n ?? 2));
-            }}
-          >
-            第{j + 1}試合のチームから○名ずつ
+        {custom.map((o) => (
+          <button key={`c-${o}`} type="button" className="pick" aria-pressed onClick={() => toggle(o)}>
+            ✎ {o}
           </button>
         ))}
-        <button type="button" className="pick pick--other" aria-pressed={custom || typing} onClick={() => setTyping(!typing)}>
-          {custom ? `✎ ${value}` : "手で入力"}
+        {others.map((j) => {
+          const ts = gameTeams(j);
+          if (ts.length < 2) return null;
+          const on = ts.every((t) => shown.items.includes(t)) && shown.items.length === ts.length;
+          return (
+            <button
+              key={`x${j}`}
+              type="button"
+              className="pick pick--cross"
+              aria-pressed={on}
+              onClick={() => {
+                setTyping(false);
+                save(on ? { items: [], n: 0, fed: shown.fed } : { items: ts, n: shown.n || 2, fed: shown.fed });
+              }}
+            >
+              第{j + 1}試合の2チームから
+            </button>
+          );
+        })}
+        <button type="button" className="pick pick--other" aria-pressed={typing} onClick={() => setTyping(!typing)}>
+          ＋ 手で入力
         </button>
       </div>
-      {cross && (
-        <div className="flex items-center gap-2">
-          <span className="shrink-0 text-sm font-extrabold text-navy-soft">各チームから</span>
+      {typing && (
+        <form
+          className="flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const t = String(new FormData(e.currentTarget).get("t") ?? "").trim();
+            if (t) toggle(t);
+            setTyping(false);
+          }}
+        >
+          <input name="t" className={`${inputClass} f-input--white`} placeholder="チーム名（例：大会役員）" autoComplete="off" autoFocus />
+          <button type="submit" className="btn btn--ghost btn--small shrink-0">
+            足す
+          </button>
+        </form>
+      )}
+      {shown.items.length >= 1 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="w-[6.5em] shrink-0 text-sm font-extrabold text-navy-soft">
+            {shown.items.length >= 2 ? "各チームから" : "人数"}
+          </span>
           <div className="seg" role="group" aria-label="各チームから何名">
-            {[1, 2, 3].map((n) => (
+            {[0, 1, 2, 3].map((n) => (
               <button
                 key={n}
                 type="button"
-                className="seg__btn px-4"
-                aria-pressed={cross.n === n}
-                onClick={() => onChange(crossUmp(cross.game, n))}
+                className="seg__btn px-3"
+                aria-pressed={shown.n === n}
+                onClick={() => save({ ...shown, n })}
               >
-                {n}名ずつ
+                {n === 0 ? "書かない" : `${n}名${shown.items.length >= 2 ? "ずつ" : ""}`}
               </button>
             ))}
           </div>
         </div>
       )}
-      {(typing || custom) && (
-        <input
-          className={`${inputClass} f-input--white`}
-          value={cross ? "" : value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="審判のチーム名"
-          autoComplete="off"
-        />
-      )}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="w-[6.5em] shrink-0 text-sm font-extrabold text-navy-soft">連盟から</span>
+        <div className="seg" role="group" aria-label="連盟から何名">
+          {[0, 1, 2, 3].map((n) => (
+            <button
+              key={n}
+              type="button"
+              className="seg__btn px-3"
+              aria-pressed={shown.fed === n}
+              onClick={() => save({ ...shown, fed: n })}
+            >
+              {n === 0 ? "なし" : `${n}名`}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -912,7 +964,7 @@ function GamesEditor({
                   <UmpirePicker
                     i={i}
                     value={g.ump ?? ""}
-                    auto={autoUmpire(type, games.length, i)}
+                    auto={autoUmpire(type, games, i)}
                     teams={dayTeams}
                     games={games}
                     onChange={(v) => update(i, { ump: v })}

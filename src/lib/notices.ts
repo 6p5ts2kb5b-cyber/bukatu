@@ -17,7 +17,7 @@ import {
   type Firestore,
 } from "firebase/firestore";
 import { firebaseApp } from "./firebase";
-import { describeRef, isRef, normalizeTeam, todayString, tournamentTitle, umpireOf, parseCross, type Activity } from "./activities";
+import { describeRef, isRef, normalizeTeam, todayString, tournamentTitle, umpireOf, type Activity } from "./activities";
 import { umpireName } from "./league";
 import { findVenue } from "./directory";
 
@@ -288,7 +288,9 @@ export function applyActivity(n: NoticeDraft, a: Activity): NoticeDraft {
     ...(umpireOf(g.type, g.games, i)
       ? (() => {
           // 「○○・○○より2名ずつ」はチーム名の文にして入れる
-          const u = parseCross(umpireOf(g.type, g.games, i)) ? umpireName(g.type, g.games, i) : umpireOf(g.type, g.games, i);
+          // 1チームだけなら「第1試合の勝者」のまま（送付書で中身を添える）、組み合わせは文にする
+          const raw = umpireOf(g.type, g.games, i);
+          const u = raw.startsWith("@") ? umpireName(g.type, g.games, i) : raw;
           return { plate: u, base: u };
         })()
       : {}),

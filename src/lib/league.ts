@@ -5,7 +5,7 @@
 //                                    → 失点率（失点÷守った回数）→ 得失点差 → 出塁数 → 抽選（じゃんけん）
 // どちらも各リーグの1位だけが2日目に進む。
 
-import { crossText, parseCross, parseRef, umpireOf, type Game } from "./activities";
+import { parseRef, parseUmp, umpireOf, umpText, type Game } from "./activities";
 
 // 自分たちのチーム名（表や文に出す名前）
 export const OUR = "桜・浅羽野・住吉連合";
@@ -75,24 +75,18 @@ const num = (v: unknown): number | null => (typeof v === "number" && Number.isFi
 // 審判の名前：「第1試合の勝者」は、結果が入っていればチーム名に（まだなら「第1試合の勝者」のまま）
 export function umpireName(type: string, games: Game[], i: number): string {
   const u = umpireOf(type, games, i);
-  // 「第2試合のチームから2名ずつ」→「農大三中・春里より2名ずつ」
-  const c = parseCross(u);
-  if (c) {
-    const res = resolveGames(games);
-    const name = (t: string) => {
-      const r = parseRef(t);
-      if (!r) return t;
-      const p = res[r.game - 1];
-      if (!p || p.a == null || p.b == null || p.sa == null || p.sb == null || p.sa === p.sb) return t;
-      return r.win === p.sa > p.sb ? p.a : p.b;
-    };
-    return crossText(games, c.game, c.n, OUR, name);
-  }
-  const r = parseRef(u);
-  if (!r) return u;
-  const p = resolveGames(games)[r.game - 1];
-  if (!p || p.a == null || p.b == null || p.sa == null || p.sb == null || p.sa === p.sb) return u;
-  return r.win === p.sa > p.sb ? p.a : p.b;
+  if (!u) return "";
+  // 「第1試合の敗者」→ 結果が入っていればチーム名に
+  const res = resolveGames(games);
+  const name = (t: string) => {
+    const r = parseRef(t);
+    if (!r) return t;
+    const p = res[r.game - 1];
+    if (!p || p.a == null || p.b == null || p.sa == null || p.sb == null || p.sa === p.sb) return t;
+    return r.win === p.sa > p.sb ? p.a : p.b;
+  };
+  // 組み合わせ：「第1・第2試合の敗者より1名ずつ、連盟より2名」
+  return umpText(parseUmp(u, games, OUR), name);
 }
 
 export function resolveGames(games: Game[]): LGame[] {
