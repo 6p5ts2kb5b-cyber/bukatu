@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { ActivityEditor } from "@/components/ActivityEditor";
-import { ErrorText, SecondaryButton, Toast, PageHead } from "@/components/ui";
+import { ErrorText, SecondaryButton, Toast, PageHead, Loading } from "@/components/ui";
 import { deleteActivity, getActivity, saveActivity, type Activity } from "@/lib/activities";
 
 export default function ActivityPage() {
@@ -42,7 +42,7 @@ export default function ActivityPage() {
 
   if (error) return <ErrorText>{error}</ErrorText>;
   if (activity === undefined) {
-    return <p className="py-6 text-center text-sm text-navy-soft/70">読み込み中…</p>;
+    return <Loading />;
   }
   if (activity === null) {
     return (

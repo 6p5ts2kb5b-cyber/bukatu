@@ -633,7 +633,7 @@ export default function NoticePage() {
 
   return (
     <>
-      <div className="print:hidden flex flex-col gap-3">
+      <div className="nt-split print:hidden flex flex-col gap-3">
         <PageHead
           kicker="NOTICE"
           title={NOTICE_KINDS.find((k) => k.key === n.kind)?.label ?? "送付書"}
@@ -867,14 +867,16 @@ export default function NoticePage() {
 
         <ParentLine n={n} set={set} />
 
-        <p className="group-label">送付書の見本（このままPDFになります）</p>
-        <div className="overflow-hidden rounded-xl border border-rule bg-white shadow-sm">
-          {preview ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={preview} alt="送付書の見本" className="block w-full" />
-          ) : (
-            <Loading />
-          )}
+        <div className="nt-preview flex flex-col gap-1.5">
+          <p className="group-label">送付書の見本（このままPDFになります）</p>
+          <div className="overflow-hidden rounded-xl border border-rule bg-white shadow-sm">
+            {preview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={preview} alt="送付書の見本" className="block w-full" />
+            ) : (
+              <Loading />
+            )}
+          </div>
         </div>
 
         {note && <p className="m-0 rounded-xl border border-rule bg-white p-3 text-sm font-bold">{note}</p>}

@@ -50,7 +50,7 @@ import { DirPicker } from "@/components/DirPicker";
 import { LeaguePanel } from "@/components/LeaguePanel";
 import { OUR as LEAGUE_OUR, resolveGames, resultKindOf, type ResultKind } from "@/lib/league";
 import { ResultSend } from "@/components/ResultSend";
-import { Card, Choices, ErrorText, Field, inputClass, PanelTitle, PrimaryButton, ToggleButton } from "@/components/ui";
+import { Card, Choices, ErrorText, Field, inputClass, PanelTitle, PrimaryButton, ToggleButton, Loading } from "@/components/ui";
 
 // 10分刻み（10〜90分）。前に選んだ半端な分（45分など）も残す
 const tenSteps = (cur: number) => [...new Set([10, 20, 30, 40, 50, 60, 70, 80, 90, cur])].sort((x, y) => x - y);
@@ -1298,7 +1298,7 @@ function GroupEditor({
             持ち物
           </PanelTitle>
           {options.packingItems.length === 0 ? (
-            <p className="text-sm text-navy-soft">読み込み中…</p>
+            <Loading small />
           ) : (
             <Choices cols={3}>
               {itemNames.map((name) => (

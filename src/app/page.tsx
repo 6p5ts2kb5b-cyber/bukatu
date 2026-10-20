@@ -10,7 +10,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { ErrorText } from "@/components/ui";
+import { ErrorText, Loading } from "@/components/ui";
 import { LeaguePanel } from "@/components/LeaguePanel";
 import {
   isRef,
@@ -158,7 +158,7 @@ export default function Home() {
   const issues = useMemo(() => (list ? collectIssues(list, noticeFor) : []), [list, noticeFor]);
 
   if (error) return <ErrorText>{error}</ErrorText>;
-  if (!list) return <p className="py-16 text-center text-sm font-bold text-navy-soft">読み込み中…</p>;
+  if (!list) return <Loading />;
 
   lampSeq = 0;
   const ngCount = issues.filter((i) => i.item.level === "ng").length;
@@ -204,7 +204,7 @@ export default function Home() {
       </div>
 
       {/* ② スコアボード：次の予定 */}
-      <section className="next" aria-label="次の予定">
+      <section className="next home__next" aria-label="次の予定">
         <div className="next__head">
           <BigDate date={next.date} size="lg" />
           <div className="next__meta">
@@ -224,7 +224,7 @@ export default function Home() {
       </section>
 
       {/* ③ 要確認 */}
-      <section className="block" id="issues" aria-labelledby="issues-title">
+      <section className="block home__issues" id="issues" aria-labelledby="issues-title">
         <div className="block__head">
           <h2 className="block__title" id="issues-title">
             要確認
@@ -263,7 +263,7 @@ export default function Home() {
 
       {/* ④ その先の予定 */}
       {later.length > 0 && (
-        <section className="block" aria-labelledby="later-title">
+        <section className="block home__later" aria-labelledby="later-title">
           <div className="block__head">
             <h2 className="block__title" id="later-title">
               その先の予定

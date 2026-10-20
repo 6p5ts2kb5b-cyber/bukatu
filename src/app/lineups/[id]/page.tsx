@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PaperPreview } from "@/components/PaperPreview";
-import { ErrorText, Field, inputClass, SecondaryButton } from "@/components/ui";
+import { ErrorText, Field, inputClass, SecondaryButton, Loading } from "@/components/ui";
 import { formatDateLong } from "@/lib/activities";
 import { shareOrDownload } from "@/lib/sharePdf";
 import { lineupToPdf, type SheetRow } from "@/lib/lineupPdf";
@@ -246,7 +246,7 @@ export default function LineupPage() {
   const teamName = (tid: string) => teams.find((t) => t.id === tid)?.shortName ?? "";
 
   if (error) return <ErrorText>{error}</ErrorText>;
-  if (lineup === undefined) return <p className="py-6 text-center text-sm text-navy-soft/70">読み込み中…</p>;
+  if (lineup === undefined) return <Loading />;
   if (lineup === null) return <ErrorText>このメンバー表は見つかりませんでした。</ErrorText>;
 
   const update = (patch: Partial<Lineup>) => setLineup({ ...lineup, ...patch });

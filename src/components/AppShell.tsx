@@ -10,7 +10,7 @@ import { usePathname } from "next/navigation";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { AuthProvider, useAuth } from "@/components/AuthProvider";
 import { checkAccess, type Staff } from "@/lib/staff";
-import { cssVars } from "@/components/ui";
+import { cssVars, Loading } from "@/components/ui";
 
 const MeContext = createContext<Staff | null>(null);
 
@@ -191,6 +191,118 @@ function NavIcon({ d }: { d: string }) {
   );
 }
 
+// ───── PC用：左のサイドバー（スマホでは出さない） ─────
+const SIDE: { label: string; items: { href: string; label: string; icon: string; match?: (p: string) => boolean }[] }[] = [
+  {
+    label: "",
+    items: [
+      { href: "/", label: "ホーム", icon: NAV[0].icon, match: (p) => p === "/" },
+      {
+        href: "/activities",
+        label: "予定一覧",
+        icon: NAV[1].icon,
+        match: (p) => p.startsWith("/activities") && p !== "/activities/new" && p !== "/activities/bulk",
+      },
+      { href: "/activities/bulk", label: "まとめて入力", icon: "M4 5h16M4 10h16M4 15h10M4 20h7" },
+      {
+        href: "/print",
+        label: "保護者配布用の印刷",
+        icon: "M7 9V4h10v5M7 17H5a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2M7 14h10v6H7z",
+      },
+    ],
+  },
+  {
+    label: "試合",
+    items: [
+      { href: "/notices", label: "試合の連絡", icon: "M4 6h16v12H4zM4 7l8 6 8-6" },
+      { href: "/lineups", label: "メンバー表", icon: "M12 3l9 9-9 9-9-9zM12 8.5l3.5 3.5-3.5 3.5-3.5-3.5z" },
+      { href: "/players", label: "選手名簿", icon: "M4 14a8 8 0 0 1 16 0v1H4zM2 15h20M12 6V4" },
+    ],
+  },
+  {
+    label: "管理",
+    items: [
+      { href: "/teams", label: "学校", icon: "M3 21h18M5 21V10l7-5 7 5v11M9 21v-5h6v5" },
+      {
+        href: "/staff",
+        label: "スタッフ名簿",
+        icon: "M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.3a3.5 3.5 0 0 1 0 6.4M18 14.4c2.1.7 3.5 2.6 3.5 5.6",
+      },
+    ],
+  },
+];
+
+function SideNav() {
+  const pathname = usePathname();
+  const me = useContext(MeContext);
+  const { logOut } = useAuth();
+  const [today, setToday] = useState<{ m: number; d: number; wd: string } | null>(null);
+  useEffect(() => {
+    const t = new Date();
+    setToday({ m: t.getMonth() + 1, d: t.getDate(), wd: "日月火水木金土"[t.getDay()] });
+  }, []);
+  const active = (i: { href: string; match?: (p: string) => boolean }) =>
+    i.match ? i.match(pathname) : pathname.startsWith(i.href);
+  return (
+    <aside className="side print:hidden" aria-label="メインメニュー">
+      <Link href="/" className="side__brand">
+        <BallMark className="side__mark" />
+        <span>
+          <span className="side__title">桜・浅羽野・住吉</span>
+          <span className="side__sub">予定・活動管理</span>
+        </span>
+      </Link>
+      {today && (
+        <p className="side__today" aria-label={`今日は${today.m}月${today.d}日（${today.wd}）`}>
+          <span className="side__today-label">TODAY</span>
+          <span className="tile" style={cssVars({ "--i": 1 })}>{today.m}</span>
+          <i aria-hidden>/</i>
+          <span className="tile" style={cssVars({ "--i": 2 })}>{today.d}</span>
+          <small aria-hidden>{today.wd}</small>
+        </p>
+      )}
+      <Link href="/activities/new" className="side__add" aria-current={pathname === "/activities/new" ? "page" : undefined}>
+        <span className="side__plate" aria-hidden>
+          <NavIcon d={NAV[2].icon} />
+        </span>
+        予定を追加
+      </Link>
+      <nav className="side__nav">
+        {SIDE.map((g, k) => (
+          <div key={k} className="side__group">
+            {g.label && <p className="side__label">{g.label}</p>}
+            <ul>
+              {g.items.map((i) => (
+                <li key={i.href}>
+                  <Link href={i.href} aria-current={active(i) ? "page" : undefined}>
+                    <NavIcon d={i.icon} />
+                    {i.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </nav>
+      {me && (
+        <div className="side__me">
+          <span className="side__me-name">{me.name}</span>
+          <button type="button" onClick={logOut} className="side__logout">
+            ログアウト
+          </button>
+        </div>
+      )}
+    </aside>
+  );
+}
+
+// 画面ごとの幅（PC）：一覧は広く、入力の画面は読みやすい幅に
+function layoutOf(pathname: string): "wide" | "form" | "full" {
+  if (pathname === "/print" || /^\/notices\/[^/]+$/.test(pathname) || /^\/lineups\/[^/]+$/.test(pathname)) return "full";
+  if (["/", "/activities", "/menu", "/notices", "/players", "/lineups", "/staff", "/teams"].includes(pathname)) return "wide";
+  return "form";
+}
+
 // 画面下のボタン。「予定を追加」はホームベースの形
 function BottomNav() {
   const pathname = usePathname();
@@ -246,7 +358,7 @@ function Gate({ children }: { children: ReactNode }) {
   if (loading || (user && access.state === "checking")) {
     return (
       <Shell>
-        <p className="py-16 text-center text-sm font-bold text-navy-soft">読み込み中…</p>
+        <Loading />
       </Shell>
     );
   }
@@ -261,11 +373,22 @@ function Gate({ children }: { children: ReactNode }) {
   return (
     <MeContext.Provider value={access.me}>
       <Header />
-      <main className="page mx-auto flex min-h-dvh max-w-xl flex-col gap-3 px-3.5 pb-28 pt-4 print:max-w-none print:p-0">
-        {children}
-      </main>
+      <SideNav />
+      <Main>{children}</Main>
       <BottomNav />
     </MeContext.Provider>
+  );
+}
+
+function Main({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  return (
+    <main
+      data-layout={layoutOf(pathname)}
+      className="page mx-auto flex min-h-dvh max-w-xl flex-col gap-3 px-3.5 pb-28 pt-4 print:max-w-none print:p-0"
+    >
+      {children}
+    </main>
   );
 }
 

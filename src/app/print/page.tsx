@@ -9,7 +9,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import Link from "next/link";
 import { holidayName, isHoliday } from "@/lib/holidays";
 import { PaperPreview } from "@/components/PaperPreview";
-import { Choices, cssVars, ErrorText, Field, PageHead, Toast, ToggleButton } from "@/components/ui";
+import { Choices, cssVars, ErrorText, Field, PageHead, Toast, ToggleButton, Loading } from "@/components/ui";
 import { elementToPdf, elementToPng, shareOrDownload } from "@/lib/sharePdf";
 import { umpireName } from "@/lib/league";
 import {
@@ -657,8 +657,9 @@ export default function PrintPage() {
 
   return (
     <>
+      <div className="pr-split">
       {/* ---- 操作パネル（印刷されない） ---- */}
-      <div className="flex flex-col gap-3 print:hidden">
+      <div className="pr-controls flex flex-col gap-3 print:hidden">
         <PageHead kicker="PRINT" title="保護者配布用の印刷" lead="送り先と月を選ぶと、A4縦の月間予定表ができます。" />
         <section className="panel flex flex-col gap-4">
           <div>
@@ -785,7 +786,7 @@ export default function PrintPage() {
           {!heading.startsWith("桜・浅羽野・住吉") && <p className="text-[11px]">桜・浅羽野・住吉 連合チーム</p>}
         </header>
 
-        {!activities && !error && <p className="py-6 text-center">読み込み中…</p>}
+        {!activities && !error && <Loading small />}
         {activities && rows.length === 0 && (
           <p className="py-6 text-center">
             {divisions.length === 0 ? "載せる活動を選んでください。" : hidePast && rangeTo < today ? "この期間はもう過ぎています。「過ぎた日は載せない」を外すと載ります。" : half === "all" ? "この月の予定はまだ登録されていません。" : "この期間の予定はまだ登録されていません。"}
@@ -880,6 +881,7 @@ export default function PrintPage() {
         </div>
       </article>
       </PaperPreview>
+      </div>
 
       <div className="h-28 print:hidden" aria-hidden />
       <div className="savebar print:hidden">
