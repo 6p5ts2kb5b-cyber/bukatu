@@ -17,7 +17,8 @@ import {
   type Firestore,
 } from "firebase/firestore";
 import { firebaseApp } from "./firebase";
-import { describeRef, isRef, normalizeTeam, todayString, tournamentTitle, umpireOf, type Activity } from "./activities";
+import { describeRef, isRef, normalizeTeam, todayString, tournamentTitle, umpireOf, parseCross, type Activity } from "./activities";
+import { umpireName } from "./league";
 import { findVenue } from "./directory";
 
 export const OUR_TEAM = "桜・浅羽野・住吉連合";
@@ -284,7 +285,13 @@ export function applyActivity(n: NoticeDraft, a: Activity): NoticeDraft {
     afterPrev: i > 0 && x.afterPrev === true,
     prevMin: x.prevMin || 20,
     // 予定で入れた審判（大会は自動で「第1試合の勝者」など）
-    ...(umpireOf(g.type, g.games, i) ? { plate: umpireOf(g.type, g.games, i), base: umpireOf(g.type, g.games, i) } : {}),
+    ...(umpireOf(g.type, g.games, i)
+      ? (() => {
+          // 「○○・○○より2名ずつ」はチーム名の文にして入れる
+          const u = parseCross(umpireOf(g.type, g.games, i)) ? umpireName(g.type, g.games, i) : umpireOf(g.type, g.games, i);
+          return { plate: u, base: u };
+        })()
+      : {}),
     } as NoticeGame;
   });
   if (!games.length && kind !== "tournament") games = practiceGames(kind, opponents[0] ?? "", opponents[1] ?? "");

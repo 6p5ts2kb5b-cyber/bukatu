@@ -3989,3 +3989,15 @@ td.pl-mark {
     display: block !important;
   }
 }
+
+/* 審判：「第2試合のチームから○名ずつ」 */
+.pick--cross {
+  border-style: dashed;
+  border-color: #9db8e6;
+  color: #1f4fa3;
+}
+.pick--cross[aria-pressed="true"] {
+  border-style: solid;
+  border-color: var(--board);
+  color: #fff;
+}

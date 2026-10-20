@@ -23,6 +23,9 @@ import {
   recentPlaces,
   BOX_KEYS,
   autoUmpire,
+  crossText,
+  crossUmp,
+  parseCross,
   emptyBox,
   batteryText,
   xbhText,
@@ -391,18 +394,23 @@ function UmpirePicker({
   value,
   auto,
   teams,
+  games,
   onChange,
 }: {
   i: number;
   value: string;
   auto: string;
   teams: string[];
+  games: Game[];
   onChange: (v: string) => void;
 }) {
   const refs = Array.from({ length: i }, (_, k) => [`第${k + 1}試合の勝者`, `第${k + 1}試合の敗者`]).flat();
   const options = [...teams, ...refs];
-  const cur = value.trim() || auto;
-  const custom = !!value.trim() && !options.includes(value.trim());
+  const cross = parseCross(value.trim());
+  // ほかの試合（この試合以外）：「第2試合のチームから○名ずつ」
+  const others = games.map((_, j) => j).filter((j) => j !== i);
+  const cur = cross ? crossText(games, cross.game, cross.n, LEAGUE_OUR) : value.trim() || auto;
+  const custom = !!value.trim() && !cross && !options.includes(value.trim());
   const [typing, setTyping] = useState(false);
   return (
     <div className="flex flex-col gap-2">
@@ -429,14 +437,46 @@ function UmpirePicker({
             {o}
           </button>
         ))}
+        {others.map((j) => (
+          <button
+            key={`x${j}`}
+            type="button"
+            className="pick pick--cross"
+            aria-pressed={cross?.game === j + 1}
+            onClick={() => {
+              setTyping(false);
+              onChange(cross?.game === j + 1 ? "" : crossUmp(j + 1, cross?.n ?? 2));
+            }}
+          >
+            第{j + 1}試合のチームから○名ずつ
+          </button>
+        ))}
         <button type="button" className="pick pick--other" aria-pressed={custom || typing} onClick={() => setTyping(!typing)}>
           {custom ? `✎ ${value}` : "手で入力"}
         </button>
       </div>
+      {cross && (
+        <div className="flex items-center gap-2">
+          <span className="shrink-0 text-sm font-extrabold text-navy-soft">各チームから</span>
+          <div className="seg" role="group" aria-label="各チームから何名">
+            {[1, 2, 3].map((n) => (
+              <button
+                key={n}
+                type="button"
+                className="seg__btn px-4"
+                aria-pressed={cross.n === n}
+                onClick={() => onChange(crossUmp(cross.game, n))}
+              >
+                {n}名ずつ
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {(typing || custom) && (
         <input
           className={`${inputClass} f-input--white`}
-          value={value}
+          value={cross ? "" : value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="審判のチーム名"
           autoComplete="off"
@@ -874,6 +914,7 @@ function GamesEditor({
                     value={g.ump ?? ""}
                     auto={autoUmpire(type, games.length, i)}
                     teams={dayTeams}
+                    games={games}
                     onChange={(v) => update(i, { ump: v })}
                   />
                 )}

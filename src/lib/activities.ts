@@ -208,6 +208,23 @@ export function autoUmpire(type: string, count: number, i: number): string {
   if (type === "練習試合" || count < 3) return "";
   return i === 1 ? "第1試合の勝者" : i === 2 ? "第1試合の敗者" : "";
 }
+// 「第2試合のチームから2名ずつ」の印（審判の欄に入れる）："@g2x2"
+export function crossUmp(game: number, n: number): string {
+  return `@g${game}x${n}`;
+}
+export function parseCross(u: string): { game: number; n: number } | null {
+  const m = (u ?? "").match(/^@g(\d+)x(\d+)$/);
+  return m ? { game: Number(m[1]), n: Number(m[2]) } : null;
+}
+// その試合の2チーム（name で「第1試合の勝者」などを読みかえる）
+export function crossText(games: Game[], game: number, n: number, our: string, name: (t: string) => string = (t) => t): string {
+  const g = games[game - 1];
+  if (!g) return "";
+  const teams = [g.others ? name(g.home ?? "") : our, name(g.opponent)].map((t) => t.trim()).filter(Boolean);
+  if (!teams.length) return `第${game}試合のチームより${n}名ずつ`;
+  return `${teams.join("・")}より${n}名ずつ`;
+}
+
 // この試合の審判（手で入れたもの、なければ自動）
 export function umpireOf(type: string, games: Game[], i: number): string {
   return (games[i]?.ump ?? "").trim() || autoUmpire(type, games.length, i);
