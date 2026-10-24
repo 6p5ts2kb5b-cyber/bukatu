@@ -23,7 +23,8 @@ function cssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
-export async function lineupToPdf(d: SheetData, filename: string): Promise<File> {
+// メンバー表を A4 の絵（canvas）にえがく。PDF にも画像にも使う
+async function drawLineup(d: SheetData): Promise<HTMLCanvasElement> {
   await document.fonts?.ready;
   const NUM = cssVar("--num") || `"Arial Narrow", sans-serif`;
   const JP = cssVar("--jp") || "sans-serif";
@@ -181,6 +182,19 @@ export async function lineupToPdf(d: SheetData, filename: string): Promise<File>
     { order: 11, num: 14, name: 12, plain: 11 },
   );
 
-  const page = await toJpeg(c);
+  return c;
+}
+
+export async function lineupToPdf(d: SheetData, filename: string): Promise<File> {
+  const page = await toJpeg(await drawLineup(d));
   return new File([jpegPagesToPdf([page])], filename, { type: "application/pdf" });
+}
+
+// LINEのトークでそのまま見える画像（PNG）
+export async function lineupToPng(d: SheetData, filename: string): Promise<File> {
+  const c = await drawLineup(d);
+  const blob = await new Promise<Blob>((resolve, reject) =>
+    c.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob"))), "image/png"),
+  );
+  return new File([blob], filename, { type: "image/png" });
 }

@@ -6,7 +6,8 @@
 //   opponent  = 対戦相手
 //   positions = 守備位置 → 選手ID（"1"=投手 … "9"=右翼）
 //   order     = 打順（選手IDを1番から順に）
-//   bench     = 控え選手のID
+//   bench     = 控え選手のID（表示用に保存。決め方は benchOff）
+//   benchOff  = 控えに入れない選手のID（守備についていない選手は、ほかは全員自動で控え）
 
 import {
   addDoc,
@@ -44,6 +45,8 @@ export type Lineup = {
   positions: Record<string, string>;
   order: string[];
   bench: string[];
+  // 控えに入れない選手（守備についていない選手は、ここに無ければ自動で控えになる）
+  benchOff?: string[];
 };
 
 export type LineupDraft = Omit<Lineup, "id">;
@@ -61,6 +64,7 @@ function toLineup(id: string, x: Record<string, unknown>): Lineup {
     positions: (x.positions as Record<string, string>) ?? {},
     order: Array.isArray(x.order) ? (x.order as string[]) : [],
     bench: Array.isArray(x.bench) ? (x.bench as string[]) : [],
+    ...(Array.isArray(x.benchOff) ? { benchOff: x.benchOff as string[] } : {}),
   };
 }
 
@@ -105,4 +109,11 @@ export async function saveLineup(l: Lineup): Promise<void> {
 
 export async function deleteLineup(id: string): Promise<void> {
   await deleteDoc(doc(db(), "lineups", id));
+}
+
+// 控え選手：守備についていない選手（名簿の順）から、外した選手を除いたもの
+export function benchOf(l: Lineup, notPlaying: { id: string }[]): string[] {
+  const ids = notPlaying.map((p) => p.id);
+  const off = l.benchOff ?? [];
+  return ids.filter((id) => !off.includes(id));
 }

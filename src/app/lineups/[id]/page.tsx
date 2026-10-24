@@ -13,7 +13,7 @@ import { PaperPreview } from "@/components/PaperPreview";
 import { ErrorText, Field, inputClass, SecondaryButton, Loading } from "@/components/ui";
 import { formatDateLong } from "@/lib/activities";
 import { shareOrDownload } from "@/lib/sharePdf";
-import { lineupToPdf, type SheetRow } from "@/lib/lineupPdf";
+import { lineupToPdf, lineupToPng, type SheetRow } from "@/lib/lineupPdf";
 import {
   deleteLineup,
   getLineup,
@@ -21,6 +21,7 @@ import {
   positionOf,
   saveLineup,
   syncOrder,
+  benchOf,
   type Lineup,
 } from "@/lib/lineups";
 import { listPlayers, type Player } from "@/lib/players";
@@ -137,7 +138,7 @@ function PlayerPicker({
           {list.map((p) => {
             const pos = positionOf(lineup, p.id);
             const posLabel = POSITIONS.find((x) => x.key === pos)?.short;
-            const onBench = lineup.bench.includes(p.id);
+            const onBench = !pos && p.active && !(lineup.benchOff ?? []).includes(p.id);
             return (
               <li key={p.id}>
                 <button
@@ -186,35 +187,42 @@ export default function LineupPage() {
   // メンバー表のPDF（A4の1枚）。作る → スマホの共有画面でLINE・メールを選ぶ
   const sheetRef = useRef<HTMLElement>(null);
   const [pdf, setPdf] = useState<File | null>(null);
-  const [making, setMaking] = useState(false);
+  const [png, setPng] = useState<File | null>(null);
+  const [making, setMaking] = useState<"" | "pdf" | "png">("");
   const [pdfNote, setPdfNote] = useState("");
   useEffect(() => {
     setPdf(null);
+    setPng(null);
     setPdfNote("");
   }, [lineup, players, teams]);
   const sheetDataRef = useRef<(() => Parameters<typeof lineupToPdf>[0]) | null>(null);
   const sheetData = () => sheetDataRef.current!();
-  const sendPdf = async () => {
+  // 送る：PDF（A4）または画像（LINEのトークでそのまま見える）。iPhoneは作った後にもう一度押すと共有画面
+  const send = async (kind: "pdf" | "png") => {
     if (!sheetRef.current || making) return;
     const title = lineup?.title || "メンバー表";
+    const word = kind === "pdf" ? "PDF" : "画像";
     const share = async (f: File) => {
       try {
         const r = await shareOrDownload(f, title);
-        if (r === "downloaded") setPdfNote("PDFを保存しました。LINEやメールに添付して送ってください。");
+        if (r === "downloaded") setPdfNote(`${word}を保存しました。LINEやメールに添付して送ってください。`);
       } catch {
-        setPdfNote("「PDFを送る」をもう一度押してください。");
+        setPdfNote(`「${word}を送る」をもう一度押してください。`);
       }
     };
-    if (pdf) return share(pdf);
-    setMaking(true);
+    const made = kind === "pdf" ? pdf : png;
+    if (made) return share(made);
+    setMaking(kind);
     try {
-      const f = await lineupToPdf(sheetData(), `${title.replace(/[\s/\\]+/g, "_")}.pdf`);
-      setPdf(f);
+      const base = title.replace(/[\s/\\]+/g, "_");
+      const f = kind === "pdf" ? await lineupToPdf(sheetData(), `${base}.pdf`) : await lineupToPng(sheetData(), `${base}.png`);
+      if (kind === "pdf") setPdf(f);
+      else setPng(f);
       await share(f);
     } catch {
-      setPdfNote("PDFを作れませんでした。電波の良い場所でもう一度お試しください。");
+      setPdfNote(`${word}を作れませんでした。もう一度お試しください。`);
     } finally {
-      setMaking(false);
+      setMaking("");
     }
   };
   const loaded = useRef(false);
@@ -253,6 +261,9 @@ export default function LineupPage() {
   if (lineup === null) return <ErrorText>このメンバー表は見つかりませんでした。</ErrorText>;
 
   const update = (patch: Partial<Lineup>) => setLineup({ ...lineup, ...patch });
+  // 守備についていない選手は自動で控え（外した選手を除く）
+  const notPlaying = players.filter((p) => p.active && !positionOf(lineup, p.id));
+  const benchIds = benchOf(lineup, notPlaying);
 
   const assign = (posKey: string, playerId: string) => {
     const positions: Record<string, string> = {};
@@ -295,10 +306,11 @@ export default function LineupPage() {
     } else setDraft(next);
   };
 
+  // 守備についていない選手は自動で控え。押すと外す／戻す
   const toggleBench = (pid: string) => {
-    update({
-      bench: lineup.bench.includes(pid) ? lineup.bench.filter((b) => b !== pid) : [...lineup.bench, pid],
-    });
+    const on = benchIds.includes(pid);
+    const off = notPlaying.map((p) => p.id).filter((x) => (x === pid ? on : !benchIds.includes(x)));
+    update({ benchOff: off, bench: notPlaying.map((p) => p.id).filter((x) => !off.includes(x)) });
   };
 
   const remove = async () => {
@@ -308,7 +320,7 @@ export default function LineupPage() {
   };
 
   const filled = POSITIONS.filter((p) => lineup.positions[p.key]).length;
-  const bench = lineup.bench.map((b) => byId.get(b)).filter(Boolean) as Player[];
+  const bench = benchIds.map((b) => byId.get(b)).filter(Boolean) as Player[];
   // PDF に描く内容（画面のメンバー表と同じ）
   sheetDataRef.current = () => {
     const starters: SheetRow[] = Array.from({ length: 9 }).map((_, i) => {
@@ -340,7 +352,6 @@ export default function LineupPage() {
       bench: rows,
     };
   };
-  const notPlaying = players.filter((p) => p.active && !positionOf(lineup, p.id));
 
   return (
     <>
@@ -540,12 +551,12 @@ export default function LineupPage() {
 
           <section className="panel">
             <h2 className="panel__title">
-              控え選手<small>{lineup.bench.length}人</small>
+              控え選手<small>{benchIds.length}人</small>
             </h2>
-            <p className="f-hint -mt-2 mb-1">ベンチに入る選手をタップして選びます。</p>
+            <p className="f-hint -mt-2 mb-1">守備についていない選手は、自動で全員控えに入ります。ベンチに入らない選手だけタップして外してください。</p>
             <div className="mt-3 grid grid-cols-2 gap-2">
               {notPlaying.map((p) => {
-                const on = lineup.bench.includes(p.id);
+                const on = benchIds.includes(p.id);
                 return (
                   <button
                     key={p.id}
@@ -571,9 +582,12 @@ export default function LineupPage() {
       {/* ③ メンバー表 */}
       {tab === "sheet" && (
         <>
-          <div className="grid grid-cols-[1fr_auto] gap-2 print:hidden">
-            <button type="button" onClick={sendPdf} disabled={making} className="btn btn--accent">
-              {making ? "PDFを作っています…" : pdf ? "PDFを送る" : "PDFでLINE・メールに送る"}
+          <div className="grid grid-cols-[1fr_1fr_auto] gap-2 print:hidden">
+            <button type="button" onClick={() => send("png")} disabled={!!making} className="btn btn--line">
+              {making === "png" ? "画像を作っています…" : png ? "画像を送る" : "画像でLINEに送る"}
+            </button>
+            <button type="button" onClick={() => send("pdf")} disabled={!!making} className="btn btn--accent">
+              {making === "pdf" ? "PDFを作っています…" : pdf ? "PDFを送る" : "PDFで送る"}
             </button>
             <button type="button" onClick={() => window.print()} className="btn btn--ghost px-5">
               印刷
