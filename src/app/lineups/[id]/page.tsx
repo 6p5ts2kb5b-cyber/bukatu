@@ -2,7 +2,7 @@
 
 // メンバー表の作成画面です。
 //   タブ1「守備位置」… 野球のダイヤモンド上の丸をタップして選手を選ぶ
-//   タブ2「打順」   … 守備についた9人の打順を▲▼で並べ替え、控え選手を選ぶ
+//   タブ2「打順」   … 1番から順にタップして決める（2人タップで入れ替え）、控え選手を選ぶ
 //   タブ3「メンバー表」… 打順・守備・背番号・氏名の表を確認して印刷する
 // 変更は自動で保存されます。
 
@@ -178,6 +178,9 @@ export default function LineupPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("field");
+  // 打順：「1番から順にタップ」で作っている途中の並び／入れ替えで1人目に選んだ打順
+  const [draft, setDraft] = useState<string[] | null>(null);
+  const [swapFrom, setSwapFrom] = useState<number | null>(null);
   const [picking, setPicking] = useState<string | null>(null); // 選手を選んでいる守備位置
   const [saveState, setSaveState] = useState<"saved" | "saving" | "error">("saved");
   // メンバー表のPDF（A4の1枚）。作る → スマホの共有画面でLINE・メールを選ぶ
@@ -273,12 +276,23 @@ export default function LineupPage() {
   };
 
   const order = syncOrder(lineup.positions, lineup.order);
-  const move = (i: number, dir: -1 | 1) => {
-    const j = i + dir;
-    if (j < 0 || j >= order.length) return;
+  // 打順：2人をタップで入れ替え
+  const tapRow = (i: number) => {
+    if (swapFrom == null) return setSwapFrom(i);
+    if (swapFrom === i) return setSwapFrom(null);
     const next = [...order];
-    [next[i], next[j]] = [next[j], next[i]];
+    [next[swapFrom], next[i]] = [next[i], next[swapFrom]];
     update({ order: next });
+    setSwapFrom(null);
+  };
+  // 打順：1番から順にタップ。全員入ったら決定
+  const pick = (pid: string) => {
+    if (!draft) return;
+    const next = [...draft, pid];
+    if (next.length >= order.length) {
+      update({ order: next });
+      setDraft(null);
+    } else setDraft(next);
   };
 
   const toggleBench = (pid: string) => {
@@ -430,46 +444,98 @@ export default function LineupPage() {
         <>
           <section className="panel">
             <h2 className="panel__title">打順</h2>
-            <p className="f-hint -mt-2 mb-1">▲▼で順番を入れ替えます。守備についた選手が並びます。</p>
-            {order.length === 0 && (
+            {order.length === 0 ? (
               <p className="py-4 text-center text-sm text-[#8a6500]">▲ 先に「① 守備位置」で選手を選んでください。</p>
+            ) : draft ? (
+              <>
+                <p className="bo-guide">
+                  <b>{draft.length + 1}番</b>の選手をタップしてください
+                  <small>（{draft.length}／{order.length}人）</small>
+                </p>
+                {/* まだ打順が決まっていない選手（守備の順） */}
+                <div className="bo-pool">
+                  {order
+                    .filter((pid) => !draft.includes(pid))
+                    .sort((x, y) => Number(positionOf(lineup, x) || 99) - Number(positionOf(lineup, y) || 99))
+                    .map((pid) => {
+                      const p = byId.get(pid);
+                      const pos = POSITIONS.find((x) => x.key === positionOf(lineup, pid));
+                      return (
+                        <button key={pid} type="button" className="bo-chip" onClick={() => pick(pid)}>
+                          <span className="bo-pos">{pos?.short}</span>
+                          <span className="bo-chip__name">{p?.name ?? "（削除された選手）"}</span>
+                        </button>
+                      );
+                    })}
+                </div>
+                <ol className="bo-list">
+                  {order.map((_, i) => {
+                    const pid = draft[i];
+                    const p = pid ? byId.get(pid) : undefined;
+                    const pos = pid ? POSITIONS.find((x) => x.key === positionOf(lineup, pid)) : undefined;
+                    return (
+                      <li key={i} className={`bo-row${!pid ? " is-empty" : ""}${i === draft.length ? " is-next" : ""}`}>
+                        <span className="tile bo-no">{i + 1}</span>
+                        {pid ? (
+                          <>
+                            <span className="bo-pos">{pos?.short}</span>
+                            <span className="bo-name">{p?.name}</span>
+                          </>
+                        ) : (
+                          <span className="bo-name bo-name--empty">{i === draft.length ? "← ここに入ります" : ""}</span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ol>
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" className="btn btn--ghost btn--small" disabled={!draft.length} onClick={() => setDraft(draft.slice(0, -1))}>
+                    1つ戻す
+                  </button>
+                  <button type="button" className="btn btn--ghost btn--small" onClick={() => setDraft(null)}>
+                    やめる（前の打順に戻す）
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <button type="button" className="btn btn--primary" onClick={() => { setSwapFrom(null); setDraft([]); }}>
+                  1番から順にタップして決める
+                </button>
+                {swapFrom != null ? (
+                  <p className="bo-swap-note">
+                    {swapFrom + 1}番と入れ替える選手をタップ
+                    <button type="button" onClick={() => setSwapFrom(null)}>やめる</button>
+                  </p>
+                ) : (
+                  <p className="f-hint mb-1 mt-2">
+                    入れ替えるとき：替えたい2人を順にタップ（例：3番 → 5番で入れ替わります）。
+                  </p>
+                )}
+                <ol className="bo-list">
+                  {order.map((pid, i) => {
+                    const p = byId.get(pid);
+                    const pos = POSITIONS.find((x) => x.key === positionOf(lineup, pid));
+                    return (
+                      <li key={pid}>
+                        <button
+                          type="button"
+                          className={`bo-row bo-row--btn${swapFrom === i ? " is-picked" : ""}${swapFrom != null && swapFrom !== i ? " is-target" : ""}`}
+                          onClick={() => tapRow(i)}
+                          aria-pressed={swapFrom === i}
+                        >
+                          <span className="tile bo-no">{i + 1}</span>
+                          <span className="bo-pos">{pos?.short}</span>
+                          <span className="bo-name">{p?.name ?? "（削除された選手）"}</span>
+                          <span className="bo-meta">{p ? `#${p.number || "－"}・${teamName(p.teamId)}・${p.grade}年` : ""}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ol>
+
+              </>
             )}
-            <ol className="mt-3 flex flex-col gap-2">
-              {order.map((pid, i) => {
-                const p = byId.get(pid);
-                const pos = POSITIONS.find((x) => x.key === positionOf(lineup, pid));
-                return (
-                  <li key={pid} className="flex items-center gap-3 rounded-xl border border-rule bg-[#f7f9f5] p-2 pl-2.5">
-                    <span className="tile text-[26px]" style={{ width: "1.5em", height: "1.35em" }}>{i + 1}</span>
-                    <span className="rounded-md bg-navy px-2 py-1 text-sm font-bold text-white">{pos?.short}</span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-base font-extrabold">{p?.name ?? "（削除された選手）"}</span>
-                      <span className="block text-xs text-navy-soft/70">
-                        {p ? `#${p.number || "－"}・${teamName(p.teamId)}・${p.grade}年` : ""}
-                      </span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => move(i, -1)}
-                      disabled={i === 0}
-                      aria-label="上へ"
-                      className="h-11 w-11 rounded-lg bg-white text-lg font-bold ring-1 ring-navy/10 disabled:opacity-30"
-                    >
-                      ▲
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => move(i, 1)}
-                      disabled={i === order.length - 1}
-                      aria-label="下へ"
-                      className="h-11 w-11 rounded-lg bg-white text-lg font-bold ring-1 ring-navy/10 disabled:opacity-30"
-                    >
-                      ▼
-                    </button>
-                  </li>
-                );
-              })}
-            </ol>
           </section>
 
           <section className="panel">
