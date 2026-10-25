@@ -4179,3 +4179,10 @@ td.pl-mark {
   font-size: 13px;
   font-weight: 800;
 }
+
+/* 先攻・後攻（予定一覧の試合の行） */
+.acard__bat {
+  font-size: 0.86em;
+  font-weight: 800;
+  color: var(--stitch);
+}

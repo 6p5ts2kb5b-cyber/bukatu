@@ -18,6 +18,7 @@ import {
   describeRef,
   gameStart,
   isRelStart,
+  batLabel,
   tournamentTitle,
   isMatchType,
   isOffType,
@@ -199,7 +200,7 @@ function groupText(g: ActivityGroup, prefix: string, withDiv: boolean): string[]
           `　${circled(i)}　${isRelStart(x, i) ? gameStart(x, i) : clock(x.startTime) || "時間未定"}　${
             x.others
               ? `${team(x.home ?? "") || "未定"} 対 ${team(x.opponent) || "未定"}（観戦・補助役員）`
-              : `vs ${team(x.opponent) || "未定"}`
+              : `vs ${team(x.opponent) || "未定"}${batLabel(x) ? `（${batLabel(x)}）` : ""}`
           }${umpireName(g.type, g.games, g.games.indexOf(x)) ? `（審判　${umpireName(g.type, g.games, g.games.indexOf(x))}）` : ""}`,
         ),
       );
@@ -306,7 +307,7 @@ function GroupLines({ g, showDivision, prefix }: { g: ActivityGroup; showDivisio
                 <b>{isRelStart(x, i) ? gameStart(x, i) : clock(x.startTime) || "時間未定"}</b>
                 {x.others
                   ? `${team(x.home ?? "") || "未定"} 対 ${team(x.opponent) || "未定"}（観戦・補助役員）`
-                  : `vs ${team(x.opponent) || "未定"}`}
+                  : `vs ${team(x.opponent) || "未定"}${batLabel(x) ? `（${batLabel(x)}）` : ""}`}
                 {umpireName(g.type, g.games, g.games.indexOf(x)) && (
                   <small className="pl-game__ump">審判 {umpireName(g.type, g.games, g.games.indexOf(x))}</small>
                 )}

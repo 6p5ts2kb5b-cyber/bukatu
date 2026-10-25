@@ -115,7 +115,8 @@ export type Game = {
   // ランニングスコア（回ごとの点）。lh＝先に書いたチーム、la＝相手。null は「まだ・やっていない（X）」
   lh?: (number | null)[];
   la?: (number | null)[];
-  first?: "l" | "r"; // 先攻（l＝先に書いたチーム、r＝相手）
+  first?: "l" | "r"; // 先攻（l＝先に書いたチーム、r＝相手）。ランニングスコアの上下に使う
+  bat?: "l" | "r"; // 先攻を決めたとき（l＝先に書いたチーム＝うち／チーム1）。空＝未定
   // 新聞の記事のような「投手－捕手」と長打（l＝先に書いたチーム、r＝相手）。名前は「、」区切り
   box?: Box;
 };
@@ -506,6 +507,12 @@ export function advanceView(g: ActivityGroup): AdvanceView {
   return { mode: "both", day, win: title, lose, loseRest: rest };
 }
 
+// うちの試合の「先攻」「後攻」（決めていなければ ""）
+export function batLabel(x: Game): string {
+  if (x.others || !x.bat) return "";
+  return x.bat === "l" ? "先攻" : "後攻";
+}
+
 // 開始が時刻ではなく「昼食後」「前の試合の後」か
 export function isRelStart(x: Game, i: number): boolean {
   return (x.afterPrev === true && i > 0) || x.afterLunch === true;
@@ -709,6 +716,7 @@ function toActivity(id: string, data: Record<string, unknown>): Activity {
               lh: Array.isArray(x.lh) ? x.lh.map(scoreOf) : [],
               la: Array.isArray(x.la) ? x.la.map(scoreOf) : [],
               first: x.first === "r" ? "r" : "l",
+              ...(x.bat === "l" || x.bat === "r" ? { bat: x.bat } : {}),
               ...(toBox(x.box) ? { box: toBox(x.box) } : {}),
             }),
           )

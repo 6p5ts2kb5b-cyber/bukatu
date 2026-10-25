@@ -687,10 +687,10 @@ function LineEditor({
       <div className="flex items-center gap-2">
         <span className="text-sm font-extrabold text-navy-soft">先攻</span>
         <div className="seg flex-1" role="group" aria-label="先攻">
-          <button type="button" className="seg__btn" aria-pressed={first === "l"} onClick={() => onChange({ first: "l" })}>
+          <button type="button" className="seg__btn" aria-pressed={first === "l"} onClick={() => onChange({ first: "l", bat: "l" })}>
             {left}
           </button>
-          <button type="button" className="seg__btn" aria-pressed={first === "r"} onClick={() => onChange({ first: "r" })}>
+          <button type="button" className="seg__btn" aria-pressed={first === "r"} onClick={() => onChange({ first: "r", bat: "r" })}>
             {right}
           </button>
         </div>
@@ -760,7 +760,15 @@ function GamesEditor({
   scores?: ResultKind | null; // JJBF大会・STORM杯・新人戦・学総・練習試合など：結果（点数）を入れる欄を出す
 }) {
   const update = (i: number, patch: Partial<Game>) =>
-    onChange(games.map((g, j) => (j === i ? { ...g, ...patch } : g)));
+    onChange(
+      games.map((g, j) => {
+        if (j !== i) return g;
+        // undefined の項目は消す（Firestore は undefined を保存できない）
+        const next = { ...g, ...patch } as Record<string, unknown>;
+        Object.keys(next).forEach((k) => next[k] === undefined && delete next[k]);
+        return next as Game;
+      }),
+    );
   const add = () => onChange([...games, { opponent: "", startTime: "", home: "", others: false, bench: "1塁" }]);
   const remove = (i: number) => onChange(games.filter((_, j) => j !== i));
   // 試合の順番を入れ替える
@@ -883,6 +891,28 @@ function GamesEditor({
                         onClick={() => update(i, { bench: b })}
                       >
                         {b}側
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* 先攻・後攻（もう一度押すと未定に戻る） */}
+                <div className="flex items-center gap-2">
+                  <span className="shrink-0 text-sm font-extrabold text-navy-soft">
+                    {others ? `${g.home || "チーム1"}は` : "うちは"}
+                  </span>
+                  <div className="seg flex-1" role="group" aria-label="先攻・後攻">
+                    {([
+                      ["l", "先攻"],
+                      ["r", "後攻"],
+                    ] as const).map(([v, label]) => (
+                      <button
+                        key={v}
+                        type="button"
+                        className="seg__btn"
+                        aria-pressed={g.bat === v}
+                        onClick={() => update(i, g.bat === v ? { bat: undefined } : { bat: v, first: v })}
+                      >
+                        {label}
                       </button>
                     ))}
                   </div>

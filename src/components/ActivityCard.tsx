@@ -15,6 +15,7 @@ import {
   gameLabel,
   gameStart,
   isRelStart,
+  batLabel,
   isRef,
   formatDate,
   tournamentTitle,
@@ -161,6 +162,7 @@ function GroupDetails({ g }: { g: ActivityGroup }) {
             {isRelStart(x, i) ? gameStart(x, i) : x.startTime && <Num>{x.startTime}</Num>}
             {gameStart(x, i) && gameLabel(x) && "　"}
             {gameLabel(x)}
+            {batLabel(x) && <span className="acard__bat">（{batLabel(x)}）</span>}
             {isOthersGame(x) && "（観戦・補助役員）"}
             {umpireName(g.type, g.games, i) && <span className="acard__ump">審判　{umpireName(g.type, g.games, i)}</span>}
           </span>
