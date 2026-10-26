@@ -1,0 +1,166 @@
+/* ═════ GAS版で足した見た目 ═════ */
+
+/* 保存の状態（右上に小さく） */
+.gas-chip {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 16px);
+  right: 10px;
+  z-index: 45;
+  margin: 0;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: var(--board-deep);
+  color: #fff;
+  font-family: var(--jp);
+  font-size: 13px;
+  font-weight: 800;
+  border: 1px solid rgb(245 247 242 / 0.25);
+  box-shadow: 0 6px 18px rgb(15 42 33 / 0.25);
+  pointer-events: none;
+  animation: toast-in 0.25s ease both;
+}
+.gas-chip--ok {
+  background: var(--ok);
+}
+
+/* 保存できなかった・気をつけること（画面下のボタンの上） */
+.gas-band {
+  position: fixed;
+  inset: auto 0 calc(66px + env(safe-area-inset-bottom));
+  z-index: 46;
+  padding: 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.gas-band__box {
+  max-width: 36rem;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 12px 12px 14px;
+  border-radius: 14px;
+  font-family: var(--jp);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.55;
+  box-shadow: 0 10px 30px rgb(15 42 33 / 0.3);
+}
+.gas-band__box p {
+  flex: 1;
+  margin: 0;
+}
+.gas-band__box .btn {
+  flex-shrink: 0;
+  min-height: 46px;
+  padding: 0 14px;
+  width: auto;
+}
+.gas-band__box--ng {
+  background: #fbe9eb;
+  color: #8f1b28;
+  border: 2px solid var(--stitch);
+}
+.gas-band__box--warn {
+  background: var(--caution-bg);
+  color: var(--caution);
+  border: 2px solid #e2b33c;
+}
+.gas-band__sub {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* コピーできなかったとき：全文を出す */
+.gas-copy {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgb(0 0 0 / 0.45);
+  display: grid;
+  place-items: end center;
+  padding: 12px;
+}
+.gas-copy__box {
+  width: 100%;
+  max-width: 36rem;
+  background: #fff;
+  border-radius: 18px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: env(safe-area-inset-bottom);
+}
+.gas-copy__title {
+  margin: 0;
+  font-family: var(--jp);
+  font-size: 16px;
+  font-weight: 800;
+}
+.gas-copy__text {
+  min-height: 40vh;
+  font-size: 16px;
+  line-height: 1.6;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* スタッフを足したあとの案内 */
+.gas-added {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 2px solid var(--ok);
+}
+.gas-added__title {
+  margin: 0;
+  font-family: var(--jp);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ok);
+}
+.gas-added__text {
+  margin: 0;
+  font-family: var(--jp);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--ink);
+}
+.gas-added__url {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f7f9f5;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  word-break: break-all;
+  color: var(--ink-2);
+}
+
+/* PC：右上の状態・帯は、左のメニューの右側に */
+@media (min-width: 1024px) {
+  .gas-chip {
+    top: 16px;
+    right: 20px;
+  }
+  .gas-band {
+    left: 248px;
+    bottom: 20px;
+  }
+}
+
+/* 「動きを減らす」設定の端末では、動きを止める */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
