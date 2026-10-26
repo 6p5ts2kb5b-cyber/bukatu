@@ -1,0 +1,172 @@
+<title>部活アプリ GAS版の貼り付けガイド</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Noto+Sans+JP:wght@500;700;900&display=swap">
+<style>
+/* 得点板の緑と縫い目の赤。1画面に1ステップ、下に大きなボタン */
+:root{
+  --bg:#f3f5f1; --card:#ffffff; --ink:#0f2a21; --ink2:#4a6158; --rule:#d4dcd1;
+  --board:#123f31; --red:#c42b3b; --ok:#1e7a46; --soft:#e8efe9; --key:#f7f9f5; --warn-bg:#fff1cf; --warn:#7a5200;
+  --num:"Barlow Condensed","Arial Narrow",sans-serif;
+  --jp:"Noto Sans JP","Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","Meiryo",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0c1b16; --card:#13261f; --ink:#eef3ee; --ink2:#a9bdb3; --rule:#28443a; --board:#1d5443; --red:#e05463; --ok:#4cc184; --soft:#173229; --key:#0f211b; --warn-bg:#3a2f12; --warn:#f2cf7a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c1b16; --card:#13261f; --ink:#eef3ee; --ink2:#a9bdb3; --rule:#28443a; --board:#1d5443; --red:#e05463; --ok:#4cc184; --soft:#173229; --key:#0f211b; --warn-bg:#3a2f12; --warn:#f2cf7a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--jp);font-size:16px;line-height:1.75;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.top{display:flex;flex-direction:column;gap:6px}
+.eyebrow{font-family:var(--num);font-weight:800;letter-spacing:.22em;color:var(--red);font-size:14px;text-transform:uppercase}
+h1{margin:0;font-size:clamp(24px,5.4vw,32px);font-weight:900;line-height:1.35;text-wrap:balance}
+.lead{margin:0;color:var(--ink2);font-size:15px}
+.progress{display:flex;flex-direction:column;gap:8px}
+.bar{display:grid;gap:4px}
+.bar i{height:8px;border-radius:4px;background:var(--rule)}
+.bar i.done{background:var(--ok)} .bar i.now{background:var(--red)}
+.meta{display:flex;justify-content:space-between;font-size:14px;font-weight:700;color:var(--ink2)}
+.meta b{font-family:var(--num);font-size:20px;color:var(--ink);letter-spacing:.02em}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:18px;padding:22px 20px;display:flex;flex-direction:column;gap:16px}
+.head{display:flex;gap:14px;align-items:center}
+.no{flex:none;width:52px;height:52px;border-radius:50%;background:var(--board);color:#f5f7f2;display:grid;place-items:center;font-family:var(--num);font-weight:800;font-size:28px}
+h2{margin:0;font-size:21px;font-weight:900;line-height:1.4;text-wrap:balance}
+.desc{margin:0;color:var(--ink2);font-size:15px}
+ol.steps{margin:0;padding:0;list-style:none;counter-reset:s;display:flex;flex-direction:column;gap:12px}
+ol.steps li{counter-increment:s;display:grid;grid-template-columns:30px 1fr;gap:8px;min-width:0}
+ol.steps li::before{content:counter(s) "．";font-family:var(--num);font-weight:800;font-size:20px;color:var(--red);line-height:1.5}
+ol.steps li>span{min-width:0}
+kbd{display:inline-block;padding:0 7px;border:1px solid var(--rule);border-bottom-width:2px;border-radius:6px;background:var(--key);font-family:var(--num);font-weight:700;font-size:15px;line-height:1.5;color:var(--ink)}
+.ui{font-weight:700;background:var(--soft);padding:1px 6px;border-radius:5px}
+.note{background:var(--warn-bg);color:var(--warn);border-radius:12px;padding:12px 14px;font-size:14px;font-weight:700;line-height:1.65}
+.tip{background:var(--soft);border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.65}
+.copy{appearance:none;border:0;border-radius:14px;background:var(--red);color:#fff;font-family:var(--jp);font-weight:900;font-size:18px;min-height:64px;padding:10px 16px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.copy small{font-weight:700;font-size:13px;opacity:.9}
+.copy.ok{background:var(--ok)}
+.copy:focus-visible,.nav button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.fallback{width:100%;min-height:140px;font-size:12px;font-family:ui-monospace,monospace;border:1px solid var(--rule);border-radius:10px;padding:8px;background:var(--key);color:var(--ink)}
+.nav{display:grid;grid-template-columns:1fr 1.6fr;gap:10px}
+.nav button{appearance:none;border-radius:14px;min-height:56px;font-family:var(--jp);font-weight:900;font-size:17px;cursor:pointer}
+.prev{background:var(--card);color:var(--ink);border:2px solid var(--rule)}
+.next{background:var(--red);color:#fff;border:0}
+.prev:disabled{opacity:.35;cursor:default}
+.files{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;font-size:14px}
+.files span{background:var(--soft);border-radius:10px;padding:8px 10px;font-weight:700}
+.files em{font-style:normal;font-family:var(--num);color:var(--ink2);margin-left:6px}
+@media (prefers-reduced-motion:no-preference){.card{animation:in .25s ease both}@keyframes in{from{opacity:.4;transform:translateY(6px)}to{opacity:1;transform:none}}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">Google Apps Script ・ 段階1 土台</span>
+    <h1>部活アプリを学校のGoogleで動かす</h1>
+    <p class="lead">1ステップずつ進みます。終わったら画面のスクリーンショットをClaudeに送ってください。次の手順を案内します。</p>
+  </header>
+  <div class="progress">
+    <div class="bar" id="bar"></div>
+    <div class="meta"><span>ステップ <b id="cur">1</b> / <b id="tot">9</b></span><span>所要 約<b>15</b>分</span></div>
+  </div>
+  <section class="card" id="card" aria-live="polite"></section>
+  <div class="nav">
+    <button type="button" class="prev" id="prev">← 前へ</button>
+    <button type="button" class="next" id="next">できた・次へ →</button>
+  </div>
+</div>
+
+__FILES__
+
+<script>
+const FILES = JSON.parse(document.getElementById("files").textContent);
+const F = id => FILES[id];
+const lines = id => F(id).split("\n").length.toLocaleString();
+const K = s => s.split("+").map(k => `<kbd>${k}</kbd>`).join("＋");
+const paste = (file, where) => [
+  `下のボタンでプログラムをコピーします（約${lines(file)}行）。`,
+  `${where}の文字の上をクリックして、${K("Ctrl")}＋${K("A")}（全部選ぶ）→ ${K("Delete")} で最初の文字を消します。`,
+  `${K("Ctrl")}＋${K("V")} で貼り付けます（大きいので数秒かかることがあります）。`,
+  `${K("Ctrl")}＋${K("S")} で保存します。ファイル名の横の丸い印が消えれば保存できています。`
+];
+const STEPS = [
+ { t:"スプレッドシートを作る", d:"アプリのデータを入れる場所です。空のまま作るだけで大丈夫です。",
+   s:[ `パソコンのChromeで <span class="ui">sheets.new</span> を開きます（新しいスプレッドシートができます）。`,
+       `左上の「無題のスプレッドシート」を押して、名前を <span class="ui">部活アプリ</span> にします。`,
+       `中身は何も入れなくて大丈夫です。` ],
+   tip:"このスプレッドシートを持っている人（あなた）が、アプリの「持ち主」になります。" },
+ { t:"Apps Script を開く", d:"スプレッドシートから、プログラムを入れる画面を開きます。",
+   s:[ `スプレッドシートの上のメニューの <span class="ui">拡張機能</span> → <span class="ui">Apps Script</span> を押します。`,
+       `新しいタブでエディタが開きます。左上の「無題のプロジェクト」を押して、名前を <span class="ui">部活アプリ</span> にします。`,
+       `左の「ファイル」に <span class="ui">コード.gs</span> が1つあることを確かめます。` ] },
+ { t:"コード.gs を貼り付ける", d:"サーバー側のプログラム（データの読み書き・ログインした人の確認）です。",
+   file:"Code", s:null, where:"<span class=\"ui\">コード.gs</span> のエディタ" },
+ { t:"Index を作って貼り付ける", d:"画面の入れ物と見た目です。新しいファイルを1つ作ります。",
+   pre:[ `左の「ファイル」の横の <span class="ui">＋</span> → <span class="ui">HTML</span> を押します。`,
+         `名前に <span class="ui">Index</span> と入れて ${K("Enter")}（「.html」は自動で付きます。大文字の I です）。` ],
+   file:"Index", where:"<span class=\"ui\">Index.html</span> のエディタ" },
+ { t:"App1 を作って貼り付ける", d:"画面のプログラムの前半です。中身は読まなくて大丈夫です。",
+   pre:[ `<span class="ui">＋</span> → <span class="ui">HTML</span> で、名前を <span class="ui">App1</span> にします。` ],
+   file:"App1", where:"<span class=\"ui\">App1.html</span> のエディタ" },
+ { t:"App2 を作って貼り付ける", d:"画面のプログラムの後半です。App1 と同じやり方です。",
+   pre:[ `<span class="ui">＋</span> → <span class="ui">HTML</span> で、名前を <span class="ui">App2</span> にします。` ],
+   file:"App2", where:"<span class=\"ui\">App2.html</span> のエディタ",
+   tip:"これで左の「ファイル」は コード.gs・Index.html・App1.html・App2.html の4つになります。" },
+ { t:"setup を1回だけ実行する", d:"シートの見出し・学校3校・持ち物15品目・会場3校・大会運営用のスプレッドシート・設定を自動で作ります。",
+   s:[ `上の「デバッグ」の横の関数の選択を <span class="ui">setup</span> にします。`,
+       `<span class="ui">実行</span> を押します。「承認が必要です」と出たら <span class="ui">権限を確認</span> を押します。`,
+       `自分のGoogleアカウントを選びます。「このアプリは Google で確認されていません」と出たら、左下の <span class="ui">詳細</span> → <span class="ui">部活アプリ（安全ではないページ）に移動</span> を押します。`,
+       `<span class="ui">許可</span>（または「続行」）を押します。`,
+       `下の「実行ログ」に <span class="ui">準備ができました</span> と出れば完了です。` ],
+   tip:"自分で作ったアプリなので「安全ではない」と出ても大丈夫です。スクリプト プロパティ（スプレッドシートのIDなど）も setup が自動で入れます。Googleドライブに「部活アプリ（大会運営）」というスプレッドシートが増えます。" },
+ { t:"ウェブアプリとして公開する（デプロイ）", d:"スマホやパソコンから開けるURLを作ります。",
+   s:[ `右上の <span class="ui">デプロイ</span> → <span class="ui">新しいデプロイ</span> を押します。`,
+       `「種類の選択」の歯車 ⚙ → <span class="ui">ウェブアプリ</span> を選びます。`,
+       `説明に <span class="ui">段階1</span> と入れます。`,
+       `次のユーザーとして実行：<span class="ui">ウェブアプリにアクセスしているユーザー</span> を選びます。`,
+       `アクセスできるユーザー：<span class="ui">Google アカウントを持つ全員</span> を選びます。`,
+       `<span class="ui">デプロイ</span> を押し、出てきた「ウェブアプリ」のURLの横の <span class="ui">コピー</span> を押してメモします。` ],
+   note:"「次のユーザーとして実行」は必ず「アクセスしているユーザー」にしてください。こうすると、スプレッドシートを共有された人（スタッフ名簿の人）しか読み書きできません。" },
+ { t:"URLを開いて確かめる", d:"段階1でできるようになったことを確かめます。",
+   s:[ `メモしたURLを、パソコンのChromeで開きます。初めは許可の画面が出るので、7と同じように進みます。`,
+       `左に緑のメニューが出て、ホームに「これからの予定はまだありません」と出れば成功です。`,
+       `<span class="ui">メニュー</span> → <span class="ui">スタッフ名簿</span> で自分が「有効」になっていること、<span class="ui">学校</span> に3校あることを確かめます。`,
+       `スマホでもURLを開きます。画面の下に4つのボタン（真ん中が赤いホームベースの「予定を追加」）が出れば成功です。`,
+       `スマホのホーム画面に置くには：iPhoneはSafariの共有ボタン → <span class="ui">ホーム画面に追加</span>、AndroidはChromeの「⋮」→ <span class="ui">ホーム画面に追加</span>。` ],
+   tip:"できたら、パソコンとスマホの画面のスクリーンショットをClaudeに送ってください。別のGmailをスタッフ名簿に足して、その人が入れるか（足していない人は「このアカウントは登録されていません」になるか）も一緒に確かめます。",
+   note:"Chromeで複数のGoogleアカウントにログインしていると、GASのアプリが開けないことがあります。そのときは、シークレットウィンドウか、持ち主のアカウントだけでログインしたChromeで開いてください。" }
+];
+
+let i = 0;
+try { const s = Number(localStorage.getItem("gas-guide-step")); if (s >= 0 && s < STEPS.length) i = s; } catch(e) {}
+const bar = document.getElementById("bar");
+bar.style.gridTemplateColumns = `repeat(${STEPS.length},1fr)`;
+document.getElementById("tot").textContent = STEPS.length;
+
+function render(){
+  const st = STEPS[i];
+  bar.innerHTML = STEPS.map((_, k) => `<i class="${k < i ? "done" : k === i ? "now" : ""}"></i>`).join("");
+  document.getElementById("cur").textContent = i + 1;
+  const list = [...(st.pre || []), ...(st.file ? paste(st.file, st.where) : []), ...(st.s || [])];
+  document.getElementById("card").innerHTML = `
+    <div class="head"><span class="no">${i + 1}</span><h2>${st.t}</h2></div>
+    <p class="desc">${st.d}</p>
+    <ol class="steps">${list.map(x => `<li><span>${x}</span></li>`).join("")}</ol>
+    ${st.file ? `<button type="button" class="copy" id="copy">プログラムをまるごとコピー<small>${st.file === "Code" ? "コード.gs" : st.file + ".html"}・約${lines(st.file)}行</small></button><div id="fb"></div>` : ""}
+    ${st.note ? `<p class="note">${st.note}</p>` : ""}
+    ${st.tip ? `<p class="tip">${st.tip}</p>` : ""}`;
+  document.getElementById("prev").disabled = i === 0;
+  document.getElementById("next").textContent = i === STEPS.length - 1 ? "最初のステップへ" : "できた・次へ →";
+  const b = document.getElementById("copy");
+  if (b) b.onclick = () => {
+    const text = F(st.file);
+    const done = () => { b.classList.add("ok"); b.firstChild.textContent = "コピーしました"; };
+    const fallback = () => {
+      document.getElementById("fb").innerHTML = `<p class="note">うまくコピーできませんでした。下の枠を押して ${K("Ctrl")}＋${K("A")} → ${K("Ctrl")}＋${K("C")} でコピーしてください。</p><textarea class="fallback" id="fbt" readonly></textarea>`;
+      const t = document.getElementById("fbt"); t.value = text; t.focus(); t.select();
+    };
+    try { navigator.clipboard.writeText(text).then(done, fallback); } catch(e) { fallback(); }
+  };
+  try { localStorage.setItem("gas-guide-step", String(i)); } catch(e) {}
+}
+document.getElementById("prev").onclick = () => { if (i > 0) { i--; render(); scrollTo(0,0); } };
+document.getElementById("next").onclick = () => { i = i === STEPS.length - 1 ? 0 : i + 1; render(); scrollTo(0,0); };
+render();
+</script>
