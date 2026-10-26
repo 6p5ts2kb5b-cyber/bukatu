@@ -403,3 +403,158 @@ export function leagueView(games: Game[], rule: LeagueRule = "jjbf"): LeagueView
   }
   return view;
 }
+
+// ═════ 大会運営：うちが出ないブロック（3チームのリーグ戦）を、どのチームにもかたよらずに見る ═════
+export type BlockView = {
+  teams: string[];
+  rows: Row[];
+  ruleLabel: string;
+  // 3試合終わったとき：1位（並んだら、何で決まるか）
+  final?: { text: string; top?: string };
+  // 残り1試合のとき：結果ごとに、どこが1位になるか
+  next?: { title: string; lines: string[] };
+  waiting?: string;
+};
+
+export function blockView(games: Game[], rule: LeagueRule = "jjbf"): BlockView | null {
+  const R = LEAGUE_RULES.find((r) => r.key === rule) ?? LEAGUE_RULES[0];
+  const lg = resolveGames(games);
+  if (lg.length !== 3) return null;
+  const names = new Set<string>();
+  lg.forEach((g) => {
+    if (g.a) names.add(g.a);
+    if (g.b) names.add(g.b);
+  });
+  const teams = [...names];
+  const rows = standings(teams, lg, R.bonus).sort((x, y) => {
+    for (const k of R.order) {
+      if (k === "onBase" || k === "lots") break;
+      const d = valueOf(y, k) - valueOf(x, k);
+      if (d) return d;
+    }
+    return 0;
+  });
+  const view: BlockView = { teams, rows, ruleLabel: R.label };
+  const scored = lg.filter((g) => g.sa != null && g.sb != null).length;
+  if (scored === 0) {
+    view.waiting = "試合が終わったら、スコアを入れてください。";
+    return view;
+  }
+  if (teams.length !== 3 || lg.some((g) => g.a == null || g.b == null)) {
+    view.waiting = "前の試合のスコアを入れると、残りの試合の相手が決まります。";
+    return view;
+  }
+  const rest = lg.map((g, i) => ({ g, i })).filter(({ g }) => g.sa == null || g.sb == null);
+  const label = (rs: Row[]) => {
+    const top = topOf(rs, R.order);
+    if ("team" in top) {
+      const by = decidedBy(rs, R.order, top.team);
+      return { leader: top.team, text: top.team, by: by && by !== "勝ち点" ? `（${by}の差）` : "" };
+    }
+    return { leader: "", text: `${top.teams.join("・")}が並び、${KEY_WORD[top.tie]}で決まる`, by: "" };
+  };
+  if (rest.length === 0) {
+    const l = label(rows);
+    view.final = { text: l.leader ? `1位　${l.text}${l.by}　2日目に進出` : l.text, top: l.leader || undefined };
+    return view;
+  }
+  if (rest.length > 1) {
+    view.waiting = `あと${rest.length}試合。最後の1試合になったら、結果ごとの1位を出します。`;
+    return view;
+  }
+
+  // 残り1試合：点数を全部ためして、どこが1位になるか
+  const { g, i } = rest[0];
+  const A = g.a!;
+  const B = g.b!;
+  type C = { x: number; y: number; called: boolean; text: string; by: string };
+  const cases: C[] = [];
+  for (let x = 0; x <= MAX; x++) {
+    for (let y = 0; y <= MAX; y++) {
+      const variants = R.bonus && Math.abs(x - y) >= 7 ? [false, true] : [false];
+      for (const called of variants) {
+        const sim = lg.map((h, j) => (j === i ? { ...h, sa: x, sb: y, oa: null, ob: null, called, inn: called ? 5 : 7 } : h));
+        const l = label(standings(teams, sim, R.bonus));
+        cases.push({ x, y, called, text: l.text, by: l.by });
+      }
+    }
+  }
+  // 勝ち・引き分け・負けごとに、点差（と負けた側の点数）で1位を言いわける
+  const describe = (cs: C[], head: string, margin: (c: C) => number, runs: (c: C) => number, runsLabel: string): string => {
+    const uniq = (xs: string[]) => [...new Set(xs)];
+    const all = uniq(cs.map((c) => c.text));
+    if (all.length === 1) {
+      if (/で決まる$/.test(all[0])) return `${head}${all[0]}`;
+      const bys = uniq(cs.map((c) => c.by));
+      return `${head}${all[0]}が1位${bys.length === 1 ? bys[0] : ""}`;
+    }
+    const say = (t: string) => (/で決まる$/.test(t) ? t : `${t}が1位`);
+    // コールドかどうかで変わるか
+    const byCalled = cs.some((c) => cs.some((d) => d.x === c.x && d.y === c.y && d.called !== c.called && d.text !== c.text));
+    // 点差だけで決まるか
+    const ms = uniq(cs.map((c) => String(margin(c)))).map(Number).sort((p, q) => p - q);
+    const byMargin = !byCalled && ms.every((m) => uniq(cs.filter((c) => margin(c) === m).map((c) => c.text)).length === 1);
+    const segs: { from: number; to: number; text: string }[] = [];
+    const push = (v: number, text: string) => {
+      const last = segs[segs.length - 1];
+      if (last && last.text === text && last.to === v - 1) last.to = v;
+      else segs.push({ from: v, to: v, text });
+    };
+    if (byMargin) {
+      ms.forEach((m) => push(m, cs.find((c) => margin(c) === m)!.text));
+      const top = ms[ms.length - 1];
+      const r = (s: { from: number; to: number }) =>
+        s.to === top && s.from !== s.to ? `${s.from}点差以上` : s.from === s.to ? `${s.from}点差` : `${s.from}〜${s.to}点差`;
+      return `${head}${segs.map((s) => `${r(s)}：${say(s.text)}`).join("／")}`;
+    }
+    if (byCalled) {
+      const c1 = uniq(cs.filter((c) => c.called).map((c) => c.text));
+      const c0 = uniq(cs.filter((c) => !c.called && Math.abs(c.x - c.y) >= 7).map((c) => c.text));
+      if (c1.length === 1 && c0.length === 1)
+        return `${head}7点差以上でコールドなら ${say(c1[0])}、7回まで戦うと ${say(c0[0])}（ほかの点差は点数しだい）`;
+    }
+    // 負けた側の点数ごとに、点差で言いわける（同じ言い方が続く点数はまとめる）
+    const ys = uniq(cs.map((c) => String(runs(c)))).map(Number).sort((p, q) => p - q);
+    const per: { y: number; text: string }[] = ys.map((y) => {
+      const sub = cs.filter((c) => runs(c) === y && !c.called);
+      const t = uniq(sub.map((c) => c.text));
+      if (t.length <= 1) return { y, text: say(t[0] ?? "") };
+      const first = sub.find((c) => margin(c) === Math.min(...sub.map(margin)))!.text;
+      let m = 1;
+      for (; m <= MAX; m++) if (sub.every((c) => (c.text === first) === (margin(c) < m))) break;
+      const other = uniq(sub.filter((c) => margin(c) >= m).map((c) => c.text));
+      return {
+        y,
+        text: m <= MAX && other.length === 1 ? `${m}点差以上なら ${say(other[0])}、それより少ないと ${say(first)}` : "点数しだい",
+      };
+    });
+    const groups: { from: number; to: number; text: string }[] = [];
+    per.forEach((p) => {
+      const last = groups[groups.length - 1];
+      if (last && last.text === p.text && last.to === p.y - 1) last.to = p.y;
+      else groups.push({ from: p.y, to: p.y, text: p.text });
+    });
+    const topY = ys[ys.length - 1];
+    const rng = (s: { from: number; to: number }) =>
+      s.to === topY && s.from !== s.to && s.from > 0
+        ? `${runsLabel}${s.from}点以上`
+        : s.from === s.to
+          ? `${runsLabel}${s.from}点`
+          : s.from === 0
+            ? `${runsLabel}${s.to}点以内`
+            : `${runsLabel}${s.from}〜${s.to}点`;
+    return `${head}${groups.map((s) => `${rng(s)}：${s.text}`).join("／")}`;
+  };
+  const aWin = cases.filter((c) => c.x > c.y);
+  const draw = cases.filter((c) => c.x === c.y);
+  const bWin = cases.filter((c) => c.x < c.y);
+  view.next = {
+    title: `第${i + 1}試合（${A} 対 ${B}）の結果で決まります`,
+    lines: [
+      describe(aWin, `${A}が勝てば　`, (c) => c.x - c.y, (c) => c.y, `${B}の得点`),
+      describe(draw, "引き分けなら　", () => 0, (c) => c.x, "両チーム"),
+      describe(bWin, `${B}が勝てば　`, (c) => c.y - c.x, (c) => c.x, `${A}の得点`),
+    ],
+  };
+  return view;
+}

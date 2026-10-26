@@ -22,6 +22,20 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/staff/$(myEmail())).data.active == true
       );
     }
+    // 大会運営の名簿の人（opsStaff）：大会運営（opsTournaments）だけ読み書きできる
+    function isOpsStaff() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/opsStaff/$(myEmail()))
+        && get(/databases/$(database)/documents/opsStaff/$(myEmail())).data.active == true;
+    }
+    match /opsTournaments/{id} {
+      allow read, write: if isStaff() || isOpsStaff();
+    }
+    match /opsStaff/{email} {
+      // 自分が名簿に載っているかだけは、本人も確認できる（追加・削除はスタッフだけ）
+      allow read: if isStaff() || (signedIn() && email == myEmail());
+      allow write: if isStaff();
+    }
     match /{document=**} {
       allow read, write: if isStaff();
     }

@@ -4186,3 +4186,205 @@ td.pl-mark {
   font-weight: 800;
   color: var(--stitch);
 }
+
+/* ═════════════════ 大会運営（リーグ戦のブロック） ═════════════════ */
+.ops-summary__list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--rule);
+}
+.ops-summary__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+  text-decoration: none;
+}
+.ops-summary__block {
+  flex: none;
+  min-width: 6.5em;
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--board);
+}
+.ops-summary__team {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink-3);
+}
+.ops-summary__team.is-done {
+  color: var(--ink);
+}
+.ops-summary__team.is-done::before {
+  content: "1位　";
+  font-size: 12px;
+  color: var(--ok);
+}
+.ops-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ops-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ops-block__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ops-block__name {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 0;
+  border: 0;
+  border-bottom: 2px dashed var(--rule);
+  background: none;
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--ink);
+}
+.ops-block__name:focus {
+  outline: none;
+  border-bottom-color: var(--board);
+}
+.ops-block__del {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  color: var(--stitch);
+  font-size: 20px;
+  font-weight: 800;
+}
+.ops-teams {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.ops-game {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--rule);
+  background: #f7f9f5;
+}
+.ops-game__head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px 10px;
+  align-items: center;
+}
+.ops-game__no {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--board);
+}
+.ops-game__teams {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
+}
+.ops-game__teams select {
+  min-height: 44px;
+  padding: 6px 8px;
+  font-size: 14px;
+  font-weight: 800;
+}
+.ops-game__vs {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-3);
+}
+.ops-game__time {
+  grid-column: 2;
+  max-width: 11rem;
+}
+/* 送るカード */
+.ops-card__block {
+  padding-top: 4px;
+}
+.ops-card .rc__label small {
+  font-size: 0.85em;
+  font-weight: 700;
+  color: #666;
+}
+.ops-tops td:first-child {
+  width: 7em;
+  font-weight: 900;
+}
+.ops-next--card {
+  margin: 8px 14px 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff8e1;
+  border: 1px solid #ead9a0;
+}
+.ops-next__title {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 900;
+  color: #7a5a00;
+}
+.ops-next--card ul {
+  margin: 0;
+  padding-left: 1.1em;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+@media screen and (min-width: 1024px) {
+  .ops-blocks {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+.ops-game__result {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+}
+.ops-game__result b {
+  font-family: var(--num);
+  font-size: 22px;
+  color: var(--stitch);
+}
+.ops-game__onbase {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-2);
+}
+
+/* 大会運営の名簿の人だけの見出し（PCでも上に出す） */
+.ops-header__out {
+  flex: none;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgb(245 247 242 / 0.3);
+  color: rgb(245 247 242 / 0.85);
+  font-size: 12px;
+  font-weight: 700;
+}
+@media screen and (min-width: 1024px) {
+  .ops-header {
+    display: flex !important;
+  }
+  .page--ops {
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+}

@@ -13,8 +13,8 @@ import { elementToPdf, elementToPng, shareOrDownload } from "@/lib/sharePdf";
 const CIRCLED = "①②③④⑤⑥⑦⑧⑨⑩";
 
 // ランニングスコア：先攻・後攻の順に、回ごとの点（「X」＝裏の攻撃なし）
-type Line = { name: string; cells: string[]; total: number | null };
-function lineOf(g: Game, a: string, b: string): Line[] | null {
+export type Line = { name: string; cells: string[]; total: number | null };
+export function lineOf(g: Game, a: string, b: string): Line[] | null {
   const lh = g.lh ?? [];
   const la = g.la ?? [];
   if (!lh.some((v) => v != null) && !la.some((v) => v != null)) return null;
@@ -72,7 +72,7 @@ function BoxLines({ rows }: { rows: BoxRow[] }) {
   );
 }
 
-function LineTable({ line }: { line: Line[] }) {
+export function LineTable({ line }: { line: Line[] }) {
   return (
     <table className="rc__line">
       <thead>

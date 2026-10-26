@@ -233,7 +233,7 @@ function teamLabel(t: string, pairs: [string, string][]): string {
 }
 
 // 試合の結果（点数）を入れる行。空ならまだ
-function ScoreRow({
+export function ScoreRow({
   left,
   right,
   sl,
@@ -638,20 +638,22 @@ function MultiName({
   );
 }
 
-function LineEditor({
+export function LineEditor({
   left,
   right,
   g,
   onChange,
+  startOpen = false,
 }: {
   left: string;
   right: string;
   g: Game;
   onChange: (p: Partial<Game>) => void;
+  startOpen?: boolean; // 最初から開いておく（大会運営など、ランニングスコアで入れる画面）
 }) {
   const lh = g.lh ?? [];
   const la = g.la ?? [];
-  const [open, setOpen] = useState(lh.some((v) => v != null) || la.some((v) => v != null));
+  const [open, setOpen] = useState(startOpen || lh.some((v) => v != null) || la.some((v) => v != null));
   const [cols, setCols] = useState(Math.max(7, lh.length, la.length));
   const first = g.first ?? "l";
   // 先攻を上の段に

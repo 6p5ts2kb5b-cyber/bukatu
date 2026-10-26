@@ -10,9 +10,15 @@ import { usePathname } from "next/navigation";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { AuthProvider, useAuth } from "@/components/AuthProvider";
 import { checkAccess, type Staff } from "@/lib/staff";
+import { checkOpsAccess } from "@/lib/opsStaff";
 import { cssVars, Loading } from "@/components/ui";
 
 const MeContext = createContext<Staff | null>(null);
+// 使える範囲："staff"＝すべて／"ops"＝大会運営の名簿の人（大会運営の画面だけ）
+const RoleContext = createContext<"staff" | "ops">("staff");
+export function useRole(): "staff" | "ops" {
+  return useContext(RoleContext);
+}
 
 export function useMe(): Staff {
   const me = useContext(MeContext);
@@ -179,7 +185,7 @@ function isActive(href: string, pathname: string): boolean {
   if (href === "/") return pathname === "/";
   if (href === "/activities") return pathname.startsWith("/activities") && pathname !== "/activities/new";
   if (href === "/menu")
-    return ["/menu", "/teams", "/staff", "/print", "/players", "/lineups", "/notices"].some((p) => pathname.startsWith(p));
+    return ["/menu", "/teams", "/staff", "/print", "/players", "/lineups", "/notices", "/ops"].some((p) => pathname.startsWith(p));
   return pathname === href;
 }
 
@@ -217,6 +223,7 @@ const SIDE: { label: string; items: { href: string; label: string; icon: string;
       { href: "/notices", label: "試合の連絡", icon: "M4 6h16v12H4zM4 7l8 6 8-6" },
       { href: "/lineups", label: "メンバー表", icon: "M12 3l9 9-9 9-9-9zM12 8.5l3.5 3.5-3.5 3.5-3.5-3.5z" },
       { href: "/players", label: "選手名簿", icon: "M4 14a8 8 0 0 1 16 0v1H4zM2 15h20M12 6V4" },
+      { href: "/ops", label: "大会運営（リーグ戦）", icon: "M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4" },
     ],
   },
   {
@@ -299,7 +306,8 @@ function SideNav() {
 // 画面ごとの幅（PC）：一覧は広く、入力の画面は読みやすい幅に
 function layoutOf(pathname: string): "wide" | "form" | "full" {
   if (pathname === "/print" || /^\/notices\/[^/]+$/.test(pathname) || /^\/lineups\/[^/]+$/.test(pathname)) return "full";
-  if (["/", "/activities", "/menu", "/notices", "/players", "/lineups", "/staff", "/teams"].includes(pathname)) return "wide";
+  if (["/", "/activities", "/menu", "/notices", "/players", "/lineups", "/staff", "/teams", "/ops"].includes(pathname)) return "wide";
+  if (/^\/ops\/[^/]+$/.test(pathname)) return "full";
   return "form";
 }
 
@@ -334,6 +342,7 @@ function BottomNav() {
 type Access =
   | { state: "checking" }
   | { state: "allowed"; me: Staff }
+  | { state: "ops"; name: string }
   | { state: "denied"; message?: string };
 
 function Gate({ children }: { children: ReactNode }) {
@@ -344,10 +353,14 @@ function Gate({ children }: { children: ReactNode }) {
     if (!user) return;
     let cancelled = false;
     setAccess({ state: "checking" });
-    checkAccess(user).then((r) => {
+    checkAccess(user).then(async (r) => {
       if (cancelled) return;
-      if (r.state === "allowed") setAccess({ state: "allowed", me: r.me });
-      else if (r.state === "denied") setAccess({ state: "denied" });
+      if (r.state === "allowed") return setAccess({ state: "allowed", me: r.me });
+      // スタッフ名簿に無ければ、大会運営の名簿を見る
+      const ops = await checkOpsAccess(user);
+      if (cancelled) return;
+      if (ops) return setAccess({ state: "ops", name: ops.name });
+      if (r.state === "denied") setAccess({ state: "denied" });
       else setAccess({ state: "denied", message: r.message });
     });
     return () => {
@@ -363,6 +376,13 @@ function Gate({ children }: { children: ReactNode }) {
     );
   }
   if (!user) return <LoginScreen />;
+  if (access.state === "ops") {
+    return (
+      <RoleContext.Provider value="ops">
+        <OpsShell name={access.name}>{children}</OpsShell>
+      </RoleContext.Provider>
+    );
+  }
   if (access.state !== "allowed") {
     return (
       <Shell>
@@ -377,6 +397,33 @@ function Gate({ children }: { children: ReactNode }) {
       <Main>{children}</Main>
       <BottomNav />
     </MeContext.Provider>
+  );
+}
+
+// 大会運営の名簿の人：大会運営の画面だけ（予定・名簿などのメニューは出さない）
+function OpsShell({ name, children }: { name: string; children: ReactNode }) {
+  const pathname = usePathname();
+  const { logOut } = useAuth();
+  const allowed = pathname === "/ops" || pathname.startsWith("/ops/");
+  useEffect(() => {
+    if (!allowed) window.location.replace("/ops");
+  }, [allowed]);
+  return (
+    <>
+      <header className="app-header ops-header print:hidden">
+        <BallMark className="app-header__mark" />
+        <div className="app-header__titles">
+          <p className="app-header__title">大会運営</p>
+          <p className="app-header__sub">リーグ戦の打ち込み　{name}</p>
+        </div>
+        <button type="button" onClick={logOut} className="ops-header__out">
+          ログアウト
+        </button>
+      </header>
+      <main data-layout={layoutOf(pathname)} className="page page--ops mx-auto flex min-h-dvh max-w-xl flex-col gap-3 px-3.5 pb-16 pt-4 print:max-w-none print:p-0">
+        {allowed ? children : <Loading />}
+      </main>
+    </>
   );
 }
 
