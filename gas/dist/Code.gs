@@ -8,7 +8,7 @@
  * ・設定（スプレッドシートのIDなど）は「スクリプト プロパティ」に入ります。コードには書きません。
  */
 
-var APP_VERSION = '段階1（2026-10-26）';
+var APP_VERSION = '段階1（2026-10-27）';
 
 // ───── データの置き場所（シート）の決まり ─────
 //  json: true   … 中身の多いもの。1つのマス（data）にまとめて入れ、主な項目は見やすさのため別の列にも出す
@@ -110,9 +110,10 @@ function doGet(e) {
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
 }
 
-// HTMLの中に別のファイル（Vendor.html など）を差し込む
+// HTMLの中に別のファイル（App1.html など）を差し込む。
+// App1・App2 は画面のプログラムの文字だけなので、HTMLとして調べずにそのまま入れる
 function include(name) {
-  return HtmlService.createHtmlOutputFromFile(name).getContent();
+  return HtmlService.createTemplateFromFile(name).getRawContent();
 }
 
 // ═════════ 画面から呼ぶもの ═════════
