@@ -64,6 +64,14 @@ function patchSource(path: string, code: string): string {
   return needs.length ? needs.join("\n") + "\n" + c : c;
 }
 
+// 画面のプログラムでは、React を App1.html（window.__vendor）から使う
+const VENDOR_MAP: Record<string, string> = {
+  react: "React",
+  "react-dom": "ReactDOM",
+  "react-dom/client": "ReactDOMClient",
+  "react/jsx-runtime": "JSX",
+};
+
 const plugin: esbuild.Plugin = {
   name: "gas",
   setup(build) {
@@ -76,9 +84,14 @@ const plugin: esbuild.Plugin = {
       else if (p.startsWith(".") && args.importer) file = resolveFile(resolve(dirname(args.importer), p));
       else if (p.startsWith("/")) file = resolveFile(p);
       if (file) return { path: SHIM_BY_FILE[file] ?? file };
+      if (VENDOR_MAP[p] && build.initialOptions.globalName !== "__vendorBuild") return { path: p, namespace: "vendor" };
       if (/^(react|react-dom|scheduler)(\/|$)/.test(p)) return { path: Bun.resolveSync(p, GAS) };
       return undefined;
     });
+    build.onLoad({ filter: /.*/, namespace: "vendor" }, (args) => ({
+      contents: `module.exports = window.__vendor.${VENDOR_MAP[args.path]};`,
+      loader: "js",
+    }));
     build.onLoad({ filter: /\.(ts|tsx)$/ }, (args) => {
       const code = readFileSync(args.path, "utf8");
       return { contents: patchSource(args.path, code), loader: args.path.endsWith("x") ? "tsx" : "ts" };
@@ -86,7 +99,7 @@ const plugin: esbuild.Plugin = {
   },
 };
 
-async function bundle(entry: string): Promise<string> {
+async function bundle(entry: string, vendor = false): Promise<string> {
   // esbuild：小さくしたうえで、1行を短く区切る（Apps Script のエディタが重くならないように）
   const r = await esbuild.build({
     entryPoints: [join(GAS, entry)],
@@ -103,6 +116,7 @@ async function bundle(entry: string): Promise<string> {
     jsx: "automatic",
     plugins: [plugin],
     logLevel: "warning",
+    ...(vendor ? { globalName: "__vendorBuild" } : {}),
   });
   return r.outputFiles[0].text;
 }
@@ -179,7 +193,33 @@ ${style}
 </head>
 <body class="min-h-dvh antialiased">
 <div id="app"></div>
-<script>var PARAMS = ${paramsJs};</script>
+<div id="boot-error" hidden></div>
+<script>
+var PARAMS = ${paramsJs};
+// 動かなかったとき、理由を画面に出す（白い画面のままにしない）
+(function () {
+  var shown = false;
+  function show(msg) {
+    var app = document.getElementById("app");
+    if (shown || (app && app.childNodes.length)) return;
+    shown = true;
+    var box = document.getElementById("boot-error");
+    box.hidden = false;
+    box.innerHTML = '<div class="boot-error__box"><p class="boot-error__title">画面を開けませんでした</p>' +
+      '<p>この画面のスクリーンショットをClaudeに送ってください。</p><pre></pre>' +
+      '<button type="button" class="btn btn--primary">もう一度読み込む</button></div>';
+    box.querySelector("pre").textContent = msg + "\\n（読み込めたファイル：App" + (window.__loaded || 0) + "まで）";
+    box.querySelector("button").onclick = function () { location.reload(); };
+  }
+  window.addEventListener("error", function (e) {
+    show((e.message || "エラー") + (e.lineno ? "（" + (e.filename ? e.filename.split("/").pop() : "") + " " + e.lineno + "行）" : ""));
+  });
+  window.addEventListener("unhandledrejection", function (e) { show(String(e.reason && e.reason.stack || e.reason)); });
+  window.addEventListener("load", function () {
+    setTimeout(function () { if (!window.__loaded || window.__loaded < 2) show("画面のプログラムが最後まで読み込めませんでした。App1・App2 の貼り付けを確かめてください。"); }, 1500);
+  });
+})();
+</script>
 ${scripts}
 </body>
 </html>
@@ -193,26 +233,24 @@ async function main() {
   const style = await css();
   if (style.includes("<?")) throw new Error("CSSに <? が入っています");
 
-  const app = await bundle("src/main.tsx");
-  const safe = app.replace(/<\/script/gi, "<\\/script");
-  const parts = splitParts(safe);
-  // GAS：Index.html が App1〜AppN を順に読み込み、つないで1つのプログラムにする
-  // （1つの <script> を分けて貼るので、ファイルの境目は自由）
-  const includeLine = `<script>\n${parts.map((_, i) => `<?!= include('App${i + 1}') ?>`).join("")}\n</script>`;
+  const vendor = (await bundle("src/vendor.ts", true)).replace(/<\/script/gi, "<\\/script");
+  const app = (await bundle("src/main.tsx")).replace(/<\/script/gi, "<\\/script");
+  // App1＝React、App2＝画面のプログラム。それぞれが1つの完全なプログラム（別々の <script> に入る）
+  const parts = [vendor, app];
+  const includeLine = parts
+    .map((_, i) => `<script>\n<?!= include('App${i + 1}') ?>\n;window.__loaded=${i + 1};\n</script>`)
+    .join("\n");
   writeFileSync(join(DIST, "Index.html"), page(style, includeLine, "<?!= params ?>"));
-  parts.forEach((p, i) => {
-    // 各ファイルは「HTMLとして正しい」形でなくてもよい（Index.html の <script> の中に差し込まれる）
-    writeFileSync(join(DIST, `App${i + 1}.html`), p);
-  });
+  parts.forEach((p, i) => writeFileSync(join(DIST, `App${i + 1}.html`), p));
   writeFileSync(join(DIST, "Code.gs"), readFileSync(join(GAS, "server/Code.gs"), "utf8"));
 
   // 試す用
-  const dev = await bundle("src/dev.tsx");
-  writeFileSync(join(DIST, "dev.html"), page(style, `<script>\n${dev.replace(/<\/script/gi, "<\\/script")}\n</script>`, "{}"));
+  const dev = (await bundle("src/dev.tsx")).replace(/<\/script/gi, "<\\/script");
+  writeFileSync(join(DIST, "dev.html"), page(style, `<script>\n${vendor}\n</script>\n<script>\n${dev}\n</script>`, "{}"));
 
   const kb = (s: string) => `${Math.round(Buffer.byteLength(s) / 1024)}KB`;
   console.log(`Index.html ${kb(readFileSync(join(DIST, "Index.html"), "utf8"))}`);
-  parts.forEach((p, i) => console.log(`App${i + 1}.html ${kb(p)} ${p.split("\n").length}行`));
+  [vendor, app].forEach((p, i) => console.log(`App${i + 1}.html ${kb(p)} ${p.split("\n").length}行`));
   console.log(`Code.gs ${readFileSync(join(DIST, "Code.gs"), "utf8").split("\n").length}行`);
 }
 

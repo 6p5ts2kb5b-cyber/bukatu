@@ -14,6 +14,7 @@ import { cssVars, Loading } from "@/components/ui";
 import { useSession } from "./session";
 import { navigate } from "./shim/router";
 import { SaveBar } from "./SaveBar";
+import { BackToTop, Ripple } from "./Motion";
 
 const MeContext = createContext<Staff | null>(null);
 // 使える範囲："staff"＝すべて／"ops"＝大会運営の名簿の人（大会運営の画面だけ）
@@ -376,6 +377,8 @@ function Gate({ children }: { children: ReactNode }) {
       <RoleContext.Provider value="ops">
         <OpsShell name={s.name}>{children}</OpsShell>
         <SaveBar />
+        <Ripple />
+        <BackToTop />
       </RoleContext.Provider>
     );
   }
@@ -395,6 +398,8 @@ function Gate({ children }: { children: ReactNode }) {
       <Main>{children}</Main>
       <BottomNav />
       <SaveBar />
+      <Ripple />
+      <BackToTop />
     </MeContext.Provider>
   );
 }
