@@ -305,7 +305,7 @@ function SideNav() {
 
 // 画面ごとの幅（PC）：一覧は広く、入力の画面は読みやすい幅に
 function layoutOf(pathname: string): "wide" | "form" | "full" {
-  if (pathname === "/print" || /^\/notices\/[^/]+$/.test(pathname) || /^\/lineups\/[^/]+$/.test(pathname)) return "full";
+  if (pathname === "/print" || pathname === "/m" || /^\/notices\/[^/]+$/.test(pathname) || /^\/lineups\/[^/]+$/.test(pathname)) return "full";
   if (["/", "/activities", "/menu", "/notices", "/players", "/lineups", "/staff", "/teams", "/ops"].includes(pathname)) return "wide";
   if (/^\/ops\/[^/]+$/.test(pathname)) return "full";
   return "form";
@@ -448,7 +448,28 @@ function Shell({ children }: { children: ReactNode }) {
   );
 }
 
+// ログインなしで開けるページ（共有URLのメンバー表）。データベースは読み書きしない
+function PublicShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  return (
+    <>
+      <header className="app-header ops-header print:hidden">
+        <BallMark className="app-header__mark" />
+        <div className="app-header__titles">
+          <p className="app-header__title">メンバー表をつくる</p>
+          <p className="app-header__sub">桜・浅羽野・住吉 連合チーム</p>
+        </div>
+      </header>
+      <main data-layout={layoutOf(pathname)} className="page page--ops mx-auto flex min-h-dvh max-w-xl flex-col gap-3 px-3.5 pb-16 pt-4 print:max-w-none print:p-0">
+        {children}
+      </main>
+    </>
+  );
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  if (pathname === "/m" || pathname === "/m/") return <PublicShell>{children}</PublicShell>;
   return (
     <AuthProvider>
       <Gate>{children}</Gate>

@@ -4388,3 +4388,84 @@ td.pl-mark {
     margin-right: auto !important;
   }
 }
+
+/* ===== ログインなしで作れるメンバー表（共有URL・QRコード） ===== */
+.share-open {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px dashed var(--board-line);
+  border-radius: 16px;
+  background: var(--sheet);
+  color: var(--ink);
+  text-align: left;
+}
+.share-open:active {
+  background: #f1f5ef;
+}
+.share-open__icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--board);
+  color: var(--chalk);
+}
+.share-open__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.share-open__text b {
+  font-size: 15px;
+  font-weight: 800;
+}
+.share-open__text small {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.share-qr {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.share-qr svg {
+  width: min(100%, 300px);
+  height: auto;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: #fff;
+}
+.share-qr figcaption {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+.share-cautions {
+  margin: 0;
+  padding: 10px 12px 10px 28px;
+  border-radius: 12px;
+  background: var(--caution-bg);
+  color: var(--caution);
+  font-size: 13px;
+  line-height: 1.6;
+  list-style: disc;
+}
+.share-note {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border-left: 4px solid var(--board);
+  background: var(--sheet);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.6;
+}
