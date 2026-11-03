@@ -28,24 +28,42 @@ export const LEAGUE_RULES: { key: LeagueRule; label: string; order: Key[]; bonus
   },
 ];
 
-// この大会のリーグ戦の決まり（JJBF大会・STORM杯だけ。ほかは null＝計算しない）
-export function leagueRuleOf(g: { tournamentName: string; type: string }): LeagueRule | null {
-  if (g.type !== "公式戦" && g.type !== "大会") return null;
+type MatchDay = { tournamentName: string; type: string; stage?: string; format?: "" | "league" | "tournament" };
+
+// 大会名から分かるトーナメント（新人戦・学総など）
+const TOURNAMENT_NAME = /新人|学総|学校総合|総体|中体連/;
+
+// 大会名から分かるリーグ戦の決まり（JJBF大会・STORM杯）
+function ruleByName(g: MatchDay): LeagueRule | null {
   const n = g.tournamentName.normalize("NFKC");
   if (/jjbf/i.test(n)) return "jjbf";
   if (/storm\s*杯|ストーム杯|山下杯/i.test(n)) return "storm";
   return null;
 }
 
+// この日の試合の形式。選んでいなければ、JJBF・STORM杯は1日目（日程なしも）がリーグ戦、2日目からはトーナメント
+export function formatOf(g: MatchDay): "league" | "tournament" | null {
+  if (g.type !== "公式戦" && g.type !== "大会") return null;
+  if (g.format === "league" || g.format === "tournament") return g.format;
+  if (ruleByName(g)) return !g.stage || g.stage === "1日目" ? "league" : "tournament";
+  return TOURNAMENT_NAME.test(g.tournamentName.normalize("NFKC")) ? "tournament" : null;
+}
+
+// この日のリーグ戦の決まり（リーグ戦の日だけ。ほかは null＝順位を計算しない）
+//   大会名で分からないリーグ戦は、JJBF埼玉の決まり（勝ち点→失点→得失点差…）で計算する
+export function leagueRuleOf(g: MatchDay): LeagueRule | null {
+  if (formatOf(g) !== "league") return null;
+  return ruleByName(g) ?? "jjbf";
+}
+
 // 結果（点数）を入れて保護者に送れる試合：リーグ戦（JJBF・STORM杯）、トーナメント（新人戦・学総など）、練習試合
 export type ResultKind = LeagueRule | "tournament" | "practice";
-export function resultKindOf(g: { tournamentName: string; type: string }): ResultKind | null {
+export function resultKindOf(g: MatchDay): ResultKind | null {
   const lr = leagueRuleOf(g);
   if (lr) return lr;
   if (g.type === "練習試合") return "practice";
   if (g.type !== "公式戦" && g.type !== "大会") return null;
-  const n = g.tournamentName.normalize("NFKC");
-  return /新人|学総|学校総合|総体|中体連/.test(n) ? "tournament" : null;
+  return formatOf(g) === "tournament" ? "tournament" : null;
 }
 
 const KEY_WORD: Record<Key, string> = {

@@ -52,7 +52,7 @@ import {
 } from "@/lib/activities";
 import { DirPicker } from "@/components/DirPicker";
 import { LeaguePanel } from "@/components/LeaguePanel";
-import { OUR as LEAGUE_OUR, resolveGames, resultKindOf, type ResultKind } from "@/lib/league";
+import { formatOf, OUR as LEAGUE_OUR, resolveGames, resultKindOf, type ResultKind } from "@/lib/league";
 import { ResultSend } from "@/components/ResultSend";
 import { Card, Choices, ErrorText, Field, inputClass, PanelTitle, PrimaryButton, ToggleButton, Loading } from "@/components/ui";
 
@@ -1185,6 +1185,29 @@ function GroupEditor({
                 </button>
               ))}
             </div>
+            <span className="f-label mt-4 block">この日の試合</span>
+            <div className="picks">
+              {(
+                [
+                  ["league", "リーグ戦"],
+                  ["tournament", "トーナメント"],
+                ] as const
+              ).map(([k, label]) => (
+                <button
+                  key={k}
+                  type="button"
+                  className="pick"
+                  aria-pressed={formatOf(group) === k}
+                  onClick={() => set({ format: k })}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="f-hint mt-1">
+              リーグ戦は順位表が出ます。トーナメントは勝ち・負けの結果だけを保護者に送ります。
+              {formatOf(group) && !group.format && "（JJBF・STORM杯は、1日目がリーグ戦、2日目からトーナメントに自動でなります）"}
+            </p>
             {options.tournaments.length > 0 && <span className="f-label mt-4 block">これまでの大会名から選ぶ</span>}
             {/* これまでに入れた大会名から選ぶ（2日目・予備日なども同じ名前で） */}
             {options.tournaments.length > 0 && (

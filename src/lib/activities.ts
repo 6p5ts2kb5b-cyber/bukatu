@@ -551,6 +551,8 @@ export type ActivityGroup = {
   type: ActivityType;
   tournamentName: string; // 大会名（公式戦・大会のとき）
   stage: string; // 大会の何日目か（1日目・2日目・3日目・準決勝・決勝・準決・決勝）
+  // この日の試合の形式（"" = 自動：JJBF・STORM杯は1日目がリーグ戦、2日目からはトーナメント）
+  format: "" | "league" | "tournament";
   venue: string; // 会場
   venueAddress: string; // 会場の住所
   venueStation: string; // 最寄駅（駅からの時間も）
@@ -602,6 +604,7 @@ export function newGroup(division: DivisionKey, date = ""): ActivityGroup {
     type: date && !isWeekend(date) ? "部活あり" : "練習",
     tournamentName: "",
     stage: "",
+    format: "",
     venue: "",
     venueAddress: "",
     venueStation: "",
