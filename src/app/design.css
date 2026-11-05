@@ -4837,3 +4837,132 @@ td.pl-mark {
   font-weight: 900;
   color: var(--ink);
 }
+
+/* メンバー表（紙）：打つ人数が多いときは行を低く（--rh・--k は画面で計算） */
+.ms-table--starters td {
+  height: var(--rh, 16mm);
+  line-height: var(--rh, 16mm);
+}
+.ms-table--starters .ms-order {
+  font-size: calc(24pt * var(--k, 1));
+}
+.ms-table--starters .ms-num {
+  font-size: calc(20pt * var(--k, 1));
+}
+.ms-table--starters .ms-pitcher td {
+  background: #f2f2f2;
+}
+.ms-table--starters .ms-pitcher .ms-order {
+  font-size: 12pt;
+}
+
+/* 打つ人数（DHあり・10人打ち・全員打ち） */
+.bat-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.bat-step {
+  display: inline-flex;
+  align-items: center;
+  border: 1.5px solid var(--board);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+.bat-step button {
+  width: 44px;
+  height: 42px;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--board);
+}
+.bat-step button:disabled {
+  color: var(--rule);
+}
+.bat-step span {
+  min-width: 64px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+  border-left: 1px solid var(--rule);
+  border-right: 1px solid var(--rule);
+  line-height: 42px;
+}
+.bat-step b {
+  font-family: var(--num);
+  font-size: 24px;
+  margin-right: 1px;
+}
+.bat-need {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 10px 0 6px;
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--ok);
+}
+.bat-need.is-short {
+  color: var(--stitch);
+}
+.bat-need small {
+  font-size: 12px;
+}
+.bat-pool {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.bat-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 4px 8px 4px 4px;
+  border-radius: 10px;
+  border: 1px solid var(--rule);
+  background: #fff;
+  text-align: left;
+  font-size: 14.5px;
+  font-weight: 900;
+  color: var(--ink);
+}
+.bat-chip span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bat-chip.is-on {
+  background: #6b4bb0;
+  border-color: #6b4bb0;
+  color: #fff;
+}
+.bat-chip:disabled {
+  opacity: 0.45;
+}
+.bat-chip__jersey {
+  width: 30px;
+  flex: none;
+}
+.bat-pitcher {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #f4f7f3;
+  font-size: 15px;
+  font-weight: 900;
+}
+.bat-pitcher small {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-3);
+}

@@ -37,6 +37,9 @@ export default function LineupsPage() {
         positions: copyFrom ? copyFrom.positions : {},
         order: copyFrom ? copyFrom.order : [],
         bench: copyFrom ? copyFrom.bench : [],
+        ...(copyFrom?.dh ? { dh: true } : {}),
+        ...(copyFrom?.bats ? { bats: copyFrom.bats } : {}),
+        ...(copyFrom?.extra ? { extra: copyFrom.extra } : {}),
       });
       router.push(`/lineups/${id}`);
     } catch {

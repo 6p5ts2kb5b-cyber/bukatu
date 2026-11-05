@@ -10,8 +10,8 @@ import { PaperPreview } from "@/components/PaperPreview";
 import { Field, inputClass, SecondaryButton } from "@/components/ui";
 import { formatDateLong } from "@/lib/activities";
 import { shareOrDownload } from "@/lib/sharePdf";
-import { lineupToPdf, lineupToPng, type SheetRow } from "@/lib/lineupPdf";
-import { POSITIONS, positionOf, syncOrder, benchOf, type Lineup } from "@/lib/lineups";
+import { lineupToPdf, lineupToPng, startersRowH, type SheetRow } from "@/lib/lineupPdf";
+import { POSITIONS, positionOf, benchOf, batCount, battingOrder, extraNeed, extrasOf, type Lineup } from "@/lib/lineups";
 import type { Player } from "@/lib/players";
 import type { Team } from "@/lib/teams";
 
@@ -41,6 +41,7 @@ export const POS_BADGE: Record<string, { en: string; color: string }> = {
   "7": { en: "LF", color: "#1d72b8" },
   "8": { en: "CF", color: "#1d72b8" },
   "9": { en: "RF", color: "#1d72b8" },
+  DH: { en: "DH", color: "#6b4bb0" },
 };
 
 export function PosBadge({ pos }: { pos: string }) {
@@ -307,11 +308,33 @@ export function LineupWorkbench({
   const byId = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
   const teamName = (tid: string) => teams.find((t) => t.id === tid)?.shortName ?? "";
   const update = (patch: Partial<Lineup>) => onChange({ ...lineup, ...patch });
-  // 守備についていない選手は自動で控え（外した選手を除く）
-  const notPlaying = players
-    .filter((p) => p.active && !positionOf(lineup, p.id))
-    .sort((x, y) => (Number(x.number) || 999) - (Number(y.number) || 999));
-  const benchIds = benchOf(lineup, notPlaying);
+  // 守備についていない選手（背番号順）。打たない選手は全員控え
+  const active = players.filter((p) => p.active);
+  const total = active.length;
+  const notPlayingFor = (positions: Record<string, string>) =>
+    active
+      .filter((p) => !Object.values(positions).includes(p.id))
+      .sort((x, y) => (Number(x.number) || 999) - (Number(y.number) || 999));
+  const notPlaying = notPlayingFor(lineup.positions);
+  const extras = extrasOf(lineup, notPlaying, total); // 守備につかずに打つ選手（DH・10人目…）
+  const benchIds = benchOf(lineup, notPlaying, total);
+  const nBat = batCount(lineup, total);
+  const need = extraNeed(lineup, total);
+  const maxBat = Math.max(9, lineup.dh ? total - 1 : total); // 打てる人数の上限（全員打ち）
+  // 打つ人数・DH・打つ選手を変えたら、打順を整えて保存
+  const relineup = (l: Lineup): Lineup => {
+    const np = notPlayingFor(l.positions);
+    const ex = extrasOf(l, np, total);
+    const trimmed = l.bats === "all" ? l.extra : ex;
+    const next = { ...l, extra: trimmed ?? [] };
+    return { ...next, order: battingOrder(next, np, total) };
+  };
+  const setBat = (patch: Partial<Lineup>) => onChange(relineup({ ...lineup, ...patch }));
+  const toggleExtra = (pid: string) => {
+    const cur = extras;
+    if (cur.includes(pid)) setBat({ extra: cur.filter((x) => x !== pid) });
+    else if (cur.length < need) setBat({ extra: [...cur, pid] });
+  };
 
   // 次に空いている守備位置（投手 → 一塁 → 二塁 → 三塁 → 遊撃 → 左翼 → 中堅 → 右翼 → 捕手の順。from より後ろ → 前へ回る）
   const PICK_ORDER = ["1", "3", "4", "5", "6", "7", "8", "9", "2"];
@@ -327,11 +350,14 @@ export function LineupWorkbench({
       if (v && v !== playerId && k !== posKey) positions[k] = v;
     }
     positions[posKey] = playerId;
-    update({
-      positions,
-      order: syncOrder(positions, lineup.order),
-      bench: lineup.bench.filter((b) => b !== playerId),
-    });
+    onChange(
+      relineup({
+        ...lineup,
+        positions,
+        extra: (lineup.extra ?? []).filter((x) => x !== playerId),
+        bench: lineup.bench.filter((b) => b !== playerId),
+      }),
+    );
     // 空いていた守備位置なら、次の空いている守備位置（投→一→二→三→遊→左→中→右→捕）を続けて選ぶ
     setPicking(lineup.positions[posKey] ? null : nextEmpty(positions, posKey));
   };
@@ -339,11 +365,13 @@ export function LineupWorkbench({
   const clearPos = (posKey: string) => {
     const positions = { ...lineup.positions };
     delete positions[posKey];
-    update({ positions, order: syncOrder(positions, lineup.order) });
+    onChange(relineup({ ...lineup, positions }));
     setPicking(null);
   };
 
-  const order = syncOrder(lineup.positions, lineup.order);
+  const order = battingOrder(lineup, notPlaying, total);
+  // 打順の行に出す守備（守備につかずに打つ選手は DH）
+  const posOf = (pid: string) => positionOf(lineup, pid) || (extras.includes(pid) ? "DH" : "");
   // 打順：2人をタップで入れ替え
   const tapRow = (i: number) => {
     if (swapFrom == null) return setSwapFrom(i);
@@ -403,12 +431,12 @@ export function LineupWorkbench({
   const bench = benchIds.map((b) => byId.get(b)).filter(Boolean) as Player[];
   // PDF に描く内容（画面のメンバー表と同じ）
   sheetDataRef.current = () => {
-    const starters: SheetRow[] = Array.from({ length: 9 }).map((_, i) => {
+    const starters: SheetRow[] = Array.from({ length: Math.max(nBat, order.length) }).map((_, i) => {
       const pid = order[i];
       const p = pid ? byId.get(pid) : undefined;
       return {
         order: i + 1,
-        pos: pid ? positionOf(lineup, pid) : "",
+        pos: pid ? posOf(pid) : "",
         number: p?.number ?? "",
         name: p?.name ?? "",
         grade: p ? `${p.grade}年` : "",
@@ -423,6 +451,17 @@ export function LineupWorkbench({
       school: teamName(p.teamId),
     }));
     for (let i = rows.length; i < 5; i++) rows.push({ order: i + 1, number: "", name: "", grade: "", school: "" });
+    // DHあり：投手は打たないので、打順の下に「投手」として書く
+    const pitcher = lineup.dh ? byId.get(lineup.positions["1"] ?? "") : undefined;
+    if (lineup.dh)
+      starters.push({
+        order: "投手",
+        pos: "1",
+        number: pitcher?.number ?? "",
+        name: pitcher?.name ?? "",
+        grade: pitcher ? `${pitcher.grade}年` : "",
+        school: pitcher ? teamName(pitcher.teamId) : "",
+      });
     return {
       team: "桜・浅羽野・住吉 連合チーム",
       title: lineup.title || "メンバー表",
@@ -432,6 +471,9 @@ export function LineupWorkbench({
       bench: rows,
     };
   };
+  const sheet = sheetDataRef.current();
+  const sheetRowH = startersRowH(sheet.starters.length);
+  const sheetVars = { "--rh": `${sheetRowH}mm`, "--k": Math.max(0.62, sheetRowH / 16) } as CSSProperties;
 
   return (
     <>
@@ -537,6 +579,84 @@ export function LineupWorkbench({
               ‹ 守備を変える
             </button>
           </div>
+          <section className="panel bat-setup">
+            <h2 className="panel__title">打つ人数</h2>
+            <div className="bat-row">
+              <div className="bat-step" role="group" aria-label="打つ人数">
+                <button
+                  type="button"
+                  aria-label="1人へらす"
+                  disabled={lineup.bats !== "all" && nBat <= 9}
+                  onClick={() => setBat({ bats: Math.max(9, nBat - 1) === 9 ? undefined : nBat - 1 })}
+                >
+                  −
+                </button>
+                <span>
+                  <b>{nBat}</b>人
+                </span>
+                <button
+                  type="button"
+                  aria-label="1人ふやす"
+                  disabled={nBat >= maxBat}
+                  onClick={() => setBat({ bats: nBat + 1 >= maxBat ? "all" : nBat + 1 })}
+                >
+                  ＋
+                </button>
+              </div>
+              <button
+                type="button"
+                className="pick"
+                aria-pressed={lineup.bats === "all"}
+                onClick={() => setBat({ bats: lineup.bats === "all" ? undefined : "all" })}
+              >
+                全員打ち
+              </button>
+              <button
+                type="button"
+                className="pick"
+                aria-pressed={!!lineup.dh}
+                onClick={() => setBat({ dh: !lineup.dh })}
+              >
+                DHあり
+              </button>
+            </div>
+            <p className="f-hint m-0">
+              {lineup.dh ? "DHあり：投手は打ちません。" : ""}
+              {lineup.bats === "all"
+                ? `全員打ち：守備についていない${notPlaying.length}人も全員打ちます。`
+                : need > 0
+                  ? `守備につかずに打つ選手（DH）が${need}人います。下から選んでください。`
+                  : "ふつうの9人打ちです。DH・10人打ち・全員打ちは上で変えられます。"}
+            </p>
+            {lineup.bats !== "all" && need > 0 && (
+              <>
+                <p className={`bat-need${extras.length < need ? " is-short" : ""}`}>
+                  打つだけの選手（DH） {extras.length}／{need}人
+                  {extras.length < need && <small>あと{need - extras.length}人タップ</small>}
+                </p>
+                <div className="bat-pool">
+                  {notPlaying.map((p) => {
+                    const on = extras.includes(p.id);
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        className={`bat-chip${on ? " is-on" : ""}`}
+                        aria-pressed={on}
+                        disabled={!on && extras.length >= need}
+                        onClick={() => toggleExtra(p.id)}
+                      >
+                        <Jersey no={p.number || "－"} className="bat-chip__jersey" small />
+                        <span>{p.name}</span>
+                      </button>
+                    );
+                  })}
+                  {notPlaying.length === 0 && <p className="f-hint m-0">守備についていない選手がいません。</p>}
+                </div>
+              </>
+            )}
+          </section>
+
           <section className="panel">
             <h2 className="panel__title">打順</h2>
             {order.length === 0 ? (
@@ -551,13 +671,12 @@ export function LineupWorkbench({
                 <div className="bo-pool">
                   {order
                     .filter((pid) => !draft.includes(pid))
-                    .sort((x, y) => Number(positionOf(lineup, x) || 99) - Number(positionOf(lineup, y) || 99))
+                    .sort((x, y) => (Number(positionOf(lineup, x)) || 10) - (Number(positionOf(lineup, y)) || 10))
                     .map((pid) => {
                       const p = byId.get(pid);
-                      const pos = POSITIONS.find((x) => x.key === positionOf(lineup, pid));
                       return (
                         <button key={pid} type="button" className="bo-chip" onClick={() => pick(pid)}>
-                          <PosBadge pos={pos?.key ?? ""} />
+                          <PosBadge pos={posOf(pid)} />
                           <span className="bo-chip__name">{p?.name ?? "（削除された選手）"}</span>
                         </button>
                       );
@@ -567,13 +686,12 @@ export function LineupWorkbench({
                   {order.map((_, i) => {
                     const pid = draft[i];
                     const p = pid ? byId.get(pid) : undefined;
-                    const pos = pid ? POSITIONS.find((x) => x.key === positionOf(lineup, pid)) : undefined;
                     return (
                       <li key={i} className={`bo-row${!pid ? " is-empty" : ""}${i === draft.length ? " is-next" : ""}`}>
                         <span className="tile bo-no">{i + 1}</span>
                         {pid ? (
                           <>
-                            <PosBadge pos={pos?.key ?? ""} />
+                            <PosBadge pos={posOf(pid)} />
                             <span className="bo-name">{p?.name}</span>
                           </>
                         ) : (
@@ -610,7 +728,7 @@ export function LineupWorkbench({
                 <ol className={`bo-list bo-list--lineup${drag ? " is-dragging" : ""}`}>
                   {order.map((pid, i) => {
                     const p = byId.get(pid);
-                    const posKey = positionOf(lineup, pid);
+                    const posKey = posOf(pid);
                     return (
                       <li key={pid} className="bo-item" style={dragStyle(i)}>
                         <button
@@ -642,7 +760,13 @@ export function LineupWorkbench({
                     );
                   })}
                 </ol>
-
+                {lineup.dh && lineup.positions["1"] && (
+                  <p className="bat-pitcher">
+                    <PosBadge pos="1" />
+                    <span>{byId.get(lineup.positions["1"])?.name}</span>
+                    <small>DHのため打ちません</small>
+                  </p>
+                )}
               </>
             )}
           </section>
@@ -651,12 +775,12 @@ export function LineupWorkbench({
             <h2 className="panel__title">
               控え選手<small>{benchIds.length}人</small>
             </h2>
-            <p className="f-hint -mt-2 mb-1">守備についていない選手は、全員控えに入ります。</p>
-            {notPlaying.length === 0 ? (
-              <p className="text-sm text-navy-soft/70">守備についていない選手はいません。</p>
+            <p className="f-hint -mt-2 mb-1">守備にも打順にも入っていない選手は、全員控えに入ります。</p>
+            {bench.length === 0 ? (
+              <p className="text-sm text-navy-soft/70">控えの選手はいません。</p>
             ) : (
               <ul className="bench-list">
-                {notPlaying.map((p) => (
+                {bench.map((p) => (
                   <li key={p.id} className="bench-item">
                     <Jersey no={p.number || "－"} className="bench-jersey" small />
                     <span className="bench-name">{p.name}</span>
@@ -701,7 +825,7 @@ export function LineupWorkbench({
               </dl>
             </header>
 
-            <table className="ms-table">
+            <table className="ms-table ms-table--starters" style={sheetVars}>
               <colgroup>
                 <col style={{ width: "11%" }} />
                 <col style={{ width: "11%" }} />
@@ -721,21 +845,16 @@ export function LineupWorkbench({
                 </tr>
               </thead>
               <tbody>
-                {Array.from({ length: 9 }).map((_, i) => {
-                  const pid = order[i];
-                  const p = pid ? byId.get(pid) : undefined;
-                  const pos = pid ? positionOf(lineup, pid) : undefined;
-                  return (
-                    <tr key={i}>
-                      <td className="ms-order">{i + 1}</td>
-                      <td className="ms-num">{pos ?? ""}</td>
-                      <td className="ms-num">{p?.number ?? ""}</td>
-                      <td className="ms-name">{p?.name ?? ""}</td>
-                      <td>{p ? `${p.grade}年` : ""}</td>
-                      <td>{p ? teamName(p.teamId) : ""}</td>
-                    </tr>
-                  );
-                })}
+                {sheet.starters.map((r, i) => (
+                  <tr key={i} className={typeof r.order === "string" ? "ms-pitcher" : undefined}>
+                    <td className="ms-order">{r.order}</td>
+                    <td className="ms-num">{r.pos}</td>
+                    <td className="ms-num">{r.number}</td>
+                    <td className="ms-name">{r.name}</td>
+                    <td>{r.grade}</td>
+                    <td>{r.school}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
 
@@ -758,23 +877,13 @@ export function LineupWorkbench({
                 </tr>
               </thead>
               <tbody>
-                {bench.map((p, i) => (
-                  <tr key={p.id}>
-                    <td>{i + 1}</td>
-                    <td className="ms-num">{p.number}</td>
-                    <td className="ms-name">{p.name}</td>
-                    <td>{p.grade}年</td>
-                    <td>{teamName(p.teamId)}</td>
-                  </tr>
-                ))}
-                {/* 書き足せるように、空の行を足して最低5行にする */}
-                {Array.from({ length: Math.max(0, 5 - bench.length) }).map((_, i) => (
-                  <tr key={`blank${i}`}>
-                    <td>{bench.length + i + 1}</td>
-                    <td />
-                    <td />
-                    <td />
-                    <td />
+                {sheet.bench.map((r, i) => (
+                  <tr key={i}>
+                    <td>{r.order}</td>
+                    <td className="ms-num">{r.number}</td>
+                    <td className="ms-name">{r.name}</td>
+                    <td>{r.grade}</td>
+                    <td>{r.school}</td>
                   </tr>
                 ))}
               </tbody>

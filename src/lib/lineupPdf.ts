@@ -4,7 +4,7 @@
 
 import { jpegPagesToPdf, toJpeg } from "./sharePdf";
 
-export type SheetRow = { order?: number; pos?: string; number: string; name: string; grade: string; school: string };
+export type SheetRow = { order?: number | string; pos?: string; number: string; name: string; grade: string; school: string };
 export type SheetData = {
   team: string;
   title: string;
@@ -13,6 +13,11 @@ export type SheetData = {
   starters: SheetRow[]; // 9人（空いている打順は name を空に）
   bench: SheetRow[];
 };
+
+// 打順の行の高さ（mm）。9人なら16mm、人数が多いほど低くして A4 1枚に収める
+export function startersRowH(n: number): number {
+  return Math.min(16, 150 / Math.max(1, n));
+}
 
 const PX_PER_MM = 794 / 210;
 const SCALE = 2.5; // 細かく描く（くっきりさせるため）
@@ -159,8 +164,11 @@ async function drawLineup(d: SheetData): Promise<HTMLCanvasElement> {
       { label: "学校", pct: 15, key: "school", kind: "plain" },
     ],
     d.starters,
-    16,
-    { order: 24, num: 20, name: 16, plain: 13 },
+    startersRowH(d.starters.length),
+    (() => {
+      const k = Math.max(0.62, startersRowH(d.starters.length) / 16);
+      return { order: 24 * k, num: 20 * k, name: 16 * Math.max(0.8, k), plain: 13 * Math.max(0.85, k) };
+    })(),
   );
 
   // ---- 控え ----
