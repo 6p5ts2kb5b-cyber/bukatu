@@ -4469,3 +4469,219 @@ td.pl-mark {
   font-size: 13px;
   line-height: 1.6;
 }
+
+/* ───────── メンバー表：球場とユニフォーム ───────── */
+.ballpark {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: 22px;
+  background: #2f7d36;
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.08), 0 10px 24px -14px rgb(11 43 33 / 0.6);
+}
+.ballpark--flat {
+  aspect-ratio: 100 / 42;
+  border-radius: 18px;
+}
+.ballpark__spot {
+  position: absolute;
+  width: 17%;
+  transform: translate(-50%, -50%);
+  display: block;
+  -webkit-tap-highlight-color: transparent;
+}
+.ballpark__spot:active .jersey {
+  transform: scale(0.93);
+}
+.ballpark__name {
+  position: absolute;
+  left: 50%;
+  bottom: 96%;
+  transform: translateX(-50%);
+  max-width: 150%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(11px, 3.4vw, 14px);
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.75), 0 0 6px rgb(0 0 0 / 0.35);
+  letter-spacing: 0.02em;
+}
+.ballpark__spot.is-empty .ballpark__name {
+  color: #ffe9a8;
+  font-size: clamp(10px, 3vw, 12px);
+}
+.jersey {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  filter: drop-shadow(0 3px 2px rgb(0 0 0 / 0.35));
+  transition: transform 0.1s;
+}
+.jersey__body {
+  fill: url(#jersey-cloth);
+  stroke: #56645c;
+  stroke-width: 0.9;
+  stroke-linejoin: round;
+}
+.jersey--empty .jersey__body {
+  fill: rgb(255 255 255 / 0.22);
+  stroke: #fff;
+  stroke-width: 1.1;
+  stroke-dasharray: 2.4 1.8;
+}
+.jersey__trim {
+  fill: none;
+  stroke: var(--board);
+  stroke-linecap: round;
+}
+.jersey__no {
+  font-family: var(--num);
+  font-weight: 800;
+  fill: #1e7a46;
+  stroke: #fff;
+  stroke-width: 0.5;
+  paint-order: stroke;
+}
+.jersey--empty .jersey__no {
+  font-family: var(--jp);
+  fill: #fff;
+  stroke: none;
+}
+.ballpark__corner {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding: 8px 14px;
+  border-top-left-radius: 14px;
+  background: rgb(15 42 33 / 0.78);
+  color: #ffc24a;
+  font-size: 13px;
+  font-weight: 900;
+  backdrop-filter: blur(2px);
+}
+.ballpark__tag {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  max-width: 24%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(11px, 3.3vw, 14px);
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.8);
+}
+.ballpark__tag.is-empty {
+  color: #ffe9a8;
+  font-family: var(--num);
+  font-size: 13px;
+}
+.ballpark__hint {
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+/* 守備位置の札（P・C・1B…） */
+.posb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 26px;
+  border-radius: 4px;
+  color: #fff;
+  font-family: var(--num);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  flex: none;
+}
+.posb--none {
+  background: var(--rule);
+  color: var(--ink-3);
+}
+
+/* 打順の行（球場アプリ風） */
+.bo-list--lineup {
+  gap: 0;
+  border-top: 1px solid var(--rule);
+}
+.bo-item {
+  position: relative;
+  transition: transform 0.15s ease;
+}
+.bo-list--lineup .bo-row--lineup {
+  grid-template-columns: 1.6em auto 36px minmax(0, 1fr) auto;
+  column-gap: 10px;
+  min-height: 58px;
+  padding: 6px 52px 6px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  border-radius: 0;
+  background: transparent;
+}
+.bo-list--lineup .bo-row--lineup.is-picked {
+  background: var(--board);
+  border-radius: 10px;
+}
+.bo-list--lineup .bo-row--lineup.is-target {
+  background: #f4f8f2;
+  border-style: solid;
+}
+.bo-list--lineup .bo-row--lineup.is-lifted {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 10px 22px -8px rgb(11 43 33 / 0.45);
+}
+.bo-ord {
+  text-align: center;
+  font-family: var(--num);
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.bo-row--lineup.is-picked .bo-ord {
+  color: #fff;
+}
+.bo-jersey {
+  width: 36px;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.25));
+}
+.bo-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 1px;
+  width: 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.bo-handle i {
+  display: block;
+  width: 24px;
+  height: 2.5px;
+  border-radius: 2px;
+  background: #b9c3bd;
+}
+.bo-list--lineup.is-dragging .bo-handle {
+  cursor: grabbing;
+}
+.bo-row--lineup.is-picked + .bo-handle i {
+  background: rgb(255 255 255 / 0.7);
+}

@@ -5,7 +5,7 @@
 //   タブ2「打順」   … 1番から順にタップして決める（2人タップで入れ替え）、控え選手を選ぶ
 //   タブ3「メンバー表」… 打順・守備・背番号・氏名の表を確認して印刷する
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent, type ReactNode } from "react";
 import { PaperPreview } from "@/components/PaperPreview";
 import { Field, inputClass, SecondaryButton } from "@/components/ui";
 import { formatDateLong } from "@/lib/activities";
@@ -17,46 +17,142 @@ import type { Team } from "@/lib/teams";
 
 type Tab = "field" | "order" | "sheet";
 
-// ダイヤモンド上の位置（横・縦を % で指定）
+// 守備位置の場所（ユニフォームの中心。横・縦を % で指定）
 const SPOTS: Record<string, { x: number; y: number }> = {
-  "8": { x: 50, y: 13 },
-  "7": { x: 18, y: 28 },
-  "9": { x: 82, y: 28 },
-  "6": { x: 35, y: 47 },
-  "4": { x: 65, y: 47 },
-  "5": { x: 19, y: 64 },
-  "3": { x: 81, y: 64 },
+  "8": { x: 50, y: 14 },
+  "7": { x: 20, y: 24 },
+  "9": { x: 80, y: 24 },
+  "6": { x: 34, y: 42 },
+  "4": { x: 66, y: 42 },
+  "5": { x: 19, y: 63 },
+  "3": { x: 81, y: 63 },
   "1": { x: 50, y: 64 },
-  "2": { x: 50, y: 86 },
+  "2": { x: 50, y: 88 },
 };
 
-function FieldPicture() {
+// 守備位置の札（P・C…）と色：投手は赤、捕手は黄、内野は緑、外野は青
+export const POS_BADGE: Record<string, { en: string; color: string }> = {
+  "1": { en: "P", color: "#d7263d" },
+  "2": { en: "C", color: "#e89a00" },
+  "3": { en: "1B", color: "#15803d" },
+  "4": { en: "2B", color: "#15803d" },
+  "5": { en: "3B", color: "#15803d" },
+  "6": { en: "SS", color: "#15803d" },
+  "7": { en: "LF", color: "#1d72b8" },
+  "8": { en: "CF", color: "#1d72b8" },
+  "9": { en: "RF", color: "#1d72b8" },
+};
+
+export function PosBadge({ pos }: { pos: string }) {
+  const b = POS_BADGE[pos];
+  if (!b) return <span className="posb posb--none">－</span>;
   return (
-    <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full" aria-hidden>
+    <span className="posb" style={{ background: b.color }}>
+      {b.en}
+    </span>
+  );
+}
+
+// ユニフォーム（背番号入り）。空いている守備位置は点線で守備の名前を出す
+export function Jersey({
+  no,
+  empty = false,
+  label = "",
+  className = "",
+  small = false,
+}: {
+  no?: string;
+  empty?: boolean;
+  label?: string;
+  className?: string;
+  small?: boolean; // 打順の行など小さく出すとき（背番号を大きめに）
+}) {
+  const text = empty ? label : no || "";
+  const size = (text.length >= 3 ? 9.5 : text.length === 2 ? 12.5 : 14) * (small ? 1.3 : 1);
+  return (
+    <svg viewBox="0 0 40 40" className={`jersey${empty ? " jersey--empty" : ""} ${className}`} aria-hidden>
       <defs>
-        <pattern id="mow" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-          <rect width="4" height="8" fill="rgb(255 255 255 / 0.05)" />
-        </pattern>
+        <linearGradient id="jersey-cloth" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0" stopColor="#e3e7e4" />
+          <stop offset="0.25" stopColor="#ffffff" />
+          <stop offset="0.75" stopColor="#ffffff" />
+          <stop offset="1" stopColor="#d9dfdb" />
+        </linearGradient>
       </defs>
-      {/* 外野の芝（刈り目の縞） */}
-      <path d="M50 90 L3 43 A66 66 0 0 1 97 43 Z" fill="#3f8f4f" />
-      <path d="M50 90 L3 43 A66 66 0 0 1 97 43 Z" fill="url(#mow)" />
-      {/* 内野の土 */}
-      <path d="M50 94 L18 64 A34 34 0 0 1 82 64 Z" fill="#c98f5a" />
-      {/* 内野の芝 */}
-      <path d="M50 86 L31 67 L50 48 L69 67 Z" fill="#4f9f5f" />
-      {/* ファウルライン */}
-      <path d="M50 88 L3 41 M50 88 L97 41" stroke="#fff" strokeWidth="0.6" />
-      {/* ベース */}
-      <rect x="48.4" y="46.4" width="3.2" height="3.2" fill="#fff" transform="rotate(45 50 48)" />
-      <rect x="29.4" y="65.4" width="3.2" height="3.2" fill="#fff" transform="rotate(45 31 67)" />
-      <rect x="67.4" y="65.4" width="3.2" height="3.2" fill="#fff" transform="rotate(45 69 67)" />
-      <path d="M48.3 86 h3.4 v1.6 l-1.7 1.6 l-1.7 -1.6 z" fill="#fff" />
-      {/* マウンド */}
-      <circle cx="50" cy="67" r="2.8" fill="#b8804d" />
+      <path
+        className="jersey__body"
+        d="M13 4.5 L5 9.5 L1.8 17 L8.6 20.2 L11 16.6 V36.5 H29 V16.6 L31.4 20.2 L38.2 17 L35 9.5 L27 4.5 C25 8.4 15 8.4 13 4.5 Z"
+      />
+      {!empty && (
+        <>
+          <path d="M13 4.5 C15 8.4 25 8.4 27 4.5" className="jersey__trim" strokeWidth="2.2" />
+          <path d="M2.7 15 L9.4 18.2 M37.3 15 L30.6 18.2" className="jersey__trim" strokeWidth="1.5" />
+        </>
+      )}
+      <text x="20" y={empty ? 26 : small ? 30 : 28.5} textAnchor="middle" fontSize={empty ? 10 : size} className="jersey__no">
+        {text}
+      </text>
     </svg>
   );
 }
+
+// 球場の絵（上から見た形）。flat のときは横長につぶして、打順の画面の上に小さく出す
+function FieldPicture({ flat = false }: { flat?: boolean }) {
+  const id = flat ? "f2" : "f1";
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      preserveAspectRatio={flat ? "none" : "xMidYMid meet"}
+      className="absolute inset-0 h-full w-full"
+      aria-hidden
+    >
+      <defs>
+        {/* 芝の刈り目（市松模様） */}
+        <pattern id={`${id}-mow`} width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45 50 50)">
+          <rect width="7" height="7" fill="rgb(255 255 255 / 0.07)" />
+          <rect x="7" y="7" width="7" height="7" fill="rgb(255 255 255 / 0.07)" />
+        </pattern>
+        <pattern id={`${id}-stripe`} width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45 50 50)">
+          <rect width="2" height="4" fill="rgb(255 255 255 / 0.06)" />
+        </pattern>
+        <radialGradient id={`${id}-dirt`} cx="50%" cy="80%" r="70%">
+          <stop offset="0" stopColor="#c98a55" />
+          <stop offset="1" stopColor="#a96a3c" />
+        </radialGradient>
+        <radialGradient id={`${id}-shade`} cx="50%" cy="45%" r="75%">
+          <stop offset="0.6" stopColor="rgb(0 0 0 / 0)" />
+          <stop offset="1" stopColor="rgb(0 0 0 / 0.28)" />
+        </radialGradient>
+      </defs>
+      <rect width="100" height="100" fill="#2f7d36" />
+      <rect width="100" height="100" fill={`url(#${id}-mow)`} />
+      {/* 内野の土 */}
+      <path d="M50 102 L7 59 A44 44 0 0 1 93 59 Z" fill={`url(#${id}-dirt)`} />
+      <circle cx="50" cy="87" r="8.5" fill={`url(#${id}-dirt)`} />
+      {/* 内野の芝 */}
+      <path d="M50 79.5 L65.5 64 L50 48.5 L34.5 64 Z" fill="#3a8c40" />
+      <path d="M50 79.5 L65.5 64 L50 48.5 L34.5 64 Z" fill={`url(#${id}-stripe)`} />
+      <circle cx="28" cy="64" r="3.6" fill="#b87a48" />
+      <circle cx="72" cy="64" r="3.6" fill="#b87a48" />
+      <circle cx="50" cy="42" r="3.6" fill="#b87a48" />
+      {/* マウンド */}
+      <circle cx="50" cy="64" r="3.4" fill="#c08250" />
+      <rect x="48.6" y="63.6" width="2.8" height="0.8" fill="#fff" />
+      {/* ファウルライン・バッターボックス */}
+      <path d="M50 86 L-2 34 M50 86 L102 34" stroke="#fff" strokeWidth={flat ? 0.8 : 0.55} vectorEffect={flat ? "non-scaling-stroke" : undefined} />
+      <path d="M44.6 84.4 h3 v5 h-3 z M52.4 84.4 h3 v5 h-3 z" stroke="#fff" strokeWidth="0.35" fill="none" />
+      {/* ベース */}
+      <rect x="48.6" y="40.6" width="2.8" height="2.8" fill="#fff" transform="rotate(45 50 42)" />
+      <rect x="26.6" y="62.6" width="2.8" height="2.8" fill="#fff" transform="rotate(45 28 64)" />
+      <rect x="70.6" y="62.6" width="2.8" height="2.8" fill="#fff" transform="rotate(45 72 64)" />
+      <path d="M48.5 85.6 h3 v1.4 l-1.5 1.4 l-1.5 -1.4 z" fill="#fff" />
+      <rect width="100" height="100" fill={`url(#${id}-shade)`} />
+    </svg>
+  );
+}
+
+// 名字だけ（「知久 大翔」→「知久」）
+const surname = (name: string) => name.split(/[\s　]/)[0];
 
 function PlayerPicker({
   title,
@@ -178,6 +274,8 @@ export function LineupWorkbench({
   // 打順：「1番から順にタップ」で作っている途中の並び／入れ替えで1人目に選んだ打順
   const [draft, setDraft] = useState<string[] | null>(null);
   const [swapFrom, setSwapFrom] = useState<number | null>(null);
+  const [drag, setDrag] = useState<{ from: number; dy: number; h: number } | null>(null);
+  const dragY = useRef(0);
   const [picking, setPicking] = useState<string | null>(null); // 選手を選んでいる守備位置
   // メンバー表のPDF（A4の1枚）。作る → スマホの共有画面でLINE・メールを選ぶ
   const sheetRef = useRef<HTMLElement>(null);
@@ -257,6 +355,40 @@ export function LineupWorkbench({
     [next[swapFrom], next[i]] = [next[i], next[swapFrom]];
     update({ order: next });
     setSwapFrom(null);
+  };
+  // 打順：右の「≡」を押したまま上下に動かして並べ替える
+  const dragStart = (i: number, e: RPointerEvent<HTMLElement>) => {
+    e.preventDefault();
+    const li = e.currentTarget.closest("li");
+    if (!li) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragY.current = e.clientY;
+    setSwapFrom(null);
+    setDrag({ from: i, dy: 0, h: li.getBoundingClientRect().height + 6 });
+  };
+  const dragTo = (d: { from: number; dy: number; h: number }) =>
+    Math.max(0, Math.min(order.length - 1, d.from + Math.round(d.dy / d.h)));
+  const dragMove = (e: RPointerEvent<HTMLElement>) => {
+    if (drag) setDrag({ ...drag, dy: e.clientY - dragY.current });
+  };
+  const dragEnd = () => {
+    if (!drag) return;
+    const to = dragTo(drag);
+    if (to !== drag.from) {
+      const next = [...order];
+      const [m] = next.splice(drag.from, 1);
+      next.splice(to, 0, m);
+      update({ order: next });
+    }
+    setDrag(null);
+  };
+  const dragStyle = (i: number): CSSProperties | undefined => {
+    if (!drag) return undefined;
+    if (i === drag.from) return { transform: `translateY(${drag.dy}px)`, zIndex: 3, transition: "none" };
+    const to = dragTo(drag);
+    if (drag.from < to && i > drag.from && i <= to) return { transform: `translateY(${-drag.h}px)` };
+    if (drag.from > to && i >= to && i < drag.from) return { transform: `translateY(${drag.h}px)` };
+    return undefined;
   };
   // 打順：1番から順にタップ。全員入ったら決定
   const pick = (pid: string) => {
@@ -356,9 +488,9 @@ export function LineupWorkbench({
       {tab === "field" && (
         <>
           <p className={`px-1 text-base font-bold ${filled === 9 ? "text-ok" : "text-[#8a6500]"}`}>
-            {filled === 9 ? "● 守備9人がそろいました" : `▲ 守備 ${filled}/9人 ― 丸をタップして選ぶ`}
+            {filled === 9 ? "● 守備9人がそろいました" : `▲ 守備 ${filled}/9人 ― ユニフォームをタップして選ぶ`}
           </p>
-          <div className="relative mx-auto aspect-square w-full max-w-md overflow-hidden rounded-3xl bg-[#2f7a3f]">
+          <div className="ballpark">
             <FieldPicture />
             {POSITIONS.map((pos) => {
               const player = byId.get(lineup.positions[pos.key] ?? "");
@@ -369,27 +501,19 @@ export function LineupWorkbench({
                   type="button"
                   onClick={() => setPicking(pos.key)}
                   style={{ left: `${spot.x}%`, top: `${spot.y}%` }}
-                  className="absolute flex w-[23%] -translate-x-1/2 -translate-y-1/2 flex-col items-center"
+                  className={`ballpark__spot${player ? "" : " is-empty"}`}
                   aria-label={`${pos.label}：${player?.name ?? "未定"}`}
                 >
-                  <span
-                    className={`flex h-11 w-11 items-center justify-center rounded-full text-lg font-extrabold shadow-md ring-2 ${
-                      player ? "bg-navy text-white ring-white" : "bg-white/90 text-navy ring-stitch"
-                    }`}
-                  >
-                    {player ? player.number || pos.short : pos.short}
-                  </span>
-                  <span
-                    className={`mt-1 max-w-full truncate rounded-md px-1.5 py-0.5 text-xs font-extrabold shadow ${
-                      player ? "bg-white text-navy" : "bg-stitch text-white"
-                    }`}
-                  >
-                    {player ? player.name.split(/[\s　]/)[0] : `${pos.short}：未定`}
-                  </span>
+                  <span className="ballpark__name">{player ? surname(player.name) : pos.label}</span>
+                  <Jersey no={player?.number || pos.short} empty={!player} label={pos.short} />
                 </button>
               );
             })}
+            <button type="button" className="ballpark__corner" onClick={() => setTab("order")}>
+              打順を決める ›
+            </button>
           </div>
+          <p className="ballpark__hint">守備位置をタップして、選手一覧から選んでください。</p>
           <SecondaryButton onClick={() => setTab("order")}>次へ：② 打順を決める ›</SecondaryButton>
         </>
       )}
@@ -397,6 +521,25 @@ export function LineupWorkbench({
       {/* ② 打順 */}
       {tab === "order" && (
         <>
+          <div className="ballpark ballpark--flat">
+            <FieldPicture flat />
+            {POSITIONS.map((pos) => {
+              const player = byId.get(lineup.positions[pos.key] ?? "");
+              const spot = SPOTS[pos.key];
+              return (
+                <span
+                  key={pos.key}
+                  className={`ballpark__tag${player ? "" : " is-empty"}`}
+                  style={{ left: `${spot.x}%`, top: `${Math.min(spot.y, 86)}%` }}
+                >
+                  {player ? surname(player.name) : POS_BADGE[pos.key].en}
+                </span>
+              );
+            })}
+            <button type="button" className="ballpark__corner" onClick={() => setTab("field")}>
+              ‹ 守備を変える
+            </button>
+          </div>
           <section className="panel">
             <h2 className="panel__title">打順</h2>
             {order.length === 0 ? (
@@ -417,7 +560,7 @@ export function LineupWorkbench({
                       const pos = POSITIONS.find((x) => x.key === positionOf(lineup, pid));
                       return (
                         <button key={pid} type="button" className="bo-chip" onClick={() => pick(pid)}>
-                          <span className="bo-pos">{pos?.short}</span>
+                          <PosBadge pos={pos?.key ?? ""} />
                           <span className="bo-chip__name">{p?.name ?? "（削除された選手）"}</span>
                         </button>
                       );
@@ -433,7 +576,7 @@ export function LineupWorkbench({
                         <span className="tile bo-no">{i + 1}</span>
                         {pid ? (
                           <>
-                            <span className="bo-pos">{pos?.short}</span>
+                            <PosBadge pos={pos?.key ?? ""} />
                             <span className="bo-name">{p?.name}</span>
                           </>
                         ) : (
@@ -464,26 +607,40 @@ export function LineupWorkbench({
                   </p>
                 ) : (
                   <p className="f-hint mb-1 mt-2">
-                    入れ替えるとき：替えたい2人を順にタップ（例：3番 → 5番で入れ替わります）。
+                    打順を変えるとき：替えたい2人を順にタップすると入れ替わります。右の「≡」を押したまま上下に動かしても並べ替えられます。
                   </p>
                 )}
-                <ol className="bo-list">
+                <ol className={`bo-list bo-list--lineup${drag ? " is-dragging" : ""}`}>
                   {order.map((pid, i) => {
                     const p = byId.get(pid);
-                    const pos = POSITIONS.find((x) => x.key === positionOf(lineup, pid));
+                    const posKey = positionOf(lineup, pid);
                     return (
-                      <li key={pid}>
+                      <li key={pid} className="bo-item" style={dragStyle(i)}>
                         <button
                           type="button"
-                          className={`bo-row bo-row--btn${swapFrom === i ? " is-picked" : ""}${swapFrom != null && swapFrom !== i ? " is-target" : ""}`}
+                          className={`bo-row bo-row--btn bo-row--lineup${swapFrom === i ? " is-picked" : ""}${swapFrom != null && swapFrom !== i ? " is-target" : ""}${drag?.from === i ? " is-lifted" : ""}`}
                           onClick={() => tapRow(i)}
                           aria-pressed={swapFrom === i}
                         >
-                          <span className="tile bo-no">{i + 1}</span>
-                          <span className="bo-pos">{pos?.short}</span>
+                          <span className="bo-ord">{i + 1}</span>
+                          <PosBadge pos={posKey} />
+                          <Jersey no={p?.number || "－"} className="bo-jersey" small />
                           <span className="bo-name">{p?.name ?? "（削除された選手）"}</span>
-                          <span className="bo-meta">{p ? `#${p.number || "－"}・${teamName(p.teamId)}・${p.grade}年` : ""}</span>
+                          <span className="bo-meta">{p ? `${teamName(p.teamId)}・${p.grade}年` : ""}</span>
                         </button>
+                        <span
+                          className="bo-handle"
+                          role="button"
+                          aria-label={`${i + 1}番を動かす`}
+                          onPointerDown={(e) => dragStart(i, e)}
+                          onPointerMove={dragMove}
+                          onPointerUp={dragEnd}
+                          onPointerCancel={dragEnd}
+                        >
+                          <i />
+                          <i />
+                          <i />
+                        </span>
                       </li>
                     );
                   })}
