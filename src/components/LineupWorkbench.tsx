@@ -182,19 +182,19 @@ function PlayerPicker({
         className="flex max-h-[85dvh] w-full max-w-xl flex-col rounded-t-3xl bg-white pb-[env(safe-area-inset-bottom)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-navy/10 p-4">
-          <h3 className="text-lg font-extrabold">{title}</h3>
+        <div className="flex items-center justify-between border-b border-navy/10 px-4 py-2">
+          <h3 className="text-base font-extrabold">{title}</h3>
           <button type="button" onClick={onClose} className="min-h-10 px-3 text-base font-bold text-navy-soft">
             閉じる
           </button>
         </div>
-        <div className="flex flex-wrap gap-2 px-4 pt-3">
+        <div className="flex flex-wrap gap-1.5 px-3 pt-2">
           {[{ id: "all", shortName: "全員" }, ...teams.filter((t) => t.active)].map((t) => (
             <button
               key={t.id}
               type="button"
               onClick={() => setFilter(t.id)}
-              className={`min-h-9 rounded-full px-3 text-sm font-bold ring-1 ${
+              className={`min-h-8 rounded-full px-3 text-sm font-bold ring-1 ${
                 filter === t.id ? "bg-navy text-white ring-navy" : "bg-white ring-navy/15"
               }`}
             >
@@ -202,54 +202,37 @@ function PlayerPicker({
             </button>
           ))}
         </div>
-        <ul className="flex-1 overflow-y-auto p-4">
+        <div className="pp-scroll">
           {current && onClear && (
-            <li className="mb-2">
-              <button
-                type="button"
-                onClick={onClear}
-                className="min-h-12 w-full rounded-xl bg-ng/10 text-base font-bold text-ng"
-              >
-                この守備位置を空ける
-              </button>
-            </li>
+            <button type="button" onClick={onClear} className="pp-clear">
+              この守備位置を空ける
+            </button>
           )}
-          {list.length === 0 && (
-            <li className="py-6 text-center text-sm text-navy-soft/70">
-              選手がいません。メニューの「選手名簿」から登録してください。
-            </li>
-          )}
-          {list.map((p) => {
-            const pos = positionOf(lineup, p.id);
-            const posLabel = POSITIONS.find((x) => x.key === pos)?.short;
-            const onBench = !pos && p.active && !(lineup.benchOff ?? []).includes(p.id);
-            return (
-              <li key={p.id}>
-                <button
-                  type="button"
-                  onClick={() => onPick(p.id)}
-                  className={`mb-2 flex w-full items-center gap-3 rounded-xl p-3 text-left ring-1 ${
-                    p.id === current ? "bg-navy text-white ring-navy" : "bg-white ring-navy/10 active:bg-field"
-                  }`}
-                >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-navy/10 text-base font-extrabold">
-                    {p.number || "－"}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-base font-extrabold">{p.name}</span>
-                    <span className="block text-sm opacity-70">
-                      {teamName(p.teamId)}・{p.grade}年
+          {list.length === 0 && <p className="pp-empty">選手がいません。メニューの「選手名簿」から登録してください。</p>}
+          <ul className="pp-grid">
+            {list.map((p) => {
+              const pos = positionOf(lineup, p.id);
+              return (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    onClick={() => onPick(p.id)}
+                    className={`pp-item${p.id === current ? " is-current" : ""}${pos ? " is-playing" : ""}`}
+                  >
+                    <span className="pp-no">{p.number || "－"}</span>
+                    <span className="pp-text">
+                      <span className="pp-name">{p.name}</span>
+                      <span className="pp-meta">
+                        {teamName(p.teamId)}・{p.grade}年
+                      </span>
                     </span>
-                  </span>
-                  {posLabel && (
-                    <span className="rounded-md bg-stitch px-2 py-0.5 text-sm font-bold text-white">{posLabel}</span>
-                  )}
-                  {onBench && <span className="rounded-md bg-navy/10 px-2 py-0.5 text-sm font-bold">控え</span>}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+                    {pos ? <PosBadge pos={pos} /> : null}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       </div>
     </div>
   );
