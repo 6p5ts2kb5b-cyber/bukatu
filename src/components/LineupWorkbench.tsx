@@ -313,10 +313,11 @@ export function LineupWorkbench({
     .sort((x, y) => (Number(x.number) || 999) - (Number(y.number) || 999));
   const benchIds = benchOf(lineup, notPlaying);
 
-  // 次に空いている守備位置（投手から順。from より後ろ → 前へ回る）
-  const nextEmpty = (positions: Record<string, string>, from = "0"): string | null => {
-    const keys = POSITIONS.map((p) => p.key);
-    const start = keys.indexOf(from) + 1;
+  // 次に空いている守備位置（投手 → 一塁 → 二塁 → 三塁 → 遊撃 → 左翼 → 中堅 → 右翼 → 捕手の順。from より後ろ → 前へ回る）
+  const PICK_ORDER = ["1", "3", "4", "5", "6", "7", "8", "9", "2"];
+  const nextEmpty = (positions: Record<string, string>, from = ""): string | null => {
+    const keys = PICK_ORDER;
+    const start = from ? keys.indexOf(from) + 1 : 0;
     const ring = [...keys.slice(start), ...keys.slice(0, start)];
     return ring.find((k) => !positions[k]) ?? null;
   };
@@ -331,7 +332,7 @@ export function LineupWorkbench({
       order: syncOrder(positions, lineup.order),
       bench: lineup.bench.filter((b) => b !== playerId),
     });
-    // 空いていた守備位置なら、次の空いている守備位置（投→捕→一→二→三→遊→左→中→右）を続けて選ぶ
+    // 空いていた守備位置なら、次の空いている守備位置（投→一→二→三→遊→左→中→右→捕）を続けて選ぶ
     setPicking(lineup.positions[posKey] ? null : nextEmpty(positions, posKey));
   };
 
@@ -483,7 +484,7 @@ export function LineupWorkbench({
           </p>
           {filled < 9 && (
             <button type="button" className="btn btn--primary" onClick={() => setPicking(nextEmpty(lineup.positions))}>
-              {filled === 0 ? "投手から順に選ぶ" : "空いている守備を順に選ぶ"}
+              {filled === 0 || !lineup.positions["1"] ? "投手から順に選ぶ" : "空いている守備を順に選ぶ"}
             </button>
           )}
           <div className="ballpark">
