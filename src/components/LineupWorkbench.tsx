@@ -305,7 +305,9 @@ export function LineupWorkbench({
   const teamName = (tid: string) => teams.find((t) => t.id === tid)?.shortName ?? "";
   const update = (patch: Partial<Lineup>) => onChange({ ...lineup, ...patch });
   // 守備についていない選手は自動で控え（外した選手を除く）
-  const notPlaying = players.filter((p) => p.active && !positionOf(lineup, p.id));
+  const notPlaying = players
+    .filter((p) => p.active && !positionOf(lineup, p.id))
+    .sort((x, y) => (Number(x.number) || 999) - (Number(y.number) || 999));
   const benchIds = benchOf(lineup, notPlaying);
 
   const assign = (posKey: string, playerId: string) => {
@@ -384,11 +386,6 @@ export function LineupWorkbench({
   };
 
   // 守備についていない選手は自動で控え。押すと外す／戻す
-  const toggleBench = (pid: string) => {
-    const on = benchIds.includes(pid);
-    const off = notPlaying.map((p) => p.id).filter((x) => (x === pid ? on : !benchIds.includes(x)));
-    update({ benchOff: off, bench: notPlaying.map((p) => p.id).filter((x) => !off.includes(x)) });
-  };
 
   const filled = POSITIONS.filter((p) => lineup.positions[p.key]).length;
   const bench = benchIds.map((b) => byId.get(b)).filter(Boolean) as Player[];
@@ -637,27 +634,19 @@ export function LineupWorkbench({
             <h2 className="panel__title">
               控え選手<small>{benchIds.length}人</small>
             </h2>
-            <p className="f-hint -mt-2 mb-1">守備についていない選手は、自動で全員控えに入ります。ベンチに入らない選手だけタップして外してください。</p>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              {notPlaying.map((p) => {
-                const on = benchIds.includes(p.id);
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => toggleBench(p.id)}
-                    aria-pressed={on}
-                    className="choice choice--sm text-left"
-                  >
-                    {p.number ? `${p.number} ` : ""}
-                    {p.name}
-                  </button>
-                );
-              })}
-              {notPlaying.length === 0 && (
-                <p className="col-span-2 text-sm text-navy-soft/70">守備についていない選手はいません。</p>
-              )}
-            </div>
+            <p className="f-hint -mt-2 mb-1">守備についていない選手は、全員控えに入ります。</p>
+            {notPlaying.length === 0 ? (
+              <p className="text-sm text-navy-soft/70">守備についていない選手はいません。</p>
+            ) : (
+              <ul className="bench-list">
+                {notPlaying.map((p) => (
+                  <li key={p.id} className="bench-item">
+                    <Jersey no={p.number || "－"} className="bench-jersey" small />
+                    <span className="bench-name">{p.name}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
           <SecondaryButton onClick={() => setTab("sheet")}>次へ：③ メンバー表を見る ›</SecondaryButton>
         </>
