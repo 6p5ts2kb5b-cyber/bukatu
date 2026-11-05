@@ -175,7 +175,10 @@ function PlayerPicker({
 }) {
   const [filter, setFilter] = useState("all");
   const teamName = (id: string) => teams.find((t) => t.id === id)?.shortName ?? "";
-  const list = players.filter((p) => p.active && (filter === "all" || p.teamId === filter));
+  // まだ守備についていない選手を先に（守備についている選手は後ろへ）
+  const list = players
+    .filter((p) => p.active && (filter === "all" || p.teamId === filter))
+    .sort((x, y) => Number(!!positionOf(lineup, x.id)) - Number(!!positionOf(lineup, y.id)));
   return (
     <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/40 print:hidden" onClick={onClose}>
       <div
@@ -310,6 +313,13 @@ export function LineupWorkbench({
     .sort((x, y) => (Number(x.number) || 999) - (Number(y.number) || 999));
   const benchIds = benchOf(lineup, notPlaying);
 
+  // 次に空いている守備位置（投手から順。from より後ろ → 前へ回る）
+  const nextEmpty = (positions: Record<string, string>, from = "0"): string | null => {
+    const keys = POSITIONS.map((p) => p.key);
+    const start = keys.indexOf(from) + 1;
+    const ring = [...keys.slice(start), ...keys.slice(0, start)];
+    return ring.find((k) => !positions[k]) ?? null;
+  };
   const assign = (posKey: string, playerId: string) => {
     const positions: Record<string, string> = {};
     for (const [k, v] of Object.entries(lineup.positions)) {
@@ -321,7 +331,8 @@ export function LineupWorkbench({
       order: syncOrder(positions, lineup.order),
       bench: lineup.bench.filter((b) => b !== playerId),
     });
-    setPicking(null);
+    // 空いていた守備位置なら、次の空いている守備位置（投→捕→一→二→三→遊→左→中→右）を続けて選ぶ
+    setPicking(lineup.positions[posKey] ? null : nextEmpty(positions, posKey));
   };
 
   const clearPos = (posKey: string) => {
@@ -470,6 +481,11 @@ export function LineupWorkbench({
           <p className={`px-1 text-base font-bold ${filled === 9 ? "text-ok" : "text-[#8a6500]"}`}>
             {filled === 9 ? "● 守備9人がそろいました" : `▲ 守備 ${filled}/9人 ― ユニフォームをタップして選ぶ`}
           </p>
+          {filled < 9 && (
+            <button type="button" className="btn btn--primary" onClick={() => setPicking(nextEmpty(lineup.positions))}>
+              {filled === 0 ? "投手から順に選ぶ" : "空いている守備を順に選ぶ"}
+            </button>
+          )}
           <div className="ballpark">
             <FieldPicture />
             {POSITIONS.map((pos) => {
@@ -493,7 +509,7 @@ export function LineupWorkbench({
               打順を決める ›
             </button>
           </div>
-          <p className="ballpark__hint">守備位置をタップして、選手一覧から選んでください。</p>
+          <p className="ballpark__hint">投手から順に選べます。1つだけ変えるときは、ユニフォームをタップしてください。</p>
           <SecondaryButton onClick={() => setTab("order")}>次へ：② 打順を決める ›</SecondaryButton>
         </>
       )}
@@ -770,7 +786,7 @@ export function LineupWorkbench({
       {bottom}
       {picking && (
         <PlayerPicker
-          title={`${POSITIONS.find((p) => p.key === picking)?.label}を選ぶ`}
+          title={`${POSITIONS.find((p) => p.key === picking)?.label}を選ぶ（守備 ${filled}/9人）`}
           players={players}
           teams={teams}
           lineup={lineup}
