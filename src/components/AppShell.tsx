@@ -185,7 +185,7 @@ function isActive(href: string, pathname: string): boolean {
   if (href === "/") return pathname === "/";
   if (href === "/activities") return pathname.startsWith("/activities") && pathname !== "/activities/new";
   if (href === "/menu")
-    return ["/menu", "/teams", "/staff", "/print", "/players", "/lineups", "/notices", "/ops"].some((p) => pathname.startsWith(p));
+    return ["/menu", "/teams", "/staff", "/print", "/players", "/lineups", "/notices", "/ops", "/dosei"].some((p) => pathname.startsWith(p));
   return pathname === href;
 }
 
@@ -305,9 +305,11 @@ function SideNav() {
 
 // 画面ごとの幅（PC）：一覧は広く、入力の画面は読みやすい幅に
 function layoutOf(pathname: string): "wide" | "form" | "full" {
+  if (pathname.startsWith("/d/")) return "form";
   if (pathname === "/print" || pathname === "/m" || /^\/notices\/[^/]+$/.test(pathname) || /^\/lineups\/[^/]+$/.test(pathname)) return "full";
-  if (["/", "/activities", "/menu", "/notices", "/players", "/lineups", "/staff", "/teams", "/ops"].includes(pathname)) return "wide";
+  if (["/", "/activities", "/menu", "/notices", "/players", "/lineups", "/staff", "/teams", "/ops", "/dosei"].includes(pathname)) return "wide";
   if (/^\/ops\/[^/]+$/.test(pathname)) return "full";
+  if (/^\/dosei\/[^/]+$/.test(pathname)) return "full";
   return "form";
 }
 
@@ -456,7 +458,7 @@ function PublicShell({ children }: { children: ReactNode }) {
       <header className="app-header ops-header print:hidden">
         <BallMark className="app-header__mark" />
         <div className="app-header__titles">
-          <p className="app-header__title">メンバー表をつくる</p>
+          <p className="app-header__title">{pathname.startsWith("/d/") ? "動静表の記入" : "メンバー表をつくる"}</p>
           <p className="app-header__sub">桜・浅羽野・住吉 連合チーム</p>
         </div>
       </header>
@@ -469,7 +471,7 @@ function PublicShell({ children }: { children: ReactNode }) {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  if (pathname === "/m" || pathname === "/m/") return <PublicShell>{children}</PublicShell>;
+  if (pathname === "/m" || pathname === "/m/" || pathname.startsWith("/d/")) return <PublicShell>{children}</PublicShell>;
   return (
     <AuthProvider>
       <Gate>{children}</Gate>

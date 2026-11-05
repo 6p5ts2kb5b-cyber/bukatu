@@ -4966,3 +4966,596 @@ td.pl-mark {
   font-weight: 700;
   color: var(--ink-3);
 }
+
+/* ───────── 動静表（記入ページ） ───────── */
+.ds-head {
+  padding: 16px 16px 14px;
+  border-radius: 18px;
+  background: linear-gradient(160deg, #17503e, var(--board) 60%, var(--board-deep));
+  color: var(--chalk);
+}
+.ds-head__kicker {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #ffc24a;
+}
+.ds-head__title {
+  margin: 2px 0 0;
+  font-size: 22px;
+  font-weight: 900;
+}
+.ds-head__period {
+  margin: 2px 0 0;
+  font-size: 14px;
+  font-weight: 700;
+  opacity: 0.9;
+}
+.ds-head__msg {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.1);
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.ds-head__closed {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #fff1cf;
+  color: var(--caution);
+  font-size: 13px;
+  font-weight: 800;
+}
+.ds-who {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 4px;
+  font-size: 15px;
+  color: var(--ink);
+}
+.ds-who b {
+  font-size: 19px;
+  font-weight: 900;
+}
+.ds-who button {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-2);
+  text-decoration: underline;
+}
+.ds-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-2);
+}
+.ds-label small {
+  font-weight: 700;
+  color: var(--ink-3);
+}
+.ds-contact {
+  display: grid;
+  grid-template-columns: 22px 92px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+.ds-contact__no {
+  font-family: var(--num);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink-3);
+  text-align: center;
+}
+.ds-days {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ds-day {
+  padding: 8px 0;
+  border-top: 1px solid var(--rule);
+}
+.ds-day.is-marked {
+  background: #fff8f1;
+  margin: 0 -8px;
+  padding: 8px;
+  border-radius: 10px;
+}
+.ds-day__top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.ds-day__date {
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--ink);
+}
+.ds-day__date.is-sun {
+  color: var(--sun);
+}
+.ds-day__date.is-sat {
+  color: var(--sat);
+}
+.ds-day__plan {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+.ds-day__opts {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+}
+.ds-opt {
+  min-height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--rule);
+  background: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-2);
+}
+.ds-opt[aria-pressed="true"] {
+  color: #fff;
+  border-color: transparent;
+}
+.ds-opt--ok[aria-pressed="true"] {
+  background: var(--ok);
+}
+.ds-opt--欠[aria-pressed="true"] {
+  background: var(--stitch);
+}
+.ds-opt--遅[aria-pressed="true"],
+.ds-opt--早[aria-pressed="true"] {
+  background: #d97706;
+}
+.ds-opt--他[aria-pressed="true"] {
+  background: #6b4bb0;
+}
+.ds-day__more {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+.ds-day__more .f-input {
+  min-height: 40px;
+  font-size: 14px;
+}
+.ds-day__time {
+  flex: none;
+  width: 118px;
+}
+.ds-area {
+  min-height: 84px;
+  resize: vertical;
+  line-height: 1.6;
+}
+.ds-error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fde8ea;
+  color: var(--stitch);
+  font-size: 14px;
+  font-weight: 800;
+  white-space: pre-line;
+}
+.ds-done {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: center;
+}
+.ds-done__mark {
+  margin: 0 auto;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--ok);
+  color: #fff;
+  font-size: 30px;
+  font-weight: 900;
+}
+.ds-done__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 900;
+}
+.ds-done__box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f4f7f3;
+  text-align: left;
+}
+
+/* ───────── 動静表（先生の画面） ───────── */
+.ds-stat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 800;
+}
+.ds-stat b {
+  font-family: var(--num);
+  font-size: 28px;
+  color: #ffc24a;
+}
+.ds-open {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.12);
+  color: var(--chalk);
+  font-size: 13px;
+  font-weight: 800;
+}
+.ds-open.is-on {
+  background: #ffc24a;
+  color: var(--board-deep);
+}
+.ds-share {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+.ds-share__qr {
+  width: 132px;
+  height: auto;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+}
+.ds-share__btns {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ds-share__btns .btn {
+  text-align: center;
+  text-decoration: none;
+}
+.ds-url {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--ink-3);
+  word-break: break-all;
+}
+.ds-missing {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #fff1cf;
+  color: var(--caution);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.ds-missing b {
+  margin-right: 6px;
+}
+.dsg-scroll {
+  overflow-x: auto;
+  margin: 0 -4px;
+  -webkit-overflow-scrolling: touch;
+}
+.dsg {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+.dsg th,
+.dsg td {
+  border-bottom: 1px solid var(--rule);
+  border-right: 1px solid #eef1ec;
+  text-align: center;
+  white-space: nowrap;
+}
+.dsg thead th {
+  padding: 4px 2px;
+  min-width: 36px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--ink-2);
+  line-height: 1.15;
+}
+.dsg thead th small {
+  display: block;
+  font-size: 10px;
+}
+.dsg .is-sun {
+  color: var(--sun);
+}
+.dsg .is-sat {
+  color: var(--sat);
+}
+.dsg .dsg-name {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 108px;
+  max-width: 120px;
+  background: #fff;
+  text-align: left;
+  box-shadow: 1px 0 0 var(--rule);
+}
+.dsg .dsg-name button {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 5px 6px;
+  text-align: left;
+}
+.dsg .dsg-name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13.5px;
+  font-weight: 900;
+  color: var(--ink);
+}
+.dsg .dsg-name small {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--ok);
+}
+.dsg tr.is-missing .dsg-name small {
+  color: var(--stitch);
+}
+.dsg tr.is-missing td {
+  background: #f6f6f4;
+}
+.dsg-cell {
+  height: 36px;
+  font-weight: 900;
+}
+.dsg-cell--欠 {
+  background: #fde8ea;
+  color: var(--stitch);
+}
+.dsg-cell--遅,
+.dsg-cell--早 {
+  background: #fff1dc;
+  color: #b45309;
+  font-size: 11px;
+}
+.dsg-cell--他 {
+  background: #efe9f8;
+  color: #6b4bb0;
+}
+.dsg tfoot th,
+.dsg tfoot td {
+  padding: 6px 2px;
+  font-family: var(--num);
+  font-size: 15px;
+  font-weight: 800;
+  background: #f4f7f3;
+}
+.dsg tfoot th {
+  font-family: var(--jp);
+  font-size: 12px;
+  padding-left: 8px;
+}
+.dsd {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 8px 10px;
+  margin: 0;
+  font-size: 14px;
+}
+.dsd dt {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--ink-3);
+  padding-top: 2px;
+}
+.dsd dd {
+  margin: 0;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.6;
+}
+.dsd dd small {
+  color: var(--caution);
+}
+.dsd-tel {
+  display: inline-flex;
+  gap: 6px;
+  margin: 0 10px 4px 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eef4ec;
+  color: var(--ink);
+  font-family: var(--num);
+  font-size: 16px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.dsd-tel b {
+  font-family: var(--jp);
+  font-size: 12px;
+  color: var(--ink-2);
+  align-self: center;
+}
+.dsd-line {
+  display: block;
+}
+.dsd-teacher {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f4f7f3;
+}
+
+/* 送る・印刷する一覧（画面では外に置いて見せない。印刷のときだけ出す） */
+.dsh-wrap {
+  position: absolute;
+  left: -20000px;
+  top: 0;
+  width: 794px;
+}
+@media print {
+  .dsh-wrap {
+    position: static;
+    width: auto;
+  }
+}
+.dsh {
+  display: block;
+  padding: 18px 20px;
+  background: #fff;
+  color: #000;
+  font-family: var(--jp);
+}
+.dsh-team {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+}
+.dsh-title {
+  margin: 2px 0 0;
+  font-size: 22px;
+  font-weight: 900;
+}
+.dsh-kind {
+  margin-left: 10px;
+  font-size: 13px;
+  color: #b00020;
+}
+.dsh-meta {
+  margin: 4px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+}
+.dsh-legend {
+  margin: 2px 0 8px;
+  font-size: 10.5px;
+}
+.dsh-table,
+.dsh-detail {
+  width: 100%;
+  margin-top: 8px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 11px;
+}
+.dsh-table th,
+.dsh-table td,
+.dsh-detail th,
+.dsh-detail td {
+  border: 0.8px solid #000;
+  padding: 2px;
+  text-align: center;
+  vertical-align: middle;
+}
+.dsh-table th,
+.dsh-detail th {
+  background: #ececec;
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+.dsh-table th small {
+  display: block;
+  font-size: 9px;
+}
+.dsh-table th.is-sun {
+  color: #b00020;
+}
+.dsh-table th.is-sat {
+  color: #1d4ed8;
+}
+.dsh-table .is-pad {
+  background: #f7f7f7;
+}
+.dsh-table td {
+  height: 21px;
+}
+.dsh-name {
+  text-align: left !important;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-left: 4px !important;
+}
+.dsh-name small {
+  display: block;
+  font-size: 9px;
+  font-weight: 600;
+}
+.dsh-school,
+.dsh-no {
+  font-size: 10px;
+}
+.dsh-cell {
+  font-weight: 900;
+  font-size: 11px;
+}
+.dsh-cell--欠 {
+  background: #f3d0d4;
+}
+.dsh-cell--遅,
+.dsh-cell--早 {
+  background: #f9e3c4;
+  font-size: 8.5px;
+}
+.dsh-cell--他 {
+  background: #e3dbf2;
+}
+.dsh-cell--未 {
+  color: #888;
+  font-weight: 600;
+}
+.dsh-table tr.is-missing .dsh-name {
+  color: #666;
+}
+.dsh-table tfoot td {
+  background: #f3f3f3;
+  font-weight: 800;
+}
+.dsh-detail td {
+  text-align: left;
+  vertical-align: top;
+  line-height: 1.45;
+  padding: 3px 5px;
+}
+.dsh-tel {
+  display: block;
+  white-space: nowrap;
+}
+.dsh-tel b {
+  margin-right: 4px;
+}
+.dsh-line {
+  display: block;
+}
+.dsh-check {
+  display: block;
+  color: #1e7a46;
+}

@@ -15,6 +15,7 @@ const I = {
   school: "M3 21h18M5 21V10l7-5 7 5v11M9 21v-5h6v5",
   mail: "M4 6h16v12H4zM4 7l8 6 8-6",
   trophy: "M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4",
+  clip: "M9 4h6v3H9zM7 5H5v16h14V5h-2M8.5 12l2 2 4-4M8.5 17h7",
   people: "M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.3a3.5 3.5 0 0 1 0 6.4M18 14.4c2.1.7 3.5 2.6 3.5 5.6",
 };
 
@@ -32,6 +33,7 @@ const GROUPS: { label: string; items: { href: string; label: string; desc: strin
     items: [
       { href: "/notices", label: "試合の連絡", desc: "送付書（相手チーム）と保護者へのLINE文", icon: I.mail, red: true },
       { href: "/lineups", label: "メンバー表", desc: "守備位置と打順を決めて印刷", icon: I.diamond },
+      { href: "/dosei", label: "動静表（長期休み）", desc: "保護者・生徒がURLから記入。出欠と緊急連絡先", icon: I.clip, red: true },
       { href: "/players", label: "選手名簿", desc: "背番号・学校・学年", icon: I.cap },
       { href: "/ops", label: "大会運営（リーグ戦）", desc: "うちが出ないブロックも打ち込み、運営に送る", icon: I.trophy },
     ],

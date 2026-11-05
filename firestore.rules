@@ -36,6 +36,33 @@ service cloud.firestore {
       allow read: if isStaff() || (signedIn() && email == myEmail());
       allow write: if isStaff();
     }
+    // 動静表：保護者・生徒がログインなしで記入する
+    //   動静表（doseiTerms）は、IDを知っていれば読める（記入ページに名前・日付を出すため）
+    //   記入（doseiEntries）は、IDを知っていれば読める・直せる（IDは推測できない長い文字＝修正用URL）
+    //   全部の一覧・削除・先生の記入欄（doseiNotes）は、スタッフだけ（下の決まり）
+    match /doseiTerms/{id} {
+      allow get: if true;
+    }
+    match /doseiEntries/{id} {
+      function okEntry() {
+        let d = request.resource.data;
+        return id.size() >= 16
+          && d.keys().hasOnly(['termId', 'memberId', 'name', 'writer', 'parentName', 'contacts', 'days', 'trip', 'health', 'createdAt', 'updatedAt'])
+          && d.termId is string && d.memberId is string
+          && d.name is string && d.name.size() <= 60
+          && d.writer in ['本人', '保護者']
+          && d.parentName is string && d.parentName.size() <= 60
+          && d.contacts is list && d.contacts.size() <= 2
+          && d.days is map && d.days.size() <= 70
+          && d.trip is string && d.trip.size() <= 500
+          && d.health is string && d.health.size() <= 500
+          && exists(/databases/$(database)/documents/doseiTerms/$(d.termId))
+          && get(/databases/$(database)/documents/doseiTerms/$(d.termId)).data.open == true;
+      }
+      allow get: if true;
+      allow create: if okEntry();
+      allow update: if okEntry() && request.resource.data.termId == resource.data.termId;
+    }
     match /{document=**} {
       allow read, write: if isStaff();
     }
