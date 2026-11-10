@@ -152,6 +152,20 @@ function FieldPicture({ flat = false }: { flat?: boolean }) {
   );
 }
 
+// 奥行きのある球場（② 打順の上）：球場の絵を後ろへ倒して見せる（.ballpark3d__plane と同じ角度・遠近）
+//   倒す角度 TILT、遠近の強さ PERSP（球場の幅を1として）、箱の高さ BOX_H（幅を1として）
+const TILT = (55 * Math.PI) / 180;
+const PERSP = 1.6;
+const BOX_H = 0.44;
+// 球場の絵の上の点（%）が、箱の中のどこに見えるか（%）と、遠いほど小さくする文字の倍率
+function project3d(spot: { x: number; y: number }): { left: number; top: number; scale: number } {
+  const u = spot.x / 100;
+  const v = spot.y / 100;
+  const s = PERSP / (PERSP + (1 - v) * Math.sin(TILT));
+  const up = (1 - v) * Math.cos(TILT) * s;
+  return { left: (0.5 + (u - 0.5) * s) * 100, top: (1 - up / BOX_H) * 100, scale: 0.75 + 0.3 * s };
+}
+
 // 名字だけ（「知久 大翔」→「知久」）
 const surname = (name: string) => name.split(/[\s　]/)[0];
 
@@ -560,16 +574,18 @@ export function LineupWorkbench({
       {/* ② 打順 */}
       {tab === "order" && (
         <>
-          <div className="ballpark ballpark--flat">
-            <FieldPicture flat />
+          <div className="ballpark3d">
+            <div className="ballpark3d__plane" aria-hidden>
+              <FieldPicture />
+            </div>
             {POSITIONS.map((pos) => {
               const player = byId.get(lineup.positions[pos.key] ?? "");
-              const spot = SPOTS[pos.key];
+              const p = project3d(SPOTS[pos.key]);
               return (
                 <span
                   key={pos.key}
-                  className={`ballpark__tag${player ? "" : " is-empty"}`}
-                  style={{ left: `${spot.x}%`, top: `${Math.min(spot.y, 86)}%` }}
+                  className={`ballpark3d__tag${player ? "" : " is-empty"}`}
+                  style={{ left: `${p.left}%`, top: `${p.top}%`, fontSize: `${p.scale}em` }}
                 >
                   {player ? surname(player.name) : POS_BADGE[pos.key].en}
                 </span>

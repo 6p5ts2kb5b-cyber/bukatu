@@ -4,6 +4,7 @@
 // 見た目は design.css で決めています（得点板のデザイン）。
 
 import { useEffect, type CSSProperties, type ReactNode } from "react";
+import { BallLoader } from "@/components/BallLoader";
 
 // CSSの変数（--i など）を style に渡すための小さな道具
 export function cssVars(v: Record<string, number | string>): CSSProperties {
@@ -136,31 +137,19 @@ export function ErrorText({ children }: { children: ReactNode }) {
   );
 }
 
-// 読み込み中：縫い目が回るボールと、塁を順に回るランナー（ダイヤモンド）
+// 読み込み中：立体のボールが回転しながら、奥行きのあるダイヤモンドの塁を弾んで回る（BallLoader）
 export function Loading({ small = false, label = "読み込み中" }: { small?: boolean; label?: string }) {
   return (
     <div className={`loading${small ? " loading--small" : ""}`} role="status" aria-live="polite">
-      <span className="loading__field" aria-hidden>
-        <svg viewBox="0 0 64 64" className="loading__diamond">
-          <path d="M32 8 56 32 32 56 8 32Z" />
-          <rect className="loading__base loading__base--1" x="51" y="27" width="10" height="10" rx="1.5" transform="rotate(45 56 32)" />
-          <rect className="loading__base loading__base--2" x="27" y="3" width="10" height="10" rx="1.5" transform="rotate(45 32 8)" />
-          <rect className="loading__base loading__base--3" x="3" y="27" width="10" height="10" rx="1.5" transform="rotate(45 8 32)" />
-          <path className="loading__home" d="M27 52h10v4l-5 5-5-5z" />
-        </svg>
-        <svg viewBox="0 0 48 48" className="loading__ball">
-          <circle cx="24" cy="24" r="20" fill="#fff" stroke="#d4dcd1" strokeWidth="1.5" />
-          <path
-            d="M11 9c6 6 6 24 0 30M37 9c-6 6-6 24 0 30"
-            fill="none"
-            stroke="#c42b3b"
-            strokeWidth="2.6"
-            strokeLinecap="round"
-            strokeDasharray="2 3.2"
-          />
-        </svg>
+      <BallLoader small={small} />
+      <span className="loading__text">
+        {label}
+        <span className="loading__dots" aria-hidden>
+          <i>.</i>
+          <i>.</i>
+          <i>.</i>
+        </span>
       </span>
-      <span className="loading__text">{label}…</span>
     </div>
   );
 }

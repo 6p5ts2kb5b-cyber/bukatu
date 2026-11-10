@@ -3547,67 +3547,26 @@ td.pl-mark {
   color: #555;
 }
 
-/* ═════════════════ 読み込み中（ボールとダイヤモンド） ═════════════════ */
+/* ═════════════════ 読み込み中（立体のボールがダイヤモンドを回る：BallLoader） ═════════════════ */
 .loading {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 56px 0;
+  gap: 6px;
+  padding: 44px 0;
 }
 .loading--small {
   padding: 18px 0;
   gap: 8px;
 }
-.loading__field {
-  position: relative;
-  width: 76px;
-  height: 76px;
+.ballloader {
+  display: block;
+  width: 168px;
+  height: 124px;
 }
-.loading--small .loading__field {
-  width: 52px;
-  height: 52px;
-}
-.loading__diamond {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-.loading__diamond > path:first-child {
-  fill: rgb(18 63 49 / 0.07);
-  stroke: rgb(18 63 49 / 0.28);
-  stroke-width: 1.5;
-  stroke-dasharray: 3 3;
-}
-.loading__base,
-.loading__home {
-  fill: #fff;
-  stroke: rgb(18 63 49 / 0.35);
-  stroke-width: 1.2;
-  animation: base-run 1.6s steps(1, end) infinite;
-}
-.loading__base--1 { animation-delay: 0s; }
-.loading__base--2 { animation-delay: 0.4s; }
-.loading__base--3 { animation-delay: 0.8s; }
-.loading__home { animation-delay: 1.2s; }
-@keyframes base-run {
-  0% { fill: var(--stitch); stroke: var(--stitch); }
-  25%, 100% { fill: #fff; stroke: rgb(18 63 49 / 0.35); }
-}
-.loading__ball {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 34%;
-  height: 34%;
-  margin: -17% 0 0 -17%;
-  filter: drop-shadow(0 2px 2px rgb(15 42 33 / 0.25));
-  animation: ball-spin 0.8s linear infinite;
-}
-@keyframes ball-spin {
-  to { transform: rotate(360deg); }
+.ballloader--small {
+  width: 44px;
+  height: 44px;
 }
 .loading__text {
   font-family: var(--jp);
@@ -3616,11 +3575,19 @@ td.pl-mark {
   letter-spacing: 0.08em;
   color: var(--ink-2);
 }
-@media (prefers-reduced-motion: reduce) {
-  .loading__ball,
-  .loading__base,
-  .loading__home { animation-duration: 3.2s; }
-  .loading__ball { animation: none; }
+.loading__dots i {
+  font-style: normal;
+  animation: dot-blink 1.2s infinite;
+}
+.loading__dots i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.loading__dots i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+@keyframes dot-blink {
+  0%, 60%, 100% { opacity: 0.2; }
+  30% { opacity: 1; }
 }
 
 /* ═════════════════ PC版（画面の幅 1024px 以上） ═════════════════
@@ -5558,4 +5525,58 @@ td.pl-mark {
 .dsh-check {
   display: block;
   color: #1e7a46;
+}
+
+/* ② 打順の上：奥行きのある球場（球場の絵を後ろへ倒す。角度・遠近は LineupWorkbench の TILT・PERSP と同じ） */
+.ballpark3d {
+  position: relative;
+  width: 100%;
+  max-width: 640px !important; /* PCでも大きくなりすぎない */
+  margin: 0 auto;
+  aspect-ratio: 100 / 44;
+  overflow: hidden;
+  border-radius: 18px;
+  container-type: inline-size;
+  font-size: clamp(11px, 3.6vw, 16px);
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgb(255 255 255 / 0.10), rgb(255 255 255 / 0) 60%),
+    linear-gradient(180deg, #0f2a21 0%, #17402f 16%, #24622b 30%, #2a6f30 100%);
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.08), 0 10px 24px -14px rgb(11 43 33 / 0.6);
+}
+.ballpark3d__plane {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  transform-origin: 50% 100%;
+  transform: perspective(160cqw) rotateX(55deg);
+}
+/* 遠くを少しかすませて、奥行きを出す */
+.ballpark3d::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgb(15 42 33 / 0.35) 0%, rgb(15 42 33 / 0) 38%);
+}
+.ballpark3d__tag {
+  position: absolute;
+  z-index: 1;
+  transform: translate(-50%, -100%);
+  max-width: 26%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.85), 0 0 8px rgb(0 0 0 / 0.35);
+  letter-spacing: 0.02em;
+}
+.ballpark3d__tag.is-empty {
+  color: #ffe9a8;
+  font-family: var(--num);
+}
+.ballpark3d .ballpark__corner {
+  z-index: 2;
 }
